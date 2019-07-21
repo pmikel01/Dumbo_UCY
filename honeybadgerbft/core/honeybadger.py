@@ -62,9 +62,10 @@ class HoneyBadgerBFT():
         (:math:`\mathsf{TPKE}`) scheme.
     :param send:
     :param recv:
+    :param K: a test parameter to specify break out after K rounds
     """
 
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, ePK, eSK, send, recv):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, ePK, eSK, send, recv, K=3):
         self.sid = sid
         self.pid = pid
         self.B = B
@@ -80,6 +81,8 @@ class HoneyBadgerBFT():
         self.round = 0  # Current block number
         self.transaction_buffer = []
         self._per_round_recv = {}  # Buffer of incoming messages
+
+        self.K = K
 
     def submit_tx(self, tx):
         """Appends the given transaction to the transaction buffer.
@@ -133,13 +136,14 @@ class HoneyBadgerBFT():
             send_r = _make_send(r)
             recv_r = self._per_round_recv[r].get
             new_tx = self._run_round(r, tx_to_send[0], send_r, recv_r)
-            print('new_tx:', new_tx)
+            print('new block at %d:' % self.pid, new_tx)
 
             # Remove all of the new transactions from the buffer
-            self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx not in new_tx]
+            self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx.encode('utf-8') not in new_tx]
+            print('buffer at %d:' % self.pid, self.transaction_buffer)
 
             self.round += 1     # Increment the round
-            if self.round >= 3:
+            if self.round >= self.K:
                 break   # Only run one round for now
 
     def _run_round(self, r, tx_to_send, send, recv):

@@ -1,23 +1,10 @@
 version: '3'
 
 services:
-  honeybadger:
+  honeybadger-test:
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
       - .:/usr/local/src/HoneyBadgerBFT
-    command: pytest -v --cov=honeybadgerbft
-  builddocs:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      - .:/usr/local/src/HoneyBadgerBFT
-    command: make -C docs html
-  viewdocs:
-    image: nginx
-    ports:
-      - '52032:80'
-    volumes:
-      - ./docs/_build/html:/usr/share/nginx/html
+    command: python /usr/local/src/HoneyBadgerBFT/mytest/test_honeybadger.py

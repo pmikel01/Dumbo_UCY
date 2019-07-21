@@ -29,4 +29,5 @@ RUN pip install --upgrade pip
 RUN pip install -e .[dev]
 
 # Run tests by default
-CMD sh test.sh
+# CMD sh test.sh
+# CMD ['python', '-u', '/usr/local/src/HoneyBadgerBF/mytest/test_honeybadger.py']
