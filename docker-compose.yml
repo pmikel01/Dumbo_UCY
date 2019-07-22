@@ -7,4 +7,4 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/usr/local/src/HoneyBadgerBFT
-    command: python /usr/local/src/HoneyBadgerBFT/mytest/test_honeybadger.py
+    command: python /usr/local/src/HoneyBadgerBFT/mytest/my_run_honeybadger.py

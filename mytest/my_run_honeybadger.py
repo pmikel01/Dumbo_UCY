@@ -4,7 +4,6 @@ from collections import defaultdict
 import gevent
 from gevent.event import Event
 from gevent.queue import Queue
-from pytest import fixture, mark, raises
 
 import honeybadgerbft.core.honeybadger
 #reload(honeybadgerbft.core.honeybadger)
@@ -15,7 +14,7 @@ from honeybadgerbft.core.honeybadger import BroadcastTag
 
 import time
 
-@fixture
+
 def recv_queues(request):
     from honeybadgerbft.core.honeybadger import BroadcastReceiverQueues
     number_of_nodes = getattr(request, 'N', 4)
@@ -27,16 +26,12 @@ def recv_queues(request):
     return BroadcastReceiverQueues(**queues)
 
 
-from pytest import mark
-
-
 def simple_router(N, maxdelay=0.005, seed=None):
     """Builds a set of connected channels, with random delay
 
     :return: (receives, sends)
     """
     rnd = random.Random(seed)
-    #if seed is not None: print 'ROUTER SEED: %f' % (seed,)
 
     queues = [Queue() for _ in range(N)]
     _threads = []
@@ -44,10 +39,8 @@ def simple_router(N, maxdelay=0.005, seed=None):
     def makeSend(i):
         def _send(j, o):
             delay = rnd.random() * maxdelay
-            if not i%3:
-                delay *= 1000
-            #delay = 0.1
-            #print 'SEND   %8s [%2d -> %2d] %2.1f' % (o[0], i, j, delay*1000), o[1:]
+            if not i % 3:
+                delay *= 100
             gevent.spawn_later(delay, queues[j].put_nowait, (i,o))
         return _send
 
@@ -116,9 +109,9 @@ def _test_honeybadger(N=4, f=1, seed=None):
     print('time cost: ', time_end-time_start, 's')
 
 
-#@mark.skip('python 3 problem with gevent')
 def test_honeybadger():
     _test_honeybadger()
+
 
 if __name__ == '__main__':
     test_honeybadger()

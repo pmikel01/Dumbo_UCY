@@ -30,4 +30,4 @@ RUN pip install -e .[dev]
 
 # Run tests by default
 # CMD sh test.sh
-# CMD ['python', '-u', '/usr/local/src/HoneyBadgerBF/mytest/test_honeybadger.py']
+# CMD ['python', '-u', '/usr/local/src/HoneyBadgerBF/mytest/my_run_honeybadger.py']
