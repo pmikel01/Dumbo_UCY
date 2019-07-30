@@ -1,9 +1,6 @@
 import random
-from collections import defaultdict
-
 import gevent
 from gevent import monkey
-from gevent.event import Event
 from gevent.queue import Queue
 
 import honeybadgerbft.core.honeybadger
@@ -13,37 +10,44 @@ from honeybadgerbft.crypto.threshsig.boldyreva import dealer
 from honeybadgerbft.crypto.threshenc import tpke
 from honeybadgerbft.core.honeybadger import BroadcastTag
 
-import time
+import time, logging
 
 from multiprocessing import Process
+from mytest.mysockettest.socket_node import Node
+
 
 monkey.patch_all()
+
 
 def simple_router(N, maxdelay=0, seed=None):
     """Builds a set of connected channels, with random delay
 
     :return: (receives, sends)
     """
-    rnd = random.Random(seed)
+    rnd = random.Random()
 
+    host = "127.0.0.1"
+    port_base = int(rnd.random() * 5 + 1) * 10000
+    addresses = [(host, port_base + 200 * i) for i in range(N)]
     queues = [Queue() for _ in range(N)]
-    _threads = []
+    nodes = [Node(port=addresses[i][1], i=i, nodes_list=addresses, queue=queues[i]) for i in range(N)]
 
-    def makeSend(i):
-        def _send(j, o):
-            delay = rnd.random() * maxdelay
-            if not i % 3:
-                delay *= 100
-            gevent.spawn_later(delay, queues[j].put_nowait, (i,o))
-        return _send
+    for node in nodes:
+        node.start()
+
+    for node in nodes:
+        node.connect_all()
 
     def makeRecv(j):
         def _recv():
-            (i,o) = queues[j].get()
-            print(j, (i,o))
-            #print 'RECV %8s [%2d -> %2d]' % (o[0], i, j)
-            return (i,o)
+            (i, o) = nodes[j].recv()
+            return (i, o)
         return _recv
+
+    def makeSend(i):
+        def _send(j, o):
+            gevent.spawn(nodes[i].send(j, o))
+        return _send
 
     return ([makeSend(i) for i in range(N)],
             [makeRecv(j) for j in range(N)])
@@ -77,6 +81,7 @@ def _test_honeybadger(N=4, f=1, seed=None):
                                     sPK, sSKs[i], ePK, eSKs[i],
                                     sends[i], recvs[i], K)
         #print(sPK, sSKs[i], ePK, eSKs[i])
+        #print(sPK, sSKs[i], ePK, eSKs[i])
 
 
 
@@ -92,6 +97,8 @@ def _test_honeybadger(N=4, f=1, seed=None):
 
     print('start the test...')
     time_start=time.time()
+
+    print(logger)
 
     #gevent.killall(threads[N-f:])
     #gevent.sleep(3)
@@ -116,4 +123,9 @@ def test_honeybadger():
 
 
 if __name__ == '__main__':
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    fh = logging.FileHandler('debug.log')
+    logger.addHandler(fh)
+
     test_honeybadger()

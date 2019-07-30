@@ -1,4 +1,4 @@
-import gevent
+import gevent,sys
 from gevent.event import Event
 
 from collections import defaultdict
@@ -8,6 +8,10 @@ from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
 
 
 logger = logging.getLogger(__name__)
+#logger.setLevel(logging.DEBUG)
+#ch = logging.StreamHandler(sys.stdout)
+#ch.setFormatter(format)
+#logger.addHandler(ch)
 
 
 def handle_conf_messages(*, sender, message, conf_values, pid, bv_signal):
@@ -55,7 +59,6 @@ def wait_for_conf_values(*, pid, N, f, epoch, conf_sent, bin_values,
         bv_signal.clear()
         bv_signal.wait()
 
-
 def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
     """Binary consensus from [MMR14]. It takes an input ``vi`` and will
     finally write the decided value into ``decide`` channel.
@@ -91,6 +94,8 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
             if msg[0] == 'EST':
                 # BV_Broadcast message
                 _, r, v = msg
+
+
                 assert v in (0, 1)
                 if sender in est_values[r][v]:
                     # FIXME: raise or continue? For now will raise just
@@ -166,28 +171,42 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
     _thread_recv = gevent.spawn(_recv)
 
     # Block waiting for the input
+    print(pid, sid, 'PRE-ENTERING CRITICAL')
     vi = input()
+    print(pid, sid, 'PRE-EXITING CRITICAL', vi)
+
     assert vi in (0, 1)
     est = vi
     r = 0
     already_decided = None
     while True:  # Unbounded number of rounds
+
+        #print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
+
         logger.info(f'Starting with est = {est}',
                     extra={'nodeid': pid, 'epoch': r})
 
-        if not est_sent[r][est]:
-            est_sent[r][est] = True
-            broadcast(('EST', r, est))
+        #if not est_sent[r][est]:
+        #    est_sent[r][est] = True
+        #    gevent.spawn(broadcast(('EST', r, est)))
+        est_sent[r][est] = True
+        broadcast(('EST', r, est))
+
+        #print("debug", pid, sid, 'WAITS BIN VAL at epoch', r)
 
         while len(bin_values[r]) == 0:
             # Block until a value is output
             bv_signal.clear()
             bv_signal.wait()
 
+        #print("debug", pid, sid, 'GETS BIN VAL at epoch', r)
+
         w = next(iter(bin_values[r]))  # take an element
         logger.debug(f"broadcast {('AUX', r, w)}",
                      extra={'nodeid': pid, 'epoch': r})
         broadcast(('AUX', r, w))
+
+
 
         values = None
         logger.debug(
@@ -234,6 +253,7 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
                 bv_signal=bv_signal,
                 broadcast=broadcast,
             )
+
         logger.debug(f'Completed CONF phase with values = {values}',
                      extra={'nodeid': pid, 'epoch': r})
 
@@ -242,7 +262,12 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
             extra={'nodeid': pid, 'epoch': r},
         )
         # Block until receiving the common coin value
+
+        #print("debug", pid, sid, 'fetchs a coin at epoch', r)
         s = coin(r)
+        #print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
+
+
         logger.info(f'Received coin with value = {s}',
                     extra={'nodeid': pid, 'epoch': r})
 
@@ -253,7 +278,9 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
                 already_decided=already_decided,
                 decide=decide,
             )
+            #print('debug then decided:', already_decided, '%s' % sid)
         except AbandonedNodeError:
+            #print('debug node %d quits %s' % (pid, sid))
             # print('[sid:%s] [pid:%d] QUITTING in round %d' % (sid,pid,r)))
             logger.debug(f'QUIT!',
                          extra={'nodeid': pid, 'epoch': r})
@@ -261,6 +288,7 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
             return
 
         r += 1
+
 
 
 def set_new_estimate(*, values, s, already_decided, decide):

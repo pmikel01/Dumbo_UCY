@@ -6,10 +6,15 @@ Dependencies:
     based crypto)
 
 """
-from charm.toolbox.pairinggroup import PairingGroup, ZR, G1, G2, pair
-from base64 import encodestring, decodestring
-from operator import mul
-from functools import reduce
+try:
+    from charm.toolbox.pairinggroup import PairingGroup, ZR, G1, G2, pair
+    from base64 import encodestring, decodestring
+    from operator import mul
+    from functools import reduce
+except Exception as err:
+  print(err)
+  exit(-1)
+
 
 # group = PairingGroup('SS512')
 # group = PairingGroup('MNT159')

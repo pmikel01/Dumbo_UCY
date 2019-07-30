@@ -1,6 +1,7 @@
 from ..crypto.threshenc import tpke
-import os
+import os, logging, sys
 
+logger = logging.getLogger(__name__)
 
 def serialize_UVW(U, V, W):
     # U: element of g1 (65 byte serialized for SS512)
@@ -39,6 +40,7 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
     :return:
     """
 
+
     # Broadcast inputs are of the form (tenc(key), enc(key, transactions))
 
     # Threshold encrypt
@@ -52,10 +54,19 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
     to_acs = pickle.dumps((serialize_UVW(*tkey), ciphertext))
     acs_in(to_acs)
 
+
+
     # Wait for the corresponding ACS to finish
     vall = acs_out()
+
+    logger.debug("node %d is making block" % pid)
+
+
     assert len(vall) == N
     assert len([_ for _ in vall if _ is not None]) >= N - f  # This many must succeed
+
+    logger.debug("node %d is making block" % pid)
+
 
     # print pid, 'Received from acs:', vall
 
@@ -99,6 +110,6 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
         key = PK.combine_shares(*tkey, svec)
         plain = tpke.decrypt(key, ciph)
         decryptions.append(plain)
-    # print 'Done!', decryptions
+    print('Done!', decryptions)
 
     return tuple(decryptions)

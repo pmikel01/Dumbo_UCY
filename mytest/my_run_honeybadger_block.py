@@ -118,50 +118,6 @@ def _make_honeybadger(sid, pid, N, f, sPK, sSK, ePK, eSK, input, send, recv):
                              tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
 
 
-### Test asynchronous common subset
-def _test_honeybadger(N=4, f=1, seed=None):
-    # Generate threshold sig keys
-    sid = 'sidA'
-    sPK, sSKs = dealer(N, f+1, seed=seed)
-    ePK, eSKs = tpke.dealer(N, f+1)
-
-    rnd = random.Random(seed)
-    #print('SEED:', seed)
-    router_seed = rnd.random()
-    sends, recvs = simple_router(N, seed=router_seed)
-
-    inputs  = [None] * N
-    threads = [None] * N
-    for i in range(N):
-        inputs[i] = Queue(1)
-        threads[i] = gevent.spawn(_make_honeybadger, sid, i, N, f,
-                                  sPK, sSKs[i],
-                                  ePK, eSKs[i],
-                                  inputs[i].get, sends[i], recvs[i])
-
-    for i in range(N):
-        #if i == 1: continue
-        inputs[i].put('<[HBBFT Input %d]>' % i)
-
-    #gevent.killall(threads[N-f:])
-    #gevent.sleep(3)
-    #for i in range(N-f, N):
-    #    inputs[i].put(0)
-    try:
-        outs = [threads[i].get() for i in range(N)]
-
-        # Consistency check
-        assert len(set(outs)) == 1
-
-    except KeyboardInterrupt:
-        gevent.killall(threads)
-        raise
-
-
-#@mark.skip('python 3 problem with gevent')
-def test_honeybadger():
-    _test_honeybadger()
-
 
 def test_honeybadger_block_with_missing_input():
     N = 4
@@ -187,27 +143,11 @@ def test_honeybadger_block_with_missing_input():
             inputs[i].put('<[HBBFT Input %d]>' % i)
 
     gevent.joinall(threads, timeout=0.5)
+
+    for t in threads:
+        print(t.value)
+
     assert all([t.value is None for t in threads])
-
-
-def broadcast_receiver_duplicates_share(recv_func, recv_queues):
-    from honeybadgerbft.core.honeybadger import BroadcastTag
-    sender, (tag, j, msg) = recv_func()
-    recv_queue = getattr(recv_queues, tag)
-
-    if tag == BroadcastTag.TPKE.value:
-        recv_queue.put_nowait((sender, msg))
-        recv_queue.put_nowait((sender, msg))
-    else:
-        recv_queue = recv_queue[j]
-        recv_queue.put_nowait((sender, msg))
-
-
-def test_when_duplicate_share_is_received(monkeypatch):
-    from honeybadgerbft.core import honeybadger
-    monkeypatch.setattr(
-        honeybadger, 'broadcast_receiver', broadcast_receiver_duplicates_share)
-    _test_honeybadger()
 
 
 if __name__ == "__main__":

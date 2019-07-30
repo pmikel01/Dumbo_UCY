@@ -93,9 +93,14 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive):
         """
         # I have to do mapping to 1..l
         h = PK.hash_message(str((sid, round)))
+        # print('debug', SK.sign(h))
+        # print('debug', type(SK.sign(h)))
         logger.debug(f"broadcast {('COIN', round, SK.sign(h))}",
                      extra={'nodeid': pid, 'epoch': round})
+        #sig = SK.sign(h)
         broadcast(('COIN', round, SK.sign(h)))
-        return outputQueue[round].get()
+        coin = outputQueue[round].get()
+        #print('debug', 'node %d gets a coin %d for round %d in %s' % (pid, coin, round, sid))
+        return coin
 
     return getCoin

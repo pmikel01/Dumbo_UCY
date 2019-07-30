@@ -4,35 +4,44 @@ import random
 from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from mytest.mysockettest.socket_node import Node
+
+
 
 def simple_router(N, maxdelay=0.01, seed=None):
     """Builds a set of connected channels, with random delay
     @return (receives, sends)
     """
-    rnd = random.Random(seed)
-    #if seed is not None: print 'ROUTER SEED: %f' % (seed,)
-    
+    rnd = random.Random()
+
+    host = "127.0.0.1"
+    port_base = int(rnd.random() * 5 + 1) * 10000
+    addresses = [(host, port_base + 200 * i) for i in range(N)]
     queues = [Queue() for _ in range(N)]
+    nodes = [Node(port=addresses[i][1], i=i, nodes_list=addresses, queue=queues[i]) for i in range(N)]
+
+    for node in nodes:
+        node.start()
+
+    for node in nodes:
+        node.connect_all()
 
     def makeBroadcast(i):
         def _send(j, o):
-            delay = rnd.random() * maxdelay
-            #print 'BC   %8s [%2d -> %2d] %2.1f' % (o[0], i, j, delay*1000)
-            gevent.spawn_later(delay, queues[j].put, (i,o))
-            #queues[j].put((i, o))
+            gevent.spawn(nodes[i].send(j, o))
         def _bc(o):
             for j in range(N): _send(j, o)
         return _bc
 
     def makeRecv(j):
         def _recv():
-            (i,o) = queues[j].get()
-            #print 'RECV %8s [%2d -> %2d]' % (o[0], i, j)
+            (i,o) = nodes[j].recv()
             return (i,o)
         return _recv
 
     return ([makeBroadcast(i) for i in range(N)],
             [makeRecv(j)      for j in range(N)])
+
 
 
 ### Test
@@ -56,6 +65,7 @@ def _test_commoncoin(N=4, f=1, seed=None):
 
 def test_commoncoin():
     _test_commoncoin()
+
 
 
 if __name__ == "__main__":

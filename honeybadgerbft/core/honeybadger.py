@@ -67,7 +67,7 @@ class HoneyBadgerBFT():
 
     def __init__(self, sid, pid, B, N, f, sPK, sSK, ePK, eSK, send, recv, K=3):
         self.sid = sid
-        self.pid = pid
+        self.id = pid
         self.B = B
         self.N = N
         self.f = f
@@ -89,7 +89,7 @@ class HoneyBadgerBFT():
 
         :param tx: Transaction to append to the buffer.
         """
-        print('submit_tx', self.pid, tx)
+        print('submit_tx', self.id, tx)
         self.transaction_buffer.append(tx)
 
     def run(self):
@@ -136,15 +136,16 @@ class HoneyBadgerBFT():
             send_r = _make_send(r)
             recv_r = self._per_round_recv[r].get
             new_tx = self._run_round(r, tx_to_send[0], send_r, recv_r)
-            print('new block at %d:' % self.pid, new_tx)
+            print('new block at %d:' % self.id, new_tx)
 
             # Remove all of the new transactions from the buffer
             self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx.encode('utf-8') not in new_tx]
-            print('buffer at %d:' % self.pid, self.transaction_buffer)
+            print('buffer at %d:' % self.id, self.transaction_buffer)
 
             self.round += 1     # Increment the round
             if self.round >= self.K:
                 break   # Only run one round for now
+        print("node %d breaks" % self.id)
 
     def _run_round(self, r, tx_to_send, send, recv):
         """Run one protocol round.
@@ -156,7 +157,7 @@ class HoneyBadgerBFT():
         """
         # Unique sid for each round
         sid = self.sid + ':' + str(r)
-        pid = self.pid
+        pid = self.id
         N = self.N
         f = self.f
 
@@ -202,7 +203,9 @@ class HoneyBadgerBFT():
 
                 :param o: Value to multicast.
                 """
+
                 broadcast(('ACS_ABA', j, o))
+
 
             aba_recvs[j] = Queue()
             gevent.spawn(binaryagreement, sid+'ABA'+str(j), pid, N, f, coin,
@@ -249,6 +252,7 @@ class HoneyBadgerBFT():
 
         _input = Queue(1)
         _input.put(tx_to_send)
+
         return honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
                                  _input.get,
                                  acs_in=my_rbc_input.put_nowait, acs_out=acs.get,
