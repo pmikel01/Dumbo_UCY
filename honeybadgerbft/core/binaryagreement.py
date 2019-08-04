@@ -106,9 +106,9 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
                         f'Redundant EST message received by {sender}: {msg}',
                         extra={'nodeid': pid, 'epoch': msg[1]}
                     )
-                    raise RedundantMessageError(
-                        'Redundant EST received {}'.format(msg))
-                    # continue
+                    #raise RedundantMessageError(
+                    #    'Redundant EST received {}'.format(msg))
+                    continue
 
                 est_values[r][v].add(sender)
                 # Relay after reaching first threshold
@@ -171,9 +171,9 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
     _thread_recv = gevent.spawn(_recv)
 
     # Block waiting for the input
-    print(pid, sid, 'PRE-ENTERING CRITICAL')
+    #print(pid, sid, 'PRE-ENTERING CRITICAL')
     vi = input()
-    print(pid, sid, 'PRE-EXITING CRITICAL', vi)
+    #print(pid, sid, 'PRE-EXITING CRITICAL', vi)
 
     assert vi in (0, 1)
     est = vi
