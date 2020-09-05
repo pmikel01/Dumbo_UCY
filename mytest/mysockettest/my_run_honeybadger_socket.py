@@ -199,11 +199,9 @@ def _test_honeybadger_1(N=4, f=1, seed=None):
     print('time cost: ', time_end-time_start, 's')
 
 
-
-
 def _test_honeybadger_2(N=4, f=1, seed=None):
 
-    def run_hbbft_instance(badger: HoneyBadgerBFTNode):
+    def run_hbbft_instance(badger: HoneyBadgerBFTNode, threads: multiprocessing.Queue):
 
         # lock.acquire()
         # print(pid, "gets lock to start server")
@@ -220,8 +218,9 @@ def _test_honeybadger_2(N=4, f=1, seed=None):
         # lock.release()
         # print(pid, "releases lock after fully connecting")
 
-        gevent.spawn(badger.run())
-        #return thread
+        thread = gevent.spawn(badger.run())
+        threads.put(thread)
+        return thread
 
     rnd = random.Random(seed)
     sid = 'sidA'
@@ -240,7 +239,7 @@ def _test_honeybadger_2(N=4, f=1, seed=None):
     K = 2
     badgers = [None] * N
     processes = [None] * N
-    threads = [None] * N
+    threads = multiprocessing.Queue()
 
     for i in range(N):
         badgers[i] = HoneyBadgerBFTNode(sid, i, 1, N, f,
@@ -248,13 +247,27 @@ def _test_honeybadger_2(N=4, f=1, seed=None):
                             addresses_list=addresses, K=K)
 
     for i in range(N):
-        processes[i] = Process(target=run_hbbft_instance, args=(badgers[i], ))
+        processes[i] = Process(target=run_hbbft_instance, args=(badgers[i], threads, ))
         processes[i].start()
         processes[i].join()
 
-    while True:
-        time.sleep(5)
-        print("parent is waiting...")
+    while threads.qsize() != N:
+        pass
+
+    print("finished")
+
+    # outs = [None] * N
+    # try:
+    #     for i in range(N):
+    #         outs[i] = threads.get()
+    #     print(outs)
+    #     # Consistency check
+    #     assert len(set(outs)) == 1
+    # except KeyboardInterrupt:
+    #     gevent.killall(threads)
+    #     raise
+    #time.sleep(5)
+    #print("parent is waiting...", threads.qsize())
 
 
 # Test by threads
