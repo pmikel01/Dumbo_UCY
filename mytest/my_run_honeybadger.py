@@ -67,20 +67,19 @@ def _test_honeybadger(N=4, f=1, seed=None):
     threads = [None] * N
     
     # This is an experiment parameter to specify the maximum round number 
-    K = 2
-
+    K = 100
+    B = 8
 
 
 
     for i in range(N):
-        badgers[i] = HoneyBadgerBFT(sid, i, 1, N, f,
+        badgers[i] = HoneyBadgerBFT(sid, i, B, N, f,
                                     sPK, sSKs[i], ePK, eSKs[i],
                                     sends[i], recvs[i], K)
         #print(sPK, sSKs[i], ePK, eSKs[i])
 
 
-
-    for r in range(K):
+    for r in range(K * B):
         for i in range(N):
             #if i == 1: continue
             badgers[i].submit_tx('<[HBBFT Input %d]>' % (i+10*r))

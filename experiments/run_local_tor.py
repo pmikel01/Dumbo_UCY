@@ -17,14 +17,14 @@ def runOnTransaction(N, t, Tx):
             retry = True
             time.sleep(2)
     q = subprocess.check_output(['python', 'process.py', 'msglog.TorMultiple'])
-    print N, t, Tx, q.replace('\n', ' ')
+    print(N, t, Tx, q.replace('\n', ' '))
 
 import sys
 def main(N, t, start_i=0, end_i=11, start_j=0):
     for i in range(start_i, end_i):
         for j in range(start_j, 4):
             runOnTransaction(N, t, 2**i)
-        print 
+        print()
 
 
 if __name__=='__main__':

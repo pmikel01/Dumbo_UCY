@@ -1,6 +1,6 @@
 from collections import namedtuple
 from enum import Enum
-
+import json
 import gevent
 from gevent.queue import Queue
 
@@ -133,13 +133,14 @@ class HoneyBadgerBFT():
                 def _send(j, o):
                     self._send(j, (r, o))
                 return _send
+
             send_r = _make_send(r)
             recv_r = self._per_round_recv[r].get
-            new_tx = self._run_round(r, tx_to_send[0], send_r, recv_r)
+            new_tx = self._run_round(r, tx_to_send, send_r, recv_r)
             print('new block at %d:' % self.id, new_tx)
 
             # Remove all of the new transactions from the buffer
-            self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx.encode('utf-8') not in new_tx]
+            self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx not in new_tx]
             print('buffer at %d:' % self.id, self.transaction_buffer)
 
             self.round += 1     # Increment the round
@@ -251,9 +252,17 @@ class HoneyBadgerBFT():
         gevent.spawn(broadcast_receiver_loop, recv, recv_queues)
 
         _input = Queue(1)
-        _input.put(tx_to_send)
+        _input.put(json.dumps(tx_to_send))
 
-        return honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
-                                 _input.get,
-                                 acs_in=my_rbc_input.put_nowait, acs_out=acs.get,
-                                 tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
+        _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
+                          _input.get,
+                          acs_in=my_rbc_input.put_nowait, acs_out=acs.get,
+                          tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
+
+        block = set()
+        for batch in _output:
+            decoded_batch = json.loads(batch.decode())
+            for tx in decoded_batch:
+                block.add(tx)
+
+        return list(block)

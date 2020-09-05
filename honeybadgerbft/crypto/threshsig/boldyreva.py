@@ -144,6 +144,23 @@ class TBLSPrivateKey(TBLSPublicKey):
         """ """
         return h ** self.SK
 
+    def __getstate__(self):
+        """ """
+        d = dict(self.__dict__)
+        d['SK'] = serialize(self.SK)
+        d['VK'] = serialize(self.VK)
+        d['VKs'] = list(map(serialize, self.VKs))
+        return d
+
+    def __setstate__(self, d):
+        """ """
+        self.__dict__ = d
+        self.SK = deserialize0(self.SK)
+        self.VK = deserialize2(self.VK)
+        self.VKs = list(map(deserialize2, self.VKs))
+        print("I'm being depickled")
+
+
 
 def dealer(players=10, k=5, seed=None):
     """ """

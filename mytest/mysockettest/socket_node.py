@@ -1,18 +1,13 @@
 import gevent
-import pickle
-
 from gevent import Greenlet
 from gevent import socket, monkey
 from gevent.queue import Queue
-from crypto.threshsig.boldyreva import serialize as tsig_serialize, deserialize1 as tsig_deserialize
-from crypto.threshenc.tpke import serialize as tenc_serialize, deserialize1 as tenc_deserialize
-from core.honeybadger import HoneyBadgerBFT
-
-from multiprocessing import Process
-import time, os, logging
+from honeybadgerbft.crypto.threshsig.boldyreva import serialize as tsig_serialize, deserialize1 as tsig_deserialize
+from honeybadgerbft.crypto.threshenc.tpke import serialize as tenc_serialize, deserialize1 as tenc_deserialize
+from honeybadgerbft.core.honeybadger import HoneyBadgerBFT
+import logging
 import traceback
-
-
+from mytest.mysockettest.load_key import *
 
 monkey.patch_all()
 
@@ -38,10 +33,10 @@ class Node(Greenlet):
 
     SEP = '\r\nS\r\nE\r\nP\r\n'
 
-    def __init__(self, port: int, i: int, addresses_list: list, logger=None):
+    def __init__(self, port: int, id: int, addresses_list: list, logger=None):
         self.queue = Queue()
         self.port = port
-        self.id = i
+        self.id = id
         self.addresses_list = addresses_list
         self.socks = [None for _ in self.addresses_list]
         if logger is None:
@@ -164,21 +159,6 @@ class Node(Greenlet):
         try:
             for j in range(len(self.addresses_list)):
                 self._connect(j)
-                #if self.socks[j] is None:
-                #print('node id %d:' % j)
-                #sock = socket.socket()
-                #sock.bind(("", self.port + 10 * j + 1))
-                #sock.connect(self.addresses_list[j])
-                #sock.sendall(('ping' + self.SEP).encode('utf-8'))
-                #pong = sock.recv(4096)
-                #if pong.decode('utf-8') == 'pong':
-                #    self.logger.info("node {} is ponging node {}...".format(j, self.id))
-                #    print("node {} is ponging node {}...".format(j, self.id))
-                #    self.socks[j] = sock
-                #    continue
-                #else:
-                #    self.logger.info("fails to build connect from {} to {}".format(self.id, j))
-                #    raise Exception
         except Exception as e:
             self.logger.info(str((e, traceback.print_exc())))
             print(e)
@@ -279,10 +259,11 @@ class Node(Greenlet):
 # Well defined node class to encapsulate almost everything
 class HoneyBadgerBFTNode (HoneyBadgerBFT):
 
-    def __init__(self, sid, id, B, N, f, sPK, sSK, ePK, eSK, addresses_list: list, K=3):
+    def __init__(self, sid, id, B, N, f, addresses_list: list, K=3):
         #Process.__init__(self)
         self.logger = set_logger_of_node(id)
-        self.server = Node(i=id, port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
+        self.server = Node(id=id, port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
+        sPK, ePK, sSK, eSK = load_key(id)
         HoneyBadgerBFT.__init__(self, sid, id, B, N, f, sPK, sSK, ePK, eSK, send=None, recv=None, K=K)
 
     def start_server(self):
@@ -295,8 +276,8 @@ class HoneyBadgerBFTNode (HoneyBadgerBFT):
         self.server.connect_all()
         self._send = self.server.send
         self._recv = self.server.recv
-        for r in range(self.K):
-            tx = '<[HBBFT Input %d]>' % (self.id + 10 * r)
+        for r in range(self.K * self.B):
+            tx = '<[HBBFT Input %d from %d]>' % ((self.id + 10 * r), self.id)
             HoneyBadgerBFT.submit_tx(self, tx)
 
     def hbbft_instance(self):
