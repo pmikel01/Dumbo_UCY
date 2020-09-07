@@ -25,7 +25,7 @@ def _test_honeybadger_2(N=4, f=1, seed=None):
     addresses = [(host, port_base + 200 * i) for i in range(N)]
     print(addresses)
 
-    K = 2
+    K = 10
     B = 1
     badgers = [None] * N
     processes = [None] * N

@@ -57,7 +57,7 @@ def wait_for_conf_values(*, pid, N, f, epoch, conf_sent, bin_values,
         bv_signal.clear()
         bv_signal.wait()
 
-def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
+def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
     """Binary consensus from [MMR14]. It takes an input ``vi`` and will
     finally write the decided value into ``decide`` channel.
 
@@ -83,6 +83,10 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
     # This event is triggered whenever bin_values or aux_values changes
     bv_signal = Event()
 
+    def broadcast(o):
+        for i in range(N):
+            send(i, o)
+
     def _recv():
         while True:  # not finished[pid]:
             (sender, msg) = receive()
@@ -99,7 +103,7 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, broadcast, receive):
                     # FIXME: raise or continue? For now will raise just
                     # because it appeared first, but maybe the protocol simply
                     # needs to continue.
-                    print(f'Redundant EST received by {sender}', msg)
+                    # print(f'Redundant EST received by {sender}', msg)
                     logger.warn(
                         f'Redundant EST message received by {sender}: {msg}',
                         extra={'nodeid': pid, 'epoch': msg[1]}

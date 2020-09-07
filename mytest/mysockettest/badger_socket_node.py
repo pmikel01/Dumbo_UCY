@@ -18,8 +18,8 @@ monkey.patch_all()
 
 def set_logger_of_node(id: int):
     logger = logging.getLogger("node-"+str(id))
-    # logger.setLevel(logging.DEBUG)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
+    # logger.setLevel(logging.INFO)
     formatter = logging.Formatter(
         '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
     if 'log' not in os.listdir(os.getcwd()):
@@ -49,8 +49,8 @@ class Node(Greenlet):
         Greenlet.__init__(self)
 
     def _run(self):
-        self.logger.info("node %d is running..." % self.id)
-        print("node %d is running..." % self.id)
+        self.logger.info("node %d starts to run..." % self.id)
+        #print("node %d starts to run..." % self.id)
         self._serve_forever()
 
     def _handle_request(self, sock, address):
@@ -75,7 +75,7 @@ class Node(Greenlet):
                         if data == 'ping'.encode('utf-8'):
                             sock.sendall('pong'.encode('utf-8'))
                             self.logger.info("node {} is pinging node {}...".format(self._address_to_id(address), self.id))
-                            print("node {} is pinging node {}...".format(self._address_to_id(address), self.id))
+                            #print("node {} is pinging node {}...".format(self._address_to_id(address), self.id))
                         else:
                             (j, o) = (self._address_to_id(address), pickle.loads(data))
                             assert j in range(len(self.addresses_list))
@@ -319,3 +319,46 @@ class HoneyBadgerBFTNode (HoneyBadgerBFT):
         time.sleep(2)
         gevent.sleep(2)
         self.run()
+
+
+def main(sid, i, B, N, f, addresses, K):
+    badger = HoneyBadgerBFTNode(sid, i, B, N, f, addresses, K)
+    badger.run_hbbft_instance()
+
+
+if __name__ == '__main__':
+
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--sid', metavar='sid', required=True,
+                        help='identifier of node', type=str)
+    parser.add_argument('--id', metavar='id', required=True,
+                        help='identifier of node', type=int)
+    parser.add_argument('--N', metavar='N', required=True,
+                        help='number of parties', type=int)
+    parser.add_argument('--f', metavar='f', required=True,
+                        help='number of faulties', type=int)
+    parser.add_argument('--B', metavar='B', required=True,
+                        help='size of batch', type=int)
+    parser.add_argument('--K', metavar='K', required=True,
+                        help='rounds to execute', type=int)
+    args = parser.parse_args()
+
+    # Some parameters
+    sid = args.sid
+    i = args.id
+    N = args.N
+    f = args.f
+    B = args.B
+    K = args.K
+
+    # Random generator
+    rnd = random.Random(sid)
+
+    # Nodes list
+    host = "127.0.0.1"
+    port_base = int(rnd.random() * 5 + 1) * 10000
+    addresses = [(host, port_base + 200 * i) for i in range(N)]
+    print(addresses)
+
+    main(sid, i, B, N, f, addresses, K)

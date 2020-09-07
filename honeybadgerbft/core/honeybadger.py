@@ -203,24 +203,23 @@ class HoneyBadgerBFT():
                                self.sPK, self.sSK,
                                coin_bcast, coin_recvs[j].get)
 
-            def aba_bcast(o):
+            def aba_send(k, o):
                 """Binary Byzantine Agreement multicast operation.
 
                 :param o: Value to multicast.
                 """
-
-                broadcast(('ACS_ABA', j, o))
+                send(k, ('ACS_ABA', j, o))
 
 
             aba_recvs[j] = Queue()
             gevent.spawn(binaryagreement, sid+'ABA'+str(j), pid, N, f, coin,
                          aba_inputs[j].get, aba_outputs[j].put_nowait,
-                         aba_bcast, aba_recvs[j].get)
+                         aba_recvs[j].get, aba_send)
 
             def rbc_send(k, o):
-                """Reliable broadcast operation.
-
-                :param o: Value to broadcast.
+                """Reliable send operation.
+                :param k: Node to send.
+                :param o: Value to send.
                 """
                 send(k, ('ACS_RBC', j, o))
 
