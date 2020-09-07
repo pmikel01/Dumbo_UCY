@@ -65,7 +65,7 @@ class HoneyBadgerBFT():
     :param K: a test parameter to specify break out after K rounds
     """
 
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, ePK, eSK, send, recv, K=3):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, ePK, eSK, send, recv, K=3, logger=None):
         self.sid = sid
         self.id = pid
         self.B = B
@@ -77,7 +77,7 @@ class HoneyBadgerBFT():
         self.eSK = eSK
         self._send = send
         self._recv = recv
-
+        self.logger = logger
         self.round = 0  # Current block number
         self.transaction_buffer = []
         self._per_round_recv = {}  # Buffer of incoming messages
@@ -89,7 +89,8 @@ class HoneyBadgerBFT():
 
         :param tx: Transaction to append to the buffer.
         """
-        print('submit_tx', self.id, tx)
+        #print('backlog_tx', self.id, tx)
+        if self.logger != None: self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
         self.transaction_buffer.append(tx)
 
     def run(self):
@@ -137,11 +138,13 @@ class HoneyBadgerBFT():
             send_r = _make_send(r)
             recv_r = self._per_round_recv[r].get
             new_tx = self._run_round(r, tx_to_send, send_r, recv_r)
-            print('new block at %d:' % self.id, new_tx)
+            #print('new block at %d:' % self.id, new_tx)
+            if self.logger != None: self.logger.info('New block at Node %d:' % self.id + str(new_tx))
 
             # Remove all of the new transactions from the buffer
             self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx not in new_tx]
-            print('buffer at %d:' % self.id, self.transaction_buffer)
+            #print('buffer at %d:' % self.id, self.transaction_buffer)
+            if self.logger != None: self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
 
             self.round += 1     # Increment the round
             if self.round >= self.K:
@@ -180,7 +183,8 @@ class HoneyBadgerBFT():
         rbc_outputs = [Queue(1) for _ in range(N)]
 
         my_rbc_input = Queue(1)
-        print(pid, r, 'tx_to_send:', tx_to_send)
+        #print(pid, r, 'tx_to_send:', tx_to_send)
+        if self.logger != None: self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
 
         def _setup(j):
             """Setup the sub protocols RBC, BA and common coin.

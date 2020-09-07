@@ -96,7 +96,7 @@ class TPKEPublicKey(object):
         self.__dict__ = d
         self.VK = deserialize2(self.VK)
         self.VKs = list(map(deserialize2, self.VKs))
-        print("I'm being depickled")
+        print("PK of Thld Enc is depickled")
 
     def lagrange(self, S, j):
         """ """
@@ -186,7 +186,7 @@ class TPKEPrivateKey(TPKEPublicKey):
         self.SK = deserialize0(self.SK)
         self.VK = deserialize2(self.VK)
         self.VKs = list(map(deserialize2, self.VKs))
-        print("I'm being depickled")
+        print("SK of Thld Enc is depickled")
 
     def decrypt_share(self, U, V, W):
         """ """

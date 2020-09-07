@@ -1,5 +1,5 @@
 import random
-from collections import defaultdict
+
 
 import gevent
 from gevent import monkey
@@ -33,7 +33,7 @@ def simple_router(N, maxdelay=0, seed=None):
         def _send(j, o):
             delay = rnd.random() * maxdelay
             if not i % 3:
-                delay *= 100
+                delay *= 0
             gevent.spawn_later(delay, queues[j].put_nowait, (i,o))
         return _send
 
