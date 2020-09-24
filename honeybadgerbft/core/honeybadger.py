@@ -139,7 +139,7 @@ class HoneyBadgerBFT():
             recv_r = self._per_round_recv[r].get
             new_tx = self._run_round(r, tx_to_send, send_r, recv_r)
             #print('new block at %d:' % self.id, new_tx)
-            if self.logger != None: self.logger.info('New block at Node %d:' % self.id + str(new_tx))
+            if self.logger != None: self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.round) + str(new_tx))
 
             # Remove all of the new transactions from the buffer
             self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx not in new_tx]
