@@ -83,7 +83,7 @@ class Node(Greenlet):
                                 (a, (h1, r, (h2, b, e))) = o
                                 if h1 == 'ACS_COIN' and h2 == 'COIN':
                                     o = (a, (h1, r, (h2, b, tsig_deserialize(e))))
-                                    self.logger.debug(str((self.id, (j, o))))
+                                    #self.logger.debug(str((self.id, (j, o))))
                                     #print(self.id, (j, o))
                                     gevent.spawn(self.queue.put_nowait((j, o)))
                                 else:
@@ -95,7 +95,7 @@ class Node(Greenlet):
                                         o = (h2, b, tsig_deserialize(e))
                                         #print("pickle loads group element", tsig_deserialize(e))
                                         #print("pickle loads group element type", type(tsig_deserialize(e)))
-                                        self.logger.debug(str((self.id, (j, o))))
+                                        #self.logger.debug(str((self.id, (j, o))))
                                         #print(self.id, (j, o))
                                         gevent.spawn(self.queue.put_nowait((j, o)))
                                     else:
@@ -110,7 +110,7 @@ class Node(Greenlet):
                                                 if e[i] != None:
                                                     e1[i] = tenc_deserialize(e[i])
                                             o = (a, (h1, b, e1))
-                                            self.logger.debug(str((self.id, (j, o))))
+                                            #self.logger.debug(str((self.id, (j, o))))
                                             #print(self.id, (j, o))
                                             gevent.spawn(self.queue.put_nowait((j, o)))
                                         else:
@@ -118,7 +118,7 @@ class Node(Greenlet):
                                     except ValueError as e3:
                                         #print("problem objective", o)
                                         try:
-                                            self.logger.debug(str((self.id, (j, o))))
+                                            #self.logger.debug(str((self.id, (j, o))))
                                             #print(self.id, (j, o))
                                             gevent.spawn(self.queue.put_nowait((j, o)))
                                         except Exception as e4:
@@ -313,11 +313,11 @@ class HoneyBadgerBFTNode (HoneyBadgerBFT):
 
     def run_hbbft_instance(self):
         self.start_socket_server()
-        time.sleep(2)
-        gevent.sleep(2)
+        time.sleep(3)
+        gevent.sleep(3)
         self.connect_socket_servers()
-        time.sleep(2)
-        gevent.sleep(2)
+        time.sleep(3)
+        gevent.sleep(3)
         self.run()
 
 

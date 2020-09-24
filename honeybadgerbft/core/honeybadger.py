@@ -149,7 +149,10 @@ class HoneyBadgerBFT():
             self.round += 1     # Increment the round
             if self.round >= self.K:
                 break   # Only run one round for now
-        print("node %d breaks" % self.id)
+        if self.logger != None:
+            self.logger.info("node %d breaks" % self.id)
+        else:
+            print("node %d breaks" % self.id)
 
     def _run_round(self, r, tx_to_send, send, recv):
         """Run one protocol round.

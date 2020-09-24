@@ -44,7 +44,7 @@ def validatedagreement(sid, pid, N, f, coin, aba, PK, SK, input, decide, receive
     cbc_values = defaultdict(lambda: None)
     cbc_sshares = defaultdict(dict)
     cbc_sigs = defaultdict(lambda: None)
-    is_cdelivered = [0] * N
+    is_cbcdelivered = [0] * N
 
     def broadcast(o):
         for i in range(N):
@@ -163,7 +163,7 @@ def validatedagreement(sid, pid, N, f, coin, aba, PK, SK, input, decide, receive
                 try:
                     assert PK.verify_signature(sig, h)
                     if sum(vs) >= N - f:
-                        is_cdelivered[sender] = 1
+                        is_cbcdelivered[sender] = 1
                 except AssertionError:
                     print("Signature failed!", (sid, pid, j, msg))
                     # continue
@@ -216,7 +216,7 @@ def validatedagreement(sid, pid, N, f, coin, aba, PK, SK, input, decide, receive
                 assert PK.verify_signature(sig, h)
                 cbc_sigs[sender] = sig
                 if sum(vs) >= N - f:
-                    is_cdelivered[sender] = 1
+                    is_cbcdelivered[sender] = 1
             except AssertionError:
                 print("Signature failed!", (sid, pid, j, msg))
                 # continue
@@ -233,6 +233,10 @@ def validatedagreement(sid, pid, N, f, coin, aba, PK, SK, input, decide, receive
                     _handle_vcbc_messages(j, msg)
                 elif msg[0] in {'CBC_SEND', 'CBC_READY', 'CBC_FINAL'}:
                     _handle_cbc_messages(j, msg)
+                elif msg[0] in {'BIASED_ABA_BALL'}:
+                    _, sender, vs = msg
+                    #TODO:
+                    continue
             except JustContinueException:
                 continue
 
@@ -255,7 +259,7 @@ def validatedagreement(sid, pid, N, f, coin, aba, PK, SK, input, decide, receive
 
     # wait for N - f cbc-delivered commit vectors
     while True:
-        if sum(is_cdelivered) >= N - f:
+        if sum(is_cbcdelivered) >= N - f:
             commits = cbc_values
             break
 
@@ -267,7 +271,8 @@ def validatedagreement(sid, pid, N, f, coin, aba, PK, SK, input, decide, receive
     np.random.seed(s)
     pi = np.random.permutation(N)
 
+
     r = 0
     while True:
-        #TODO:
+        if
         r += 1

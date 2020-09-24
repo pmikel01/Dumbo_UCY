@@ -1,4 +1,4 @@
-FROM python:stretch
+FROM python:3.6.9
 
 # Default cluster arguments. Override with "-e"
 #
@@ -11,7 +11,7 @@ ENV B 16
 
 RUN apt-get update && apt-get -y install bison flex libgmp-dev libmpc-dev
 
-RUN wget https://crypto.stanford.edu/pbc/files/pbc-0.5.14.tar.gz
+RUN wget --no-check-certificate https://crypto.stanford.edu/pbc/files/pbc-0.5.14.tar.gz
 RUN tar -xvf pbc-0.5.14.tar.gz
 RUN cd pbc-0.5.14 && ./configure && make && make install
 
@@ -30,4 +30,4 @@ RUN pip install -e .[dev]
 
 # Run tests by default
 # CMD sh test.sh
-# CMD ['python', '-u', '/usr/local/src/HoneyBadgerBF/mytest/my_run_honeybadger.py']
+#CMD ['python', '-u', '/usr/local/src/HoneyBadgerBF/mytest/my_run_honeybadger.py']

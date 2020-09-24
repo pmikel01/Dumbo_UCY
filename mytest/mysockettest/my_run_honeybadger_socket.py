@@ -38,13 +38,13 @@ def _test_honeybadger_2(N=4, f=1, seed=None):
         processes[i].start()
         processes[i].join()
 
-    while True:
-        pass
+    #while True:
+    #    pass
 
 
 # Test by processes
 def test_honeybadger_proc():
-    _test_honeybadger_2()
+    _test_honeybadger_2(7, 2)
 
 
 if __name__ == '__main__':
