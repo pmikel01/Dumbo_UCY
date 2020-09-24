@@ -44,7 +44,7 @@ if __name__ == '__main__':
     N = args.N
     f = args.f
 
-    assert N == 3 * f + 1
+    assert N >= 3 * f + 1
 
     trusted_key_gen(N, f)
 

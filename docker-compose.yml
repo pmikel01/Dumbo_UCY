@@ -31,11 +31,11 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/usr/local/src/HoneyBadgerBFT
-    command: python /usr/local/src/HoneyBadgerBFT/mytest/my_run_honeybadger.py
+    command: python /usr/local/src/HoneyBadgerBFT/myexperiements/my_run_honeybadger.py
   local-network-benchmark:
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
       - .:/usr/local/src/HoneyBadgerBFT
-    command: sh /usr/local/src/HoneyBadgerBFT/run_local_test.sh
+    command: /bin/sh /usr/local/src/HoneyBadgerBFT/run_local_network_test.sh 7 2 100 10

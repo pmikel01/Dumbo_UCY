@@ -1,6 +1,6 @@
 import random
 
-from mytest.mysockettest.badger_socket_node import HoneyBadgerBFTNode
+from myexperiements.mysockettest.badger_socket_node import HoneyBadgerBFTNode
 
 
 def instantiate_hbbft_node(sid, i, B, N, f, addresses, K):
