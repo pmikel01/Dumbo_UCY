@@ -1,7 +1,8 @@
-from collections import namedtuple
-from enum import Enum
 import json
 import gevent
+
+from collections import namedtuple
+from enum import Enum
 from gevent.queue import Queue
 
 from honeybadgerbft.core.commoncoin import shared_coin
@@ -196,7 +197,6 @@ class HoneyBadgerBFT():
             """
             def coin_bcast(o):
                 """Common coin multicast operation.
-
                 :param o: Value to multicast.
                 """
                 broadcast(('ACS_COIN', j, o))
@@ -208,8 +208,8 @@ class HoneyBadgerBFT():
 
             def aba_send(k, o):
                 """Binary Byzantine Agreement multicast operation.
-
-                :param o: Value to multicast.
+                :param k: Node to send.
+                :param o: Value to send.
                 """
                 send(k, ('ACS_ABA', j, o))
 

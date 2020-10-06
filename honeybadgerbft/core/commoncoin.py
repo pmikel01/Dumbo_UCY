@@ -18,7 +18,7 @@ def hash(x):
     return hashlib.sha256(x).digest()
 
 
-def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive):
+def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit = True):
     """A shared coin based on threshold signatures
 
     :param sid: a unique instance id
@@ -29,6 +29,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive):
     :param SK: ``boldyreva.TBLSPrivateKey``
     :param broadcast: broadcast channel
     :param receive: receive channel
+    :param single_bit: is the output coin a single bit or not ?
     :return: a function ``getCoin()``, where ``getCoin(r)`` blocks
     """
     assert PK.k == f+1
@@ -45,7 +46,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive):
             logger.debug(f'received i, _, r, sig: {i, _, r, sig}',
                          extra={'nodeid': pid, 'epoch': r})
             assert i in range(N)
-            assert r >= 0
+            # assert r >= 0  ### Comment this line since round r can be a string
             if i in received[r]:
                 print("redundant coin sig received", (sid, pid, i, r))
                 continue
@@ -76,10 +77,16 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive):
                 assert PK.verify_signature(sig, h)
 
                 # Compute the bit from the least bit of the hash
-                bit = hash(serialize(sig))[0] % 2
-                logger.debug(f'put bit {bit} in output queue',
+                coin = hash(serialize(sig))[0]
+                if single_bit:
+                    bit = coin % 2
+                    logger.debug(f'put coin {bit} in output queue',
                              extra={'nodeid': pid, 'epoch': r})
-                outputQueue[r].put_nowait(bit)
+                    outputQueue[r].put_nowait(bit)
+                else:
+                    logger.debug(f'put coin {coin} in output queue',
+                             extra={'nodeid': pid, 'epoch': r})
+                    outputQueue[r].put_nowait(coin)
 
     # greenletPacker(Greenlet(_recv), 'shared_coin', (pid, N, f, broadcast, receive)).start()
     Greenlet(_recv).start()

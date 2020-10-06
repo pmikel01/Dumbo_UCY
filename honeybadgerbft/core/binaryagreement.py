@@ -68,7 +68,7 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
     :param coin: a ``common coin(r)`` is called to block until receiving a bit
     :param input: ``input()`` is called to receive an input
     :param decide: ``decide(0)`` or ``output(1)`` is eventually called
-    :param broadcast: broadcast channel
+    :param send: send channel
     :param receive: receive channel
     :return: blocks until
     """

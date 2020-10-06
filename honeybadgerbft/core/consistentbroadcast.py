@@ -1,101 +1,113 @@
 from collections import defaultdict
 
 
+def consistentbroadcast(sid, pid, N, f, PK, SK, leader, input, receive, send):
+    """Consistent broadcast
+    :param str sid: session identifier
+    :param int pid: ``0 <= pid < N``
+    :param int N:  at least 3
+    :param int f: fault tolerance, ``N >= 3f + 1``
+    :param PK: ``boldyreva.TBLSPublicKey``
+    :param SK: ``boldyreva.TBLSPrivateKey``
+    :param int leader: ``0 <= leader < N``
+    :param input: if ``pid == leader``, then :func:`input()` is called
+        to wait for the input value
+    :param receive: :func:`receive()` blocks until a message is
+        received; message is of the form::
 
-def reliablebroadcast(sid, pid, N, f, PK, SK, leader, input, receive, send):
+            (i, (tag, ...)) = receive()
 
-    cbc_values = defaultdict(lambda: None)
-    cbc_sshares = defaultdict(dict)
-    cbc_sigs = defaultdict(lambda: None)
+        where ``tag`` is one of ``{"VAL", "ECHO", "READY"}``
+    :param send: sends (without blocking) a message to a designed
+        recipient ``send(i, (tag, ...))``
 
-    fromLeader = None
-    readyCounter = defaultdict(lambda: 0)
-    readySenders = set()  # Peers that have sent us ECHO messages
-    ready = defaultdict(set)
-    readySent = False
-    readySenders = set()  # Peers that have sent us READY messages
+    :return str: ``m`` after receiving ``CBC-FINAL`` message
+        from the leader
 
-    def broadcast(o):
-        for i in range(N):
-            send(i, o)
+        .. important:: **Messages**
+
+            ``CBC_VAL( m )``
+                sent from ``leader`` to each other party
+            ``CBC_ECHO( m, sigma )``
+                sent to leader after receiving ``CBC-VAL`` message
+            ``CBC_FINAL( m, Sigma )``
+                sent from ``leader`` after receiving :math:``N-f`` ``CBC_ECHO`` messages
+                where Sigma is computed over {sigma_i} in these ``CBC_ECHO`` messages
+    """
+
+    assert N >= 3*f + 1
+    assert f >= 0
+    assert 0 <= leader < N
+    assert 0 <= pid < N
+    assert PK.k == N-f
+    assert PK.l == N
+
+    EchoThreshold = N - f      # Wait for this many ECHO to send READY. (# noqa: E221)
+    digestFromLeader = None
+    cbc_echo_sshares = defaultdict(lambda: None)
+
+    #print("CBC initiated (Node: %d, Leader: %d)" % (pid, leader))
 
     if pid == leader:
-        m = input()
-        #assert isinstance(m, (str, bytes))
-        broadcast(('VCBC_SEND', pid, m))
+        # The leader sends the input to each participant
+        #print("block to wait for CBC input")
+        m = input() # block until an input is received
+        #print("CBC input received: " + m)
+        # XXX Python 3 related issue, for now let's tolerate both bytes and
+        # strings
+        # (with Python 2 it used to be: assert type(m) is str)
+        assert isinstance(m, (str, bytes, list))
+        digestFromLeader = PK.hash_message(str((sid, leader, m)))
+        #print("leader", pid, "has digest:", digestFromLeader)
+        cbc_echo_sshares[pid] = SK.sign(digestFromLeader)
+        for i in range(N):
+            if i != pid:
+                send(i, ('CBC_SEND', m))
+        #print("Leader %d broadcasts CBC SEND messages" % leader)
 
+    # Handle all consensus messages
     while True:
-        (sender, msg) = receive()
+        (j, msg) = receive()
 
-        if msg[0] == 'CBC_SEND' and fromLeader is None:
-            _, leader, vs = msg
-            if sender != leader:
-                print("CBC_SEND message from other than leader:", sender)
+        if msg[0] == 'CBC_SEND' and digestFromLeader is None:
+            # CBC_SEND message
+            (_, m) = msg
+            if j != leader:
+                print("Node %d receives a CBC_SEND message from node %d other than leader %d" % (pid, j, leader), msg)
                 continue
-            cbc_values[j] = vs
-            h = PK.hash_message(str((sid, 'CBC_SEND', sender, vs)))
-            send(j, ('CBC_READY', sender, h, SK.sign(h)))
-            if cbc_sigs[j] != None:
-                sig = cbc_sigs[j]
-                try:
-                    assert PK.verify_signature(sig, h)
-                    if sum(vs) >= N - f:
-                        is_cbcdelivered[sender] = 1
-                except AssertionError:
-                    print("Signature failed!", (sid, pid, j, msg))
-                    continue
-                    #raise JustContinueException()
+            digestFromLeader = PK.hash_message(str((sid, leader, m)))
+            print("Node", pid, "has digest:", digestFromLeader, "for leader", leader, "session id", sid, "message", m)
+            send(leader, ('CBC_ECHO', m, SK.sign(digestFromLeader)))
 
-        elif msg[0] == 'CBC_READY':
+        elif msg[0] == 'CBC_ECHO':
             # CBC_READY message
-            _, sender, h, s = msg
-            if cbc_values[sender] == None:
-                print("CBC value not broadcasted yet", (sid, pid, j, msg))
-                #raise JustContinueException()
+            if pid != leader:
+                print("I reject CBC_ECHO from %d as I am not CBC leader:", j)
                 continue
-            if j in cbc_sshares[sender]:
-                print("redundant partial sig received", (sid, pid, j, msg))
-                continue
-                #raise JustContinueException()
-            if sender != pid or h != PK.hash_message(str((sid, 'CBC_SEND', sender, cbc_values[sender]))):
-                print("Inconsistent cbc ready msg!", (sid, pid, j, msg))
-                continue
-                #raise JustContinueException()
+            (_, m, sigma) = msg
             try:
-                assert PK.verify_share(s, j, h)
+                digest = PK.hash_message(str((sid, leader, m)))
+                assert PK.verify_share(sigma, j, digest)
             except AssertionError:
-                print("Signature share failed!", (sid, pid, j, msg))
+                print("Signature share failed in CBC!", (sid, pid, j, msg))
                 continue
                 #raise JustContinueException()
-            cbc_sshares[sender][j] = s
-            if len(cbc_sshares[sender]) == f + 1:
-                sigs = dict(list(cbc_sshares[sender].items())[:f + 1])
-                sig = PK.combine_shares(sigs)
-                assert PK.verify_signature(sig, h)
-                broadcast(('CBC_FINAL', sender, h, sig))
+            cbc_echo_sshares[j] = sigma
+            if len(cbc_echo_sshares) >= EchoThreshold:
+                sigmas = dict(list(cbc_echo_sshares.items())[:N - f])
+                Sigma = PK.combine_shares(sigmas)
+                assert PK.verify_signature(Sigma, digestFromLeader)
+                for i in range(N):
+                    send(i, ('CBC_FINAL', m, Sigma))
 
         elif msg[0] == 'CBC_FINAL':
             # CBC_FINAL message
-            _, sender, h, sig = msg
-            if cbc_sigs[j] != None:
-                print("redundant full sig received", (sid, pid, j, msg))
-                continue
-                #raise JustContinueException()
-            if j != sender:
-                print("Inconsistent cbc final msg!", (sid, pid, j, msg))
-                continue
-                #raise JustContinueException()
-            if cbc_values[sender] == None:
-                continue
-                #raise JustContinueException()
+            (_, m, Sigma) = msg
             try:
-                vs = cbc_values[sender]
-                h = PK.hash_message(str((sid, 'CBC_SEND', sender, vs)))
-                assert PK.verify_signature(sig, h)
-                cbc_sigs[sender] = sig
-                if sum(vs) >= N - f:
-                    is_cbcdelivered[sender] = 1
+                digest = PK.hash_message(str((sid, leader, m)))
+                assert PK.verify_signature(Sigma, digest)
             except AssertionError:
                 print("Signature failed!", (sid, pid, j, msg))
                 continue
                 #raise JustContinueException()
+            return (m, Sigma)

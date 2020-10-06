@@ -6,11 +6,14 @@ import os
 
 def trusted_key_gen(N=4, f=1, seed=None):
 
-    # Generate threshold sig keys
-    sPK, sSKs = dealer(N, f+1, seed=seed)
-
     # Generate threshold enc keys
     ePK, eSKs = tpke.dealer(N, f+1)
+
+    # Generate threshold sig keys for coin (thld f+1)
+    sPK, sSKs = dealer(N, f+1, seed=seed)
+
+    # Generate threshold sig keys for cbc (thld n-f)
+    sPK1, sSK1s = dealer(N, N-f, seed=seed)
 
     # Save all keys to files
     if 'keys' not in os.listdir(os.getcwd()):
@@ -19,12 +22,19 @@ def trusted_key_gen(N=4, f=1, seed=None):
     with open(os.getcwd() + '/keys/' + 'sPK.key', 'wb') as fp:
         pickle.dump(sPK, fp)
 
+    with open(os.getcwd() + '/keys/' + 'sPK1.key', 'wb') as fp:
+        pickle.dump(sPK1, fp)
+
     with open(os.getcwd() + '/keys/' + 'ePK.key', 'wb') as fp:
         pickle.dump(ePK, fp)
 
     for i in range(N):
         with open(os.getcwd() + '/keys/' + 'sSK-' + str(i) + '.key', 'wb') as fp:
             pickle.dump(sSKs[i], fp)
+
+    for i in range(N):
+        with open(os.getcwd() + '/keys/' + 'sSK1-' + str(i) + '.key', 'wb') as fp:
+            pickle.dump(sSK1s[i], fp)
 
     for i in range(N):
         with open(os.getcwd() + '/keys/' + 'eSK-' + str(i) + '.key', 'wb') as fp:
@@ -47,4 +57,3 @@ if __name__ == '__main__':
     assert N >= 3 * f + 1
 
     trusted_key_gen(N, f)
-

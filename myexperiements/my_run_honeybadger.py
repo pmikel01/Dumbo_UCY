@@ -90,7 +90,7 @@ def _test_honeybadger(N=4, f=1, seed=None):
 
 
     print('start the test...')
-    time_start=time.time()
+    time_start = time.time()
 
     #gevent.killall(threads[N-f:])
     #gevent.sleep(3)
