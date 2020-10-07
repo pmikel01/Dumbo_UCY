@@ -3,8 +3,6 @@ from gevent.event import Event
 from collections import defaultdict
 import logging
 
-
-
 from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
 
 logger = logging.getLogger(__name__)
@@ -58,6 +56,7 @@ def wait_for_conf_values(*, pid, N, f, epoch, conf_sent, bin_values,
 
         bv_signal.clear()
         bv_signal.wait()
+
 
 def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
     """Binary consensus from [MMR14]. It takes an input ``vi`` and will

@@ -2,8 +2,8 @@ import random
 from gevent import monkey
 
 from multiprocessing import Process
-from myexperiements.mysockettest.socket_server import HoneyBadgerBFTNode
-from myexperiements.mysockettest.make_key_files import *
+from myexperiements.sockettest.socket_server import HoneyBadgerBFTNode
+from myexperiements.sockettest.make_key_files import *
 
 
 monkey.patch_all()

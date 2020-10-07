@@ -8,8 +8,8 @@ from honeybadgerbft.core.honeybadger import HoneyBadgerBFT
 import logging
 import traceback
 
-from myexperiements.mysockettest.load_key_files import *
-from myexperiements.mysockettest.make_random_tx import *
+from myexperiements.sockettest.load_key_files import *
+from myexperiements.sockettest.make_random_tx import *
 
 monkey.patch_all()
 

@@ -1,7 +1,7 @@
 import random
 import traceback
 
-from myexperiements.mysockettest.socket_server import HoneyBadgerBFTNode
+from myexperiements.sockettest.socket_server import HoneyBadgerBFTNode
 
 
 def instantiate_hbbft_node(sid, i, B, N, f, addresses, K):

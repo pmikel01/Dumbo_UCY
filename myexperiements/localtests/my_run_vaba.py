@@ -40,7 +40,7 @@ def simple_router(N, maxdelay=3, seed=None):
             [makeRecv(j) for j in range(N)])
 
 
-def _test_cbc(N=4, f=1, leader=None, seed=None):
+def _test_vaba(N=4, f=1, leader=None, seed=None):
     # Test everything when runs are OK
     sid = 'ISCAS'
     # Note thld siganture for CBC has a threshold different from common coin's
@@ -86,9 +86,9 @@ def _test_cbc(N=4, f=1, leader=None, seed=None):
     # assert [PK.verify_signature(t.value[1], digest) for t in threads] == [True]*N
 
 
-def test_cbc(N, f, seed):
-    _test_cbc(N=N, f=f, seed=seed)
+def _test_vaba(N, f, seed):
+    _test_vaba(N=N, f=f, seed=seed)
 
 
 if __name__ == '__main__':
-    test_cbc(19, 6, None)
+    _test_vaba(19, 6, None)
