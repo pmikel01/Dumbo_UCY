@@ -3,6 +3,8 @@ from gevent.event import Event
 from collections import defaultdict
 import logging
 
+
+
 from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
 
 logger = logging.getLogger(__name__)

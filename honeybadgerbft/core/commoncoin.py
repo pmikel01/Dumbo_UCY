@@ -1,6 +1,8 @@
 import logging
 
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize
+from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
+
+
 from collections import defaultdict
 from gevent import Greenlet
 from gevent.queue import Queue
@@ -42,7 +44,8 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit = True):
             logger.debug(f'entering loop',
                          extra={'nodeid': pid, 'epoch': '?'})
             # New shares for some round r, from sender i
-            (i, (_, r, sig)) = receive()
+            (i, (_, r, raw_sig)) = receive()
+            sig = deserialize1(raw_sig)
             logger.debug(f'received i, _, r, sig: {i, _, r, sig}',
                          extra={'nodeid': pid, 'epoch': r})
             assert i in range(N)
@@ -105,7 +108,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit = True):
         logger.debug(f"broadcast {('COIN', round, SK.sign(h))}",
                      extra={'nodeid': pid, 'epoch': round})
         #sig = SK.sign(h)
-        broadcast(('COIN', round, SK.sign(h)))
+        broadcast(('COIN', round, serialize(SK.sign(h))))
         coin = outputQueue[round].get()
         #print('debug', 'node %d gets a coin %d for round %d in %s' % (pid, coin, round, sid))
         return coin

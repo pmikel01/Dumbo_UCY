@@ -1,7 +1,23 @@
 from ..crypto.threshenc import tpke
 import os, logging, sys
+from honeybadgerbft.crypto.threshenc.tpke import serialize, deserialize1
 
 logger = logging.getLogger(__name__)
+
+
+def tpke_serialize(g):
+    if g is not None:
+        return tpke.serialize(g)
+    else:
+        return None
+
+
+def tpke_deserialize(g):
+    if g is not None:
+        return tpke.deserialize1(g)
+    else:
+        return None
+
 
 def serialize_UVW(U, V, W):
     # U: element of g1 (65 byte serialized for SS512)
@@ -82,12 +98,13 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
         # share is of the form: U_i, an element of group1
         my_shares.append(share)
 
-    tpke_bcast(my_shares)
+    tpke_bcast([tpke_serialize(share) for share in my_shares])
 
     # Receive everyone's shares
     shares_received = {}
     while len(shares_received) < f+1:
-        (j, shares) = tpke_recv()
+        (j, raw_shares) = tpke_recv()
+        shares = [tpke_deserialize(share) for share in raw_shares]
         if j in shares_received:
             # TODO: alert that we received a duplicate
             print('Received a duplicate decryption share from', j)

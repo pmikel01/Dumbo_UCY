@@ -4,8 +4,6 @@ import gevent
 from gevent import Greenlet
 from gevent import socket, monkey
 from gevent.queue import Queue
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize as tsig_serialize, deserialize1 as tsig_deserialize
-from honeybadgerbft.crypto.threshenc.tpke import serialize as tenc_serialize, deserialize1 as tenc_deserialize
 from honeybadgerbft.core.honeybadger import HoneyBadgerBFT
 import logging
 import traceback
@@ -51,7 +49,6 @@ class Node(Greenlet):
 
     def _run(self):
         self.logger.info("node %d starts to run..." % self.id)
-        #print("node %d starts to run..." % self.id)
         self._serve_forever()
 
     def _handle_request(self, sock, address):
@@ -76,70 +73,16 @@ class Node(Greenlet):
                         if data == 'ping'.encode('utf-8'):
                             sock.sendall('pong'.encode('utf-8'))
                             self.logger.info("node {} is pinging node {}...".format(self._address_to_id(address), self.id))
-                            #print("node {} is pinging node {}...".format(self._address_to_id(address), self.id))
                         else:
                             (j, o) = (self._address_to_id(address), pickle.loads(data))
                             assert j in range(len(self.addresses_list))
-                            try:
-                                (a, (h1, r, (h2, b, e))) = o
-                                if h1 == 'ACS_COIN' and h2 == 'COIN':
-                                    o = (a, (h1, r, (h2, b, tsig_deserialize(e))))
-                                    #self.logger.debug(str((self.id, (j, o))))
-                                    #print(self.id, (j, o))
-                                    gevent.spawn(self.queue.put_nowait((j, o)))
-                                else:
-                                    raise ValueError
-                            except ValueError as e1:
-                                try:
-                                    h2, b, e = o
-                                    if h2 == 'COIN':
-                                        o = (h2, b, tsig_deserialize(e))
-                                        #print("pickle loads group element", tsig_deserialize(e))
-                                        #print("pickle loads group element type", type(tsig_deserialize(e)))
-                                        #self.logger.debug(str((self.id, (j, o))))
-                                        #print(self.id, (j, o))
-                                        gevent.spawn(self.queue.put_nowait((j, o)))
-                                    else:
-                                        raise ValueError
-                                except ValueError as e2:
-                                    try:
-                                        (a, (h1, b, e)) = o
-                                        if h1 == 'TPKE':
-                                            #print("resolve problem tpke", o)
-                                            e1 = [None] * len(e)
-                                            for i in range(len(e)):
-                                                if e[i] != None:
-                                                    e1[i] = tenc_deserialize(e[i])
-                                            o = (a, (h1, b, e1))
-                                            #self.logger.debug(str((self.id, (j, o))))
-                                            #print(self.id, (j, o))
-                                            gevent.spawn(self.queue.put_nowait((j, o)))
-                                        else:
-                                            raise ValueError
-                                    except ValueError as e3:
-                                        #print("problem objective", o)
-                                        try:
-                                            #self.logger.debug(str((self.id, (j, o))))
-                                            #print(self.id, (j, o))
-                                            gevent.spawn(self.queue.put_nowait((j, o)))
-                                        except Exception as e4:
-                                            self.logger.error(str(("problem objective when receiving", o, e1, e2, e3, e4, traceback.print_exc())))
-                                            print("problem objective", o)
-                                            print(e1)
-                                            print(e2)
-                                            print(e3)
-                                            print(e4)
-                                            traceback.print_exc()
+                            gevent.spawn(self.queue.put_nowait((j, o)))
                     else:
-                        #print(data)
                         self.logger.error('syntax error messages')
-                        #print('syntax error messages')
-                        raise Exception
+                        raise ValueError
                     tmp = buf.split(self.SEP.encode('utf-8'), 1)
         except Exception as e:
             self.logger.error(str((e, traceback.print_exc())))
-            print(e)
-            traceback.print_exc()
             _finish(e)
 
     def _serve_forever(self):
@@ -149,18 +92,14 @@ class Node(Greenlet):
         while True:
             sock, address = self.server_sock.accept()
             gevent.spawn(self._handle_request, sock, address)
-            self.logger.info('node id %d accepts a new socket connection from node %d' % (self.id, self._address_to_id(address)))
-            #print('node id %d accepts a new socket connection from node %d' % (self.id, self._address_to_id(address)))
+            self.logger.info('node id %d accepts a new socket from node %d' % (self.id, self._address_to_id(address)))
             gevent.sleep(0)
-            #self._handle_request(sock, address)
 
     def _watchdog_deamon(self):
-        #self.server_sock.
         pass
 
     def connect_all(self):
         self.logger.info("node %d is fully meshing the network" % self.id)
-        #print("node %d is fully meshing the network" % self.id)
         is_sock_connected = [False] * len(self.addresses_list)
         while True:
             try:
@@ -172,8 +111,6 @@ class Node(Greenlet):
                 time.sleep(1)
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
-                #print(e)
-                #traceback.print_exc()
 
     def _connect(self, j: int):
         sock = socket.socket()
@@ -188,12 +125,10 @@ class Node(Greenlet):
             #traceback.print_exc()
         if pong.decode('utf-8') == 'pong':
             self.logger.info("node {} is ponging node {}...".format(j, self.id))
-            #print("node {} is ponging node {}...".format(j, self.id))
             self.socks[j] = sock
             return True
         else:
             self.logger.info("fails to build connect from {} to {}".format(self.id, j))
-            #raise Exception
             return False
 
     def _send(self, j: int, o: bytes):
@@ -209,52 +144,13 @@ class Node(Greenlet):
                 self.socks[j].sendall(msg)
             except Exception as e2:
                 self.logger.error(str((e1, e2, traceback.print_exc())))
-                #print(e1)
-                #print(e2)
-                #traceback.print_exc()
 
     def send(self, j: int, o: object):
         try:
             self._send(j, pickle.dumps(o))
         except Exception as e:
-            try:
-                (a, (h1, r, (h2, b, e))) = o
-                if h1 == 'ACS_COIN' and h2 == 'COIN':
-                    o = (a, (h1, r, (h2, b, tsig_serialize(e))))
-                    assert tsig_deserialize(tsig_serialize(e)) == e
-                    self._send(j, pickle.dumps(o))
-                else:
-                    raise Exception
-            except Exception as e1:
-                try:
-                    (h2, b, e) = o
-                    if h2 == 'COIN':
-                        o = (h2, b, tsig_serialize(e))
-                        assert tsig_deserialize(tsig_serialize(e)) == e
-                        self._send(j, pickle.dumps(o))
-                    else:
-                        raise Exception
-                except Exception as e2:
-                    try:
-                        (a, (h1, b, e)) = o
-                        e1 = [None] * len(e)
-                        if h1 == 'TPKE':
-                            for i in range(len(e)):
-                                if e[i] != None:
-                                    e1[i] = tenc_serialize(e[i])
-                                    #assert tenc_deserialize(e1[i]) == e[i]
-                            o = (a, (h1, b, e1))
-                            self._send(j, pickle.dumps(o))
-                        else:
-                            raise Exception
-                    except Exception as e3:
-                        self.logger.error(str(("problem objective when sending", o)))
-                        #print("problem objective when sending", o)
-                        #print(e)
-                        #print(e1)
-                        #print(e2)
-                        #print(e3)
-                        traceback.print_exc()
+            self.logger.error(str(("problem objective when sending", o)))
+            traceback.print_exc(e)
 
     def _recv(self):
         #time.sleep(0.001)
@@ -276,7 +172,7 @@ class Node(Greenlet):
         for i in range(len(self.addresses_list)):
             if address[0] != '127.0.0.1' and address[0] == self.addresses_list[i][0]:
                 return i
-        return int(address[1] % 10000 / 200)
+        return int((address[1] - 10007) / 200)
 
 
 # Well defined node class to encapsulate almost everything
@@ -292,7 +188,7 @@ class HoneyBadgerBFTNode (HoneyBadgerBFT):
     def _prepare_bootstrap(self):
         if self.mode == 'test' or 'debug':
             for r in range(self.K * self.B):
-                tx = tx_generator(250) #'<[HBBFT Input %d from %d]>' % ((self.id + 10 * r), self.id)
+                tx = tx_generator(250) # Set each dummy TX to be 250 Byte
                 HoneyBadgerBFT.submit_tx(self, tx)
         else:
             pass
@@ -308,10 +204,6 @@ class HoneyBadgerBFTNode (HoneyBadgerBFT):
         self.server.connect_all()
         self._send = self.server.send
         self._recv = self.server.recv
-
-    #def get_hbbft_instance(self):
-    #    hbbft = gevent.spawn(HoneyBadgerBFT.run(self))
-    #    return hbbft
 
     def run_hbbft_instance(self):
         self.start_socket_server()

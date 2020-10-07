@@ -2,7 +2,7 @@ import random
 from gevent import monkey
 
 from multiprocessing import Process
-from myexperiements.mysockettest.badger_socket_node import HoneyBadgerBFTNode
+from myexperiements.mysockettest.socket_server import HoneyBadgerBFTNode
 from myexperiements.mysockettest.make_key_files import *
 
 
@@ -21,7 +21,7 @@ def _test_honeybadger_2(N=4, f=1, seed=None):
 
     # Nodes list
     host = "127.0.0.1"
-    port_base = int(rnd.random() * 5 + 1) * 10000
+    port_base = 10007
     addresses = [(host, port_base + 200 * i) for i in range(N)]
     print(addresses)
 

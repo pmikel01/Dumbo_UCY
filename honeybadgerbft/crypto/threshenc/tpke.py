@@ -30,7 +30,6 @@ def serialize(g):
     # Only work in G1 here
     return decodestring(group.serialize(g)[2:])
 
-
 def deserialize0(g):
     """ """
     # Only work in G1 here

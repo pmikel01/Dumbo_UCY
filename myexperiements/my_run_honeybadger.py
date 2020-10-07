@@ -105,7 +105,7 @@ def _test_honeybadger(N=4, f=1, seed=None):
         gevent.killall(threads)
         raise
 
-    time_end=time.time()
+    time_end = time.time()
     print('complete the test...')
     print('time cost: ', time_end-time_start, 's')
 

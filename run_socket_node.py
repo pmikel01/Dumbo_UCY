@@ -1,6 +1,7 @@
 import random
+import traceback
 
-from myexperiements.mysockettest.badger_socket_node import HoneyBadgerBFTNode
+from myexperiements.mysockettest.socket_server import HoneyBadgerBFTNode
 
 
 def instantiate_hbbft_node(sid, i, B, N, f, addresses, K):
@@ -46,20 +47,20 @@ if __name__ == '__main__':
                 pid = int(params[0])
                 ip = params[1]
                 port = int(params[2])
-                print(pid, ip, port)
+                # print(pid, ip, port)
                 if pid not in range(N):
                     continue
                 addresses[pid] = (ip, port)
-        print(addresses)
+        # print(addresses)
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
         instantiate_hbbft_node(sid, i, B, N, f, addresses, K)
     except FileNotFoundError or AssertionError as e:
-        print(e)
+        #print(e)
+        traceback.print_exc()
         #print("hosts.config is not correctly read... ")
         #host = "127.0.0.1"
         #port_base = int(rnd.random() * 5 + 1) * 10000
         #addresses = [(host, port_base + 200 * i) for i in range(N)]
         #print(addresses)
-
     #instantiate_hbbft_node(sid, i, B, N, f, addresses, K)
