@@ -38,9 +38,28 @@ if __name__ == '__main__':
     rnd = random.Random(sid)
 
     # Nodes list
-    host = "127.0.0.1"
-    port_base = int(rnd.random() * 5 + 1) * 10000
-    addresses = [(host, port_base + 200 * i) for i in range(N)]
-    print(addresses)
+    addresses = [None] * N
+    try:
+        with open('hosts.config', 'r') as hosts:
+            for line in hosts:
+                params = line.split()
+                pid = int(params[0])
+                ip = params[1]
+                port = int(params[2])
+                print(pid, ip, port)
+                if pid not in range(N):
+                    continue
+                addresses[pid] = (ip, port)
+        print(addresses)
+        assert all([node is not None for node in addresses])
+        print("hosts.config is correctly read")
+        instantiate_hbbft_node(sid, i, B, N, f, addresses, K)
+    except FileNotFoundError or AssertionError as e:
+        print(e)
+        #print("hosts.config is not correctly read... ")
+        #host = "127.0.0.1"
+        #port_base = int(rnd.random() * 5 + 1) * 10000
+        #addresses = [(host, port_base + 200 * i) for i in range(N)]
+        #print(addresses)
 
-    instantiate_hbbft_node(sid, i, B, N, f, addresses, K)
+    #instantiate_hbbft_node(sid, i, B, N, f, addresses, K)

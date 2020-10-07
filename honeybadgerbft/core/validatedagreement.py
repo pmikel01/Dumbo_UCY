@@ -212,8 +212,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         time.sleep(0)
         pass
 
-    print(is_cbc_delivered)
-    print(cbc_values)
+    # print(is_cbc_delivered)
+    # print(cbc_values)
 
     """
     Run n CBC instance to commit finished CBC IDs
@@ -225,7 +225,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     assert sum(is_cbc_delivered) >= N - f
     assert all(item == 0 or 1 for item in is_cbc_delivered)
 
-    my_commit_input.put_nowait(copy.deepcopy(is_cbc_delivered)) # Deepcopy prevents input changing while executing
+    my_commit_input.put_nowait(copy.deepcopy(is_cbc_delivered))  # Deepcopy prevents input changing while executing
 
     def wait_for_commit_to_continue(leader):
         # Receive output from CBC broadcast for commitment
@@ -241,17 +241,17 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         time.sleep(0)
         pass
 
-    print(is_commit_delivered)
-    print(commit_values)
+    # print(is_commit_delivered)
+    # print(commit_values)
 
     """
     Run a Coin instance to permute the nodes' IDs to sequentially elect the leaders
     """
-    seed = permutation_coin('permutation') # Block to get a random seed to permute nodes
+    seed = permutation_coin('permutation')  # Block to get a random seed to permute nodes
     np.random.seed(seed)
     pi = np.random.permutation(N)
 
-    print(pi)
+    # print(pi)
 
     """
     Repeatedly run biased ABA instances until 1 is output 
@@ -345,4 +345,4 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         else:
             continue
     assert a is not None
-    decide(cbc_values[a][0]) # In rare cases, there could return None. We let higher level caller of VABA to deal that
+    decide(cbc_values[a][0])  # In rare cases, there could return None. We let higher level caller of VABA to deal that

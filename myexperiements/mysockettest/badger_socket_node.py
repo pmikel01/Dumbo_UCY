@@ -34,15 +34,16 @@ def set_logger_of_node(id: int):
 # Network node class: deal with socket communications
 class Node(Greenlet):
 
-    SEP = '\r\nS\r\nE\r\nP\r\n'
+    SEP = '\r\nSEP\r\n'
 
-    def __init__(self, port: int, id: int, addresses_list: list, logger=None):
+    def __init__(self, port: int, ip: str, id: int, addresses_list: list, logger=None):
         self.queue = Queue()
+        self.ip = ip
         self.port = port
         self.id = id
         self.addresses_list = addresses_list
         self.socks = [None for _ in self.addresses_list]
-        if logger == None:
+        if logger is None:
             self.logger = set_logger_of_node(self.id)
         else:
             self.logger = logger
@@ -143,8 +144,8 @@ class Node(Greenlet):
 
     def _serve_forever(self):
         self.server_sock = socket.socket()
-        self.server_sock.bind(("", self.port))
-        self.server_sock.listen(50)
+        self.server_sock.bind((self.ip, self.port))
+        self.server_sock.listen(5)
         while True:
             sock, address = self.server_sock.accept()
             gevent.spawn(self._handle_request, sock, address)
@@ -166,7 +167,9 @@ class Node(Greenlet):
                 for j in range(len(self.addresses_list)):
                     if not is_sock_connected[j]:
                         is_sock_connected[j] = self._connect(j)
-                if all(is_sock_connected): break
+                if all(is_sock_connected):
+                    break
+                time.sleep(1)
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
                 #print(e)
@@ -174,13 +177,12 @@ class Node(Greenlet):
 
     def _connect(self, j: int):
         sock = socket.socket()
-        sock.bind(("", self.port + 10 * j + 1))
+        sock.bind((self.ip, self.port + j + 1))
         try:
             sock.connect(self.addresses_list[j])
             sock.sendall(('ping' + self.SEP).encode('utf-8'))
             pong = sock.recv(4096)
         except Exception as e1:
-            #print("Not connected...")
             return False
             #print(e1)
             #traceback.print_exc()
@@ -283,7 +285,7 @@ class HoneyBadgerBFTNode (HoneyBadgerBFT):
     def __init__(self, sid, id, B, N, f, addresses_list: list, K=3, mode='debug', tx_buffer=None):
         self.sPK, self.ePK, self.sSK, self.eSK = load_key(id)
         HoneyBadgerBFT.__init__(self, sid, id, B, N, f, self.sPK, self.sSK, self.ePK, self.eSK, send=None, recv=None, K=K, logger=set_logger_of_node(id))
-        self.server = Node(id=id, port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
+        self.server = Node(id=id, ip=addresses_list[id][0], port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
         self.mode = mode
         self._prepare_bootstrap()
 

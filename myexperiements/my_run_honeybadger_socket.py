@@ -3,7 +3,7 @@ from gevent import monkey
 
 from multiprocessing import Process
 from myexperiements.mysockettest.badger_socket_node import HoneyBadgerBFTNode
-from myexperiements.mysockettest.trusted_key_gen import *
+from myexperiements.mysockettest.make_key_files import *
 
 
 monkey.patch_all()
