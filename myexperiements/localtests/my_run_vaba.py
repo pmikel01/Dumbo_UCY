@@ -86,9 +86,9 @@ def _test_vaba(N=4, f=1, leader=None, seed=None):
     # assert [PK.verify_signature(t.value[1], digest) for t in threads] == [True]*N
 
 
-def _test_vaba(N, f, seed):
+def test_vaba(N, f, seed):
     _test_vaba(N=N, f=f, seed=seed)
 
 
 if __name__ == '__main__':
-    _test_vaba(19, 6, None)
+    test_vaba(19, 6, None)
