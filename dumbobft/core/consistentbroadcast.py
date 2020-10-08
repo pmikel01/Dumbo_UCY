@@ -57,7 +57,7 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
         # XXX Python 3 related issue, for now let's tolerate both bytes and
         # strings
         # (with Python 2 it used to be: assert type(m) is str)
-        assert isinstance(m, (str, bytes, tuple))
+        assert isinstance(m, (str, bytes, list, tuple))
         digestFromLeader = PK1.hash_message(str((sid, leader, m)))
         # print("leader", pid, "has digest:", digestFromLeader)
         cbc_echo_sshares[pid] = SK1.sign(digestFromLeader)

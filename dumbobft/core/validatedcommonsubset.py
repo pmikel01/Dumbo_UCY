@@ -119,4 +119,4 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
         time.sleep(0)
 
     vaba_input.put_nowait(tuple(values))
-    decide(vaba_output.get())
+    decide(list(vaba_output.get()))

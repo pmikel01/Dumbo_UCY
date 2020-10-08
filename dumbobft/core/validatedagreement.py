@@ -33,7 +33,7 @@ MessageReceiverQueues = namedtuple(
 
 def msg_send_receiver(recv_func, recv_queues):
     x = recv_func()
-    print(x)
+    # print(x)
     sender, (tag, j, msg) = x
     # sender, (tag, j, msg) = recv_func()
     if tag not in MessageTag.__members__:
@@ -204,8 +204,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         if predicate(msg):
             cbc_values[leader] = (msg, Sigma)  # May block
             is_cbc_delivered[leader] = 1
-            print("Leader %d finishes CBC for node %d" % (leader, pid) )
-            print(is_cbc_delivered)
+            # print("Leader %d finishes CBC for node %d" % (leader, pid) )
+            # print(is_cbc_delivered)
 
     cbc_out_threads = [gevent.spawn(wait_for_cbc_to_continue, node) for node in range(N)]
 
@@ -213,8 +213,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         time.sleep(0)
         pass
 
-    print(is_cbc_delivered)
-    print(cbc_values)
+    # print(is_cbc_delivered)
+    # print(cbc_values)
 
     """
     Run n CBC instance to commit finished CBC IDs

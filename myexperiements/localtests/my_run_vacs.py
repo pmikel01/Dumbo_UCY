@@ -90,4 +90,4 @@ def test_vacs(N, f, seed):
 
 
 if __name__ == '__main__':
-    test_vacs(4, 1, None)
+    test_vacs(31, 10, None)
