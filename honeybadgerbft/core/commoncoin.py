@@ -20,7 +20,7 @@ def hash(x):
     return hashlib.sha256(x).digest()
 
 
-def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit = True):
+def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
     """A shared coin based on threshold signatures
 
     :param sid: a unique instance id

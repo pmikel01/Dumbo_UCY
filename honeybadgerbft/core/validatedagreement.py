@@ -33,7 +33,7 @@ MessageReceiverQueues = namedtuple(
 
 def msg_send_receiver(recv_func, recv_queues):
     sender, (tag, j, msg) = recv_func()
-    print(sender, (tag, j, msg))
+    # print(sender, (tag, j, msg))
     if tag not in MessageTag.__members__:
         # TODO Post python 3 port: Add exception chaining.
         # See https://www.python.org/dev/peps/pep-3134/
@@ -43,12 +43,10 @@ def msg_send_receiver(recv_func, recv_queues):
 
     if tag not in {MessageTag.VABA_COIN.value}:
         recv_queue = recv_queue[j]
-
-    #if (tag == MessageTag.VABA_COIN.value)
     try:
         recv_queue.put_nowait((sender, msg))
     except AttributeError as e:
-        print((sender, msg))
+        # print((sender, msg))
         traceback.print_exc(e)
 
 
@@ -60,7 +58,7 @@ def msg_send_receiver_loop(recv_func, recv_queues):
 logger = logging.getLogger(__name__)
 
 
-def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, predicate = lambda x: True):
+def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, predicate=lambda x: True):
     """Multi-valued Byzantine consensus. It takes an input ``vi`` and will
     finally writes the decided value into ``decide`` channel.
 
@@ -177,7 +175,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
             send(k, ('VABA_COIN', 'leader_election', o))
 
     permutation_coin = shared_coin(sid + 'COIN', pid, N, f,
-                               PK, SK, coin_bcast, coin_recv.get)
+                               PK, SK, coin_bcast, coin_recv.get, False)
+    # False means to get a coin of 256 bits instead of a single bit
 
     """ 
     """
@@ -203,8 +202,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         if predicate(vl):
             cbc_values[leader] = vl # May block
             is_cbc_delivered[leader] = 1
-            #print("Leader %d finishes CBC for node %d" % (leader, pid) )
-            #print(is_cbc_delivered)
+            # print("Leader %d finishes CBC for node %d" % (leader, pid) )
+            # print(is_cbc_delivered)
 
     cbc_out_threads = [gevent.spawn(wait_for_cbc_to_continue, node) for node in range(N)]
 
@@ -233,7 +232,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         if (sum(cl[0]) >= N - f) and all(item == 0 or 1 for item in cl[0]): #
             commit_values[leader] = cl # May block
             is_commit_delivered[leader] = 1
-            #print("Leader %d finishes COMMIT_CBC for node %d" % (leader, pid) )
+            # print("Leader %d finishes COMMIT_CBC for node %d" % (leader, pid) )
 
     commit_out_threads = [gevent.spawn(wait_for_commit_to_continue, node) for node in range(N)]
 
@@ -247,7 +246,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     """
     Run a Coin instance to permute the nodes' IDs to sequentially elect the leaders
     """
-    seed = permutation_coin('permutation')  # Block to get a random seed to permute nodes
+    seed = permutation_coin('permutation')  # Block to get a random seed to permute the list of nodes
+    # print(seed)
     np.random.seed(seed)
     pi = np.random.permutation(N)
 
@@ -298,7 +298,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
             time.sleep(0)
             pass
 
-        print(votes[r])
+        # print(votes[r])
         aba_r_input = 0
         for vote in votes[r]:
             _, (_, bit, cbc_value) = vote
@@ -325,7 +325,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
                 :param k: Node to send.
                 :param o: Value to send.
                 """
-                #print("node", pid, "is sending", o, "to node", k, "with the leader", j)
+                # print("node", pid, "is sending", o, "to node", k, "with the leader", j)
                 send(k, ('VABA_ABA', rnd, o))
             return aba_send
 
@@ -336,11 +336,11 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         # aba.get is a blocking function to get aba output
         aba_inputs[r].put_nowait(aba_r_input)
         aba_r = aba_outputs[r].get()
-        print("Round", r, "ABA outputs", aba_r)
+        # print("Round", r, "ABA outputs", aba_r)
 
         if aba_r == 1:
             msg_stop_signal.set()
-            print(msg_stop_signal.is_set())
+            # print(msg_stop_signal.is_set())
             break
         else:
             continue

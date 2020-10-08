@@ -3,44 +3,8 @@ import random
 import gevent
 from gevent import Greenlet
 from gevent.queue import Queue
-from pytest import mark, raises
+from honeybadgerbft.core.reliablebroadcast import reliablebroadcast
 
-from honeybadgerbft.core.reliablebroadcast import reliablebroadcast, encode, decode
-from honeybadgerbft.core.reliablebroadcast import hash, merkleTree, getMerkleBranch, merkleVerify
-
-
-### Merkle tree
-def test_merkletree0():
-    mt = merkleTree(["hello"])
-    assert mt == [b'', hash("hello")]
-
-def test_merkletree1():
-    strList = ["hello","hi","ok"]
-    mt = merkleTree(strList)
-    roothash = mt[1]
-    assert len(mt) == 8
-    for i in range(3):
-        val = strList[i]
-        branch = getMerkleBranch(i, mt)
-        assert merkleVerify(3, val, roothash, branch, i)
-
-### Zfec
-def test_zfec1():
-    K = 3
-    N = 10
-    m = b"hello this is a test string"
-    stripes = encode(K, N, m)
-    assert decode(K, N, stripes) == m
-    _s = list(stripes)
-    # Test by setting some to None
-    _s[0] = _s[1] = _s[4] = _s[5] = _s[6] = None
-    assert decode(K, N, _s) == m
-    _s[3] = _s[7] = None
-    assert decode(K, N, _s) == m
-    _s[8] = None
-    with raises(ValueError) as exc:
-        decode(K, N, _s)
-    assert exc.value.args[0] == 'Too few to recover'
 
 ### RBC
 def simple_router(N, maxdelay=0.01, seed=None):

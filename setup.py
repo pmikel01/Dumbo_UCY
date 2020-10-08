@@ -28,6 +28,7 @@ install_requires = [
     'zfec>=1.5.0',
     'gipc',
     'coincurve',
+    'numpy',
 ]
 
 tests_require = [
