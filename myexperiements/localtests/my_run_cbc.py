@@ -4,7 +4,7 @@ import gevent
 from gevent import Greenlet
 from gevent.queue import Queue
 
-from honeybadgerbft.core.consistentbroadcast import consistentbroadcast
+from dumbobft.core.consistentbroadcast import consistentbroadcast
 from honeybadgerbft.crypto.threshsig.boldyreva import dealer
 
 

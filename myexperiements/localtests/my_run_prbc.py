@@ -5,7 +5,7 @@ from gevent import Greenlet
 from gevent.queue import Queue
 
 from honeybadgerbft.crypto.threshsig.boldyreva import dealer
-from honeybadgerbft.core.provablereliablebroadcast import provablereliablebroadcast, encode, merkleTree
+from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast, encode, merkleTree
 
 
 ### RBC

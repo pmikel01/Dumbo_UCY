@@ -12,7 +12,7 @@ from collections import defaultdict
 from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.core.binaryagreement import binaryagreement
-from honeybadgerbft.core.consistentbroadcast import consistentbroadcast
+from dumbobft.core.consistentbroadcast import consistentbroadcast
 from honeybadgerbft.exceptions import UnknownTagError
 from gevent.monkey import patch_all
 patch_all()

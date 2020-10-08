@@ -3,9 +3,8 @@ import random
 import gevent
 from gevent import Greenlet
 from gevent.queue import Queue
-from pytest import mark, raises
 
-from honeybadgerbft.core.validatedagreement import validatedagreement
+from dumbobft.core.validatedagreement import validatedagreement
 from honeybadgerbft.crypto.threshsig.boldyreva import dealer
 
 from gevent.monkey import patch_all
