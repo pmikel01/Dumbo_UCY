@@ -85,7 +85,7 @@ class TBLSPublicKey(object):
         self.__dict__ = d
         self.VK = deserialize2(self.VK)
         self.VKs = list(map(deserialize2, self.VKs))
-        print("PK of Thld Sig is depickled")
+        # print("PK of Thld Sig is depickled")
 
     def lagrange(self, S, j):
         """ """
@@ -158,7 +158,7 @@ class TBLSPrivateKey(TBLSPublicKey):
         self.SK = deserialize0(self.SK)
         self.VK = deserialize2(self.VK)
         self.VKs = list(map(deserialize2, self.VKs))
-        print("SK of Thld Sig is depickled")
+        # print("SK of Thld Sig is depickled")
 
 
 

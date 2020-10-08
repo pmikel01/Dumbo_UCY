@@ -38,7 +38,7 @@ def commonsubset(pid, N, f, rbc_out, aba_in, aba_out):
     def _recv_aba(j):
         # Receive output from binary agreement
         aba_values[j] = aba_out[j]()  # May block
-        #print (pid, j, 'ENTERING CRITICAL', sum(aba_values))
+        # print (pid, j, 'ENTERING CRITICAL', sum(aba_values))
         if sum(aba_values) >= N - f:
             # Provide 0 to all other aba
             for k in range(N):
@@ -46,12 +46,12 @@ def commonsubset(pid, N, f, rbc_out, aba_in, aba_out):
                     aba_inputted[k] = True
                     aba_in[k](0)
                     print(pid, 'ABA[%d] input -> %d' % (k, 0))
-        #print (pid, j, 'EXITING CRITICAL')
+        # print (pid, j, 'EXITING CRITICAL')
 
     # Wait for all binary agreements
     a_threads = [gevent.spawn(_recv_aba, j) for j in range(N)]
     gevent.joinall(a_threads)
-    #print ("aba values of node %d" % pid, aba_values)
+    # print ("aba values of node %d" % pid, aba_values)
 
     assert sum(aba_values) >= N - f  # Must have at least N-f committed
 
@@ -64,5 +64,5 @@ def commonsubset(pid, N, f, rbc_out, aba_in, aba_out):
             r_threads[j].kill()
             rbc_values[j] = None
 
-    #print('rbc values', rbc_values)
+    # print('rbc values', rbc_values)
     return tuple(rbc_values)

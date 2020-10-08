@@ -20,7 +20,7 @@ patch_all()
 
 class MessageTag(Enum):
     VABA_COIN = 'VABA_COIN'             # Queue()
-    VABA_COMMIT = 'VABA_COMMIT'         # Queue()
+    VABA_COMMIT = 'VABA_COMMIT'         # [Queue()] * N
     VABA_VOTE = 'VABA_VOTE'             # [Queue()] * Number_of_ABA_Iterations
     VABA_ABA_COIN = 'VABA_ABA_COIN'     # [Queue()] * Number_of_ABA_Iterations
     VABA_CBC = 'VABA_CBC'               # [Queue()] * N
@@ -32,8 +32,10 @@ MessageReceiverQueues = namedtuple(
 
 
 def msg_send_receiver(recv_func, recv_queues):
-    sender, (tag, j, msg) = recv_func()
-    # print(sender, (tag, j, msg))
+    x = recv_func()
+    print(x)
+    sender, (tag, j, msg) = x
+    # sender, (tag, j, msg) = recv_func()
     if tag not in MessageTag.__members__:
         # TODO Post python 3 port: Add exception chaining.
         # See https://www.python.org/dev/peps/pep-3134/
@@ -93,7 +95,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     """
 
     my_cbc_input = Queue(1)
-    my_commit_input  = Queue(1)
+    my_commit_input = Queue(1)
     aba_inputs = [Queue(1) for _ in range(Number_of_ABA_Iterations)]  # noqa: E221
 
     aba_recvs = [Queue() for _ in range(Number_of_ABA_Iterations)]
@@ -198,12 +200,12 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
     def wait_for_cbc_to_continue(leader):
         # Receive output from CBC broadcast for input values
-        vl = cbc_outputs[leader]()
-        if predicate(vl):
-            cbc_values[leader] = vl # May block
+        msg, Sigma = cbc_outputs[leader]()
+        if predicate(msg):
+            cbc_values[leader] = (msg, Sigma)  # May block
             is_cbc_delivered[leader] = 1
-            # print("Leader %d finishes CBC for node %d" % (leader, pid) )
-            # print(is_cbc_delivered)
+            print("Leader %d finishes CBC for node %d" % (leader, pid) )
+            print(is_cbc_delivered)
 
     cbc_out_threads = [gevent.spawn(wait_for_cbc_to_continue, node) for node in range(N)]
 
@@ -211,8 +213,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         time.sleep(0)
         pass
 
-    # print(is_cbc_delivered)
-    # print(cbc_values)
+    print(is_cbc_delivered)
+    print(cbc_values)
 
     """
     Run n CBC instance to commit finished CBC IDs
@@ -267,9 +269,9 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
             for r in range(Number_of_ABA_Iterations):
                 if not vote_recvs[r].empty():
                     sender, msg = vote_recvs[r].get()
-                    a, flag_bit, o = msg
-                    if (pi[r] == a) and (flag_bit == 0 or flag_bit == 1):
-                        if flag_bit == 1:
+                    a, ballot_bit, o = msg
+                    if (pi[r] == a) and (ballot_bit == 0 or ballot_bit == 1):
+                        if ballot_bit == 1:
                             (m, Sig) = o
                             digestFromLeader = PK1.hash_message(str((sid + 'CBC' + str(a), a, m)))
                             PK1.verify_signature(Sig, digestFromLeader)
