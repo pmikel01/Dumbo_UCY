@@ -1,25 +1,16 @@
 import random
-
-
+import time
 import gevent
 from gevent import monkey
-from gevent.event import Event
 from gevent.queue import Queue
-
-import honeybadgerbft.core.honeybadger
-#reload(honeybadgerbft.core.honeybadger)
 from honeybadgerbft.core.honeybadger import HoneyBadgerBFT
 from honeybadgerbft.crypto.threshsig.boldyreva import dealer
 from honeybadgerbft.crypto.threshenc import tpke
-from honeybadgerbft.core.honeybadger import BroadcastTag
 
-import time
-
-from multiprocessing import Process
 
 monkey.patch_all()
 
-def simple_router(N, maxdelay=0, seed=None):
+def simple_router(N, maxdelay=0.01, seed=None):
     """Builds a set of connected channels, with random delay
 
     :return: (receives, sends)

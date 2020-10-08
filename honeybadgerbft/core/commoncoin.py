@@ -4,9 +4,10 @@ from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 
 
 from collections import defaultdict
-from gevent import Greenlet
+from gevent import Greenlet, monkey
 from gevent.queue import Queue
 import hashlib
+monkey.patch_all()
 
 logger = logging.getLogger(__name__)
 

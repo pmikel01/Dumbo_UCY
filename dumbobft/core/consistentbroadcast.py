@@ -1,5 +1,11 @@
 from collections import defaultdict
+
+import gevent
+from gevent import time, monkey
+
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
+
+monkey.patch_all()
 
 
 def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
@@ -35,6 +41,7 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
                 sent from ``leader`` after receiving :math:``N-f`` ``CBC_ECHO`` messages
                 where Sigma is computed over {sigma_i} in these ``CBC_ECHO`` messages
     """
+    gevent.sleep(0)
 
     assert N >= 3*f + 1
     assert f >= 0
@@ -68,8 +75,8 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
 
     # Handle all consensus messages
     while True:
+        gevent.sleep(0)
         (j, msg) = receive()
-
         if msg[0] == 'CBC_SEND' and digestFromLeader is None:
             # CBC_SEND message
             (_, m) = msg
@@ -79,7 +86,7 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
             digestFromLeader = PK1.hash_message(str((sid, leader, m)))
             # print("Node", pid, "has digest:", digestFromLeader, "for leader", leader, "session id", sid, "message", m)
             send(leader, ('CBC_ECHO', m, serialize(SK1.sign(digestFromLeader))))
-
+            print(pid, pid, pid, pid)
         elif msg[0] == 'CBC_ECHO':
             # CBC_READY message
             if pid != leader:
@@ -100,7 +107,6 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
                 # assert PK.verify_signature(Sigma, digestFromLeader)
                 for i in range(N):
                     send(i, ('CBC_FINAL', m, serialize(Sigma)))
-
         elif msg[0] == 'CBC_FINAL':
             # CBC_FINAL message
             (_, m, raw_Sigma) = msg

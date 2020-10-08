@@ -1,8 +1,14 @@
 # coding=utf-8
 from collections import defaultdict
+
+import gevent
+from gevent import monkey
+
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.reliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
+
+monkey.patch_all()
 
 
 def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
@@ -49,6 +55,8 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
         the leader.
 
     """
+    gevent.sleep(0)
+
     assert N >= 3*f + 1
     assert f >= 0
     assert 0 <= leader < N
@@ -109,6 +117,7 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
         return m
 
     while True:  # main receive loop
+        gevent.sleep(0)
         sender, msg = receive()
         if msg[0] == 'VAL' and fromLeader is None:
             # Validation
@@ -182,4 +191,6 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
             if len(ready[roothash]) >= OutputThreshold and echoCounter[roothash] >= K:
                 sigmas = dict(list(readySigShares.items())[:N - f])
                 Sigma = PK1.combine_shares(sigmas)
-                return decode_output(roothash), Sigma
+                value = decode_output(roothash)
+                proof = (sid, roothash, Sigma)
+                return value, proof

@@ -4,6 +4,9 @@ import zfec
 import hashlib
 import math
 
+from gevent import monkey
+
+monkey.patch_all()
 
 #####################
 #    zfec encode    #

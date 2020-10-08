@@ -3,11 +3,12 @@ from collections import namedtuple
 from enum import Enum
 
 import gevent
-from gevent import time
+from gevent import time, monkey
 
 from dumbobft.core.validatedagreement import validatedagreement
 from gevent.queue import Queue
 from honeybadgerbft.exceptions import UnknownTagError
+monkey.patch_all()
 
 
 class MessageTag(Enum):
@@ -19,7 +20,7 @@ MessageReceiverQueues = namedtuple(
     'MessageReceiverQueues', ('VACS_VAL', 'VACS_VABA'))
 
 
-def msg_send_receiver(recv_func, recv_queues):
+def handle_vacs_messages(recv_func, recv_queues):
     sender, (tag, msg) = recv_func()
     # print(sender, (tag, msg))
     if tag not in MessageTag.__members__:
@@ -30,17 +31,39 @@ def msg_send_receiver(recv_func, recv_queues):
     recv_queue = recv_queues._asdict()[tag]
     try:
         recv_queue.put_nowait((sender, msg))
+        print(444444444444)
     except AttributeError as e:
         # print((sender, msg))
         traceback.print_exc(e)
 
 
-def msg_send_receiver_loop(recv_func, recv_queues):
+def vacs_msg_receiving_loop(recv_func, recv_queues):
     while True:
-        msg_send_receiver(recv_func, recv_queues)
+        gevent.sleep(0)
+        handle_vacs_messages(recv_func, recv_queues)
 
 
 def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, predicate=lambda i, v: True):
+    """Validated vector consensus. It takes an input ``vi`` and will
+    finally writes the decided value (i.e., a vector of different nodes' vi) into ``decide`` channel.
+    Each vi is validated by a predicate function predicate(i, vi)
+
+    :param sid: session identifier
+    :param pid: my id number
+    :param N: the number of parties
+    :param f: the number of byzantine parties
+    :param PK: ``boldyreva.TBLSPublicKey`` with threshold f+1
+    :param SK: ``boldyreva.TBLSPrivateKey`` with threshold f+1
+    :param PK1: ``boldyreva.TBLSPublicKey`` with threshold n-f
+    :param SK1: ``boldyreva.TBLSPrivateKey`` with threshold n-f
+    :param input: ``input()`` is called to receive an input
+    :param decide: ``decide()`` is eventually called
+    :param receive: receive channel
+    :param send: send channel
+    :param predicate: ``predicate(i, v)`` represents the externally validated condition where i represent proposer's pid
+    """
+
+    gevent.sleep(0)
 
     assert PK.k == f + 1
     assert PK.l == N
@@ -67,7 +90,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
         VACS_VAL=value_recv,
         VACS_VABA=vaba_recv,
     )
-    gevent.spawn(msg_send_receiver_loop, receive, recv_queues)
+    gevent.spawn(vacs_msg_receiving_loop, receive, recv_queues)
 
     def make_vaba_send():  # this make will automatically deep copy the enclosed send func
         def vaba_send(k, o):
@@ -104,6 +127,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
     v = input()
     assert predicate(pid, v)
+    print(pid, "VACS starts ...", v)
 
     for k in range(N):
         send(k, ('VACS_VAL', v))
@@ -111,12 +135,16 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
     values = [None] * N
     while True:
         j, vj = value_recv.get()
+        print(pid, predicate(j, vj))
         if predicate(j, vj):
             valueSenders.add(j)
             values[j] = vj
+            print(vj)
             if len(valueSenders) >= N - f:
                 break
-        time.sleep(0)
 
-    vaba_input.put_nowait(tuple(values))
+    print(5555555555)
+
+    vaba_input.put(tuple(values))
     decide(list(vaba_output.get()))
+    vaba.kill()

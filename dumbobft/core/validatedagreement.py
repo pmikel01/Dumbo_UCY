@@ -5,7 +5,7 @@ import gevent
 import numpy as np
 
 from collections import namedtuple
-from gevent import time
+from gevent import time, monkey
 from gevent.event import Event
 from enum import Enum
 from collections import defaultdict
@@ -14,8 +14,8 @@ from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.core.binaryagreement import binaryagreement
 from dumbobft.core.consistentbroadcast import consistentbroadcast
 from honeybadgerbft.exceptions import UnknownTagError
-from gevent.monkey import patch_all
-patch_all()
+
+monkey.patch_all()
 
 
 class MessageTag(Enum):
@@ -31,7 +31,7 @@ MessageReceiverQueues = namedtuple(
     'MessageReceiverQueues', ('VABA_COIN', 'VABA_COMMIT', 'VABA_VOTE', 'VABA_ABA_COIN', 'VABA_CBC', 'VABA_ABA'))
 
 
-def msg_send_receiver(recv_func, recv_queues):
+def handle_vaba_messages(recv_func, recv_queues):
     x = recv_func()
     # print(x)
     sender, (tag, j, msg) = x
@@ -47,14 +47,16 @@ def msg_send_receiver(recv_func, recv_queues):
         recv_queue = recv_queue[j]
     try:
         recv_queue.put_nowait((sender, msg))
+        print(333333333333)
     except AttributeError as e:
         # print((sender, msg))
         traceback.print_exc(e)
 
 
-def msg_send_receiver_loop(recv_func, recv_queues):
+def vaba_msg_receiving_loop(recv_func, recv_queues):
     while True:
-        msg_send_receiver(recv_func, recv_queues)
+        gevent.sleep(0)
+        handle_vaba_messages(recv_func, recv_queues)
 
 
 logger = logging.getLogger(__name__)
@@ -78,6 +80,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     :param send: send channel
     :param predicate: ``predicate()`` represents the externally validated condition
     """
+    gevent.sleep(0)
 
     assert PK.k == f+1
     assert PK.l == N
@@ -120,7 +123,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         VABA_CBC=cbc_recvs,
         VABA_ABA=aba_recvs,
     )
-    gevent.spawn(msg_send_receiver_loop, receive, recv_queues)
+    gevent.spawn(vaba_msg_receiving_loop, receive, recv_queues)
 
     """ 
     Setup the sub protocols Input Broadcast CBCs"""
@@ -201,6 +204,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     def wait_for_cbc_to_continue(leader):
         # Receive output from CBC broadcast for input values
         msg, Sigma = cbc_outputs[leader]()
+        print(predicate(msg))
         if predicate(msg):
             cbc_values[leader] = (msg, Sigma)  # May block
             is_cbc_delivered[leader] = 1
@@ -210,7 +214,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     cbc_out_threads = [gevent.spawn(wait_for_cbc_to_continue, node) for node in range(N)]
 
     while sum(is_cbc_delivered) < N - f:
-        time.sleep(0)
+        gevent.sleep(0)
         pass
 
     # print(is_cbc_delivered)
@@ -239,7 +243,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     commit_out_threads = [gevent.spawn(wait_for_commit_to_continue, node) for node in range(N)]
 
     while sum(is_commit_delivered) < N - f:
-        time.sleep(0)
+        gevent.sleep(0)
         pass
 
     # print(is_commit_delivered)
@@ -265,7 +269,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
     def handle_vote_messages():
         while not msg_stop_signal.ready():
-            time.sleep(0)
+            gevent.sleep(0)
             for r in range(Number_of_ABA_Iterations):
                 if not vote_recvs[r].empty():
                     sender, msg = vote_recvs[r].get()
@@ -297,7 +301,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
             send(j, ('VABA_VOTE', r, vote))
 
         while len(votes[r]) < N - f:
-            time.sleep(0)
+            gevent.sleep(0)
             pass
 
         # print(votes[r])

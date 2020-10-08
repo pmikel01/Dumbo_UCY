@@ -1,29 +1,32 @@
 import json
+import traceback
+
 import gevent
 
 from collections import namedtuple
 from enum import Enum
 
-from gevent import time
+from gevent import monkey, time
 from gevent.queue import Queue
 
-from honeybadgerbft.core.commoncoin import shared_coin
-from honeybadgerbft.core.binaryagreement import binaryagreement
-from honeybadgerbft.core.reliablebroadcast import reliablebroadcast
-from honeybadgerbft.core.commonsubset import commonsubset
+from dumbobft.core.dumbocommonsubset import dumbocommonsubset
+from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
+from dumbobft.core.validatedcommonsubset import validatedcommonsubset
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
+
 from honeybadgerbft.exceptions import UnknownTagError
+
+monkey.patch_all()
 
 
 class BroadcastTag(Enum):
-    ACS_COIN = 'ACS_COIN'
-    ACS_RBC = 'ACS_RBC'
-    ACS_ABA = 'ACS_ABA'
+    ACS_PRBC = 'ACS_PRBC'
+    ACS_VACS = 'ACS_VACS'
     TPKE = 'TPKE'
 
 
 BroadcastReceiverQueues = namedtuple(
-    'BroadcastReceiverQueues', ('ACS_COIN', 'ACS_ABA', 'ACS_RBC', 'TPKE'))
+    'BroadcastReceiverQueues', ('ACS_PRBC', 'ACS_VACS', 'TPKE'))
 
 
 def broadcast_receiver(recv_func, recv_queues):
@@ -35,19 +38,23 @@ def broadcast_receiver(recv_func, recv_queues):
             tag, BroadcastTag.__members__.keys()))
     recv_queue = recv_queues._asdict()[tag]
 
-    if tag != BroadcastTag.TPKE.value:
+    if tag == BroadcastTag.ACS_PRBC.value:
         recv_queue = recv_queue[j]
-
-    recv_queue.put_nowait((sender, msg))
+    try:
+        print(sender, (tag, j, msg))
+        recv_queue.put_nowait((sender, msg))
+    except AttributeError as e:
+        print("error", sender, (tag, j, msg))
+        traceback.print_exc(e)
 
 
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
+        gevent.sleep(0)
         broadcast_receiver(recv_func, recv_queues)
-        time.sleep(0)
 
 
-class HoneyBadgerBFT():
+class Dumbo():
     r"""HoneyBadgerBFT object used to run the protocol.
 
     :param str sid: The base name of the common coin that will be used to
@@ -69,7 +76,7 @@ class HoneyBadgerBFT():
     :param K: a test parameter to specify break out after K rounds
     """
 
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, ePK, eSK, send, recv, K=3, logger=None):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, ePK, eSK, send, recv, K=3, logger=None):
         self.sid = sid
         self.id = pid
         self.B = B
@@ -77,6 +84,8 @@ class HoneyBadgerBFT():
         self.f = f
         self.sPK = sPK
         self.sSK = sSK
+        self.sPK1 = sPK1
+        self.sSK1 = sSK1
         self.ePK = ePK
         self.eSK = eSK
         self._send = send
@@ -103,6 +112,7 @@ class HoneyBadgerBFT():
         def _recv():
             """Receive messages."""
             while True:
+                gevent.sleep(0)
                 (sender, (r, msg)) = self._recv()
 
                 # Maintain an *unbounded* recv queue for each epoch
@@ -114,7 +124,7 @@ class HoneyBadgerBFT():
                 _recv = self._per_round_recv[r]
                 if _recv is not None:
                     # Queue it
-                    _recv.put((sender, msg))
+                    _recv.put_nowait((sender, msg))
 
                 # else:
                 # We have already closed this
@@ -158,6 +168,8 @@ class HoneyBadgerBFT():
         else:
             print("node %d breaks" % self.id)
 
+
+
     def _run_round(self, r, tx_to_send, send, recv):
         """Run one protocol round.
 
@@ -172,90 +184,78 @@ class HoneyBadgerBFT():
         N = self.N
         f = self.f
 
-        def broadcast(o):
-            """Multicast the given input ``o``.
 
-            :param o: Input to multicast.
-            """
-            for j in range(N):
-                send(j, o)
 
-        # Launch ACS, ABA, instances
-        coin_recvs = [None] * N
-        aba_recvs  = [None] * N  # noqa: E221
-        rbc_recvs  = [None] * N  # noqa: E221
+        # Launch  PABA
+        prbc_recvs = [Queue() for _ in range(N)]  # noqa: E221
+        vacs_recv = Queue()
 
-        aba_inputs  = [Queue(1) for _ in range(N)]  # noqa: E221
-        aba_outputs = [Queue(1) for _ in range(N)]
-        rbc_outputs = [Queue(1) for _ in range(N)]
+        my_prbc_input = Queue(1)
+        vacs_input = Queue(1)
 
-        my_rbc_input = Queue(1)
+        prbc_outputs = [Queue(1) for _ in range(N)]
+        vacs_output = Queue(1)
+
+
         #print(pid, r, 'tx_to_send:', tx_to_send)
         if self.logger != None: self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
 
-        def _setup(j):
+        def _setup_prbc(j):
             """Setup the sub protocols RBC, BA and common coin.
 
             :param int j: Node index for which the setup is being done.
             """
-            def coin_bcast(o):
-                """Common coin multicast operation.
-                :param o: Value to multicast.
-                """
-                broadcast(('ACS_COIN', j, o))
 
-            coin_recvs[j] = Queue()
-            coin = shared_coin(sid + 'COIN' + str(j), pid, N, f,
-                               self.sPK, self.sSK,
-                               coin_bcast, coin_recvs[j].get)
-
-            def aba_send(k, o):
-                """Binary Byzantine Agreement multicast operation.
-                :param k: Node to send.
-                :param o: Value to send.
-                """
-                send(k, ('ACS_ABA', j, o))
-
-
-            aba_recvs[j] = Queue()
-            gevent.spawn(binaryagreement, sid+'ABA'+str(j), pid, N, f, coin,
-                         aba_inputs[j].get, aba_outputs[j].put_nowait,
-                         aba_recvs[j].get, aba_send)
-
-            def rbc_send(k, o):
+            def prbc_send(k, o):
                 """Reliable send operation.
                 :param k: Node to send.
                 :param o: Value to send.
                 """
-                send(k, ('ACS_RBC', j, o))
+                send(k, ('ACS_PRBC', j, o))
 
             # Only leader gets input
-            rbc_input = my_rbc_input.get if j == pid else None
-            rbc_recvs[j] = Queue()
-            rbc = gevent.spawn(reliablebroadcast, sid+'RBC'+str(j), pid, N, f, j,
-                               rbc_input, rbc_recvs[j].get, rbc_send)
-            rbc_outputs[j] = rbc.get  # block for output from rbc
+            prbc_input = my_prbc_input.get if j == pid else None
+            prbc = gevent.spawn(provablereliablebroadcast, sid+'RBC'+str(j), pid, N, f, self.sPK1, self.sSK1, j,
+                               prbc_input, prbc_recvs[j].get, prbc_send)
+            prbc_outputs[j] = prbc.get  # block for output from rbc
+
+        def _setup_vacs():
+
+            def vacs_send(k, o):
+                """Threshold encryption broadcast."""
+                send(k, ('ACS_VACS', '', o))
+
+            gevent.spawn(validatedcommonsubset, sid+'ABA', pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
+                         vacs_input.get, vacs_output.put_nowait,
+                         vacs_recv.get, vacs_send)
 
         # N instances of ABA, RBC
         for j in range(N):
-            _setup(j)
+            _setup_prbc(j)
+            _setup_vacs()
 
         # One instance of TPKE
         def tpke_bcast(o):
             """Threshold encryption broadcast."""
-            broadcast(('TPKE', '', o))
+            def broadcast(o):
+                """Multicast the given input ``o``.
+
+                :param o: Input to multicast.
+                """
+                for j in range(N):
+                    send(j, o)
+            broadcast(('TPKE', 0, o))
 
         tpke_recv = Queue()
 
-        # One instance of ACS
-        acs = gevent.spawn(commonsubset, pid, N, f, rbc_outputs,
-                           [_.put_nowait for _ in aba_inputs],
-                           [_.get for _ in aba_outputs])
+        # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
+        dumboacs = gevent.spawn(dumbocommonsubset, pid, N, f, prbc_outputs,
+                           vacs_input.put_nowait,
+                           vacs_output.get)
 
         recv_queues = BroadcastReceiverQueues(
-            ACS_COIN=coin_recvs,
-            ACS_ABA=aba_recvs,
-            ACS_RBC=rbc_recvs,
+            ACS_PRBC=prbc_recvs,
+            ACS_VACS=vacs_recv,
             TPKE=tpke_recv,
         )
         gevent.spawn(broadcast_receiver_loop, recv, recv_queues)
@@ -265,7 +265,7 @@ class HoneyBadgerBFT():
 
         _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
                           _input.get,
-                          acs_in=my_rbc_input.put_nowait, acs_out=acs.get,
+                          acs_in=my_prbc_input.put_nowait, acs_out=dumboacs.get,
                           tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
 
         block = set()

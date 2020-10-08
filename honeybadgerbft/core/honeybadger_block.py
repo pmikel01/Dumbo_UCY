@@ -1,6 +1,8 @@
+from gevent import monkey
+
 from ..crypto.threshenc import tpke
-import os, logging, sys
-from honeybadgerbft.crypto.threshenc.tpke import serialize, deserialize1
+import os, logging
+monkey.patch_all()
 
 logger = logging.getLogger(__name__)
 

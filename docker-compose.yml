@@ -31,7 +31,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/usr/local/src/HoneyBadgerBFT
-    command: python /usr/local/src/HoneyBadgerBFT/myexperiements/my_run_honeybadger.py
+    command: python /usr/local/src/HoneyBadgerBFT/myexperiements/my_run_hbbft.py
   local-network-benchmark:
     build:
       context: .

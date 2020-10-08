@@ -2,7 +2,7 @@ import logging
 import gevent
 import random
 
-from gevent import Greenlet
+from gevent import monkey
 from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.core.binaryagreement import binaryagreement
@@ -11,6 +11,7 @@ from honeybadgerbft.crypto.threshsig.boldyreva import dealer
 import time
 import queue
 
+monkey.patch_all()
 
 logger = logging.getLogger(__name__)
 
