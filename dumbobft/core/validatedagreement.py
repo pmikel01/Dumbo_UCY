@@ -47,7 +47,6 @@ def handle_vaba_messages(recv_func, recv_queues):
         recv_queue = recv_queue[j]
     try:
         recv_queue.put_nowait((sender, msg))
-        print(333333333333)
     except AttributeError as e:
         # print((sender, msg))
         traceback.print_exc(e)
@@ -55,7 +54,6 @@ def handle_vaba_messages(recv_func, recv_queues):
 
 def vaba_msg_receiving_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0)
         handle_vaba_messages(recv_func, recv_queues)
 
 
@@ -80,14 +78,11 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     :param send: send channel
     :param predicate: ``predicate()`` represents the externally validated condition
     """
-    gevent.sleep(0)
 
     assert PK.k == f+1
     assert PK.l == N
     assert PK1.k == N-f
     assert PK1.l == N
-
-    Number_of_ABA_Iterations = min(15, N)
 
     """ 
     """
@@ -99,18 +94,19 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
     my_cbc_input = Queue(1)
     my_commit_input = Queue(1)
-    aba_inputs = [Queue(1) for _ in range(Number_of_ABA_Iterations)]  # noqa: E221
+    aba_inputs = defaultdict(lambda: Queue(1))
 
-    aba_recvs = [Queue() for _ in range(Number_of_ABA_Iterations)]
-    aba_coin_recvs = [Queue() for _ in range(Number_of_ABA_Iterations)]
-    vote_recvs = [Queue() for _ in range(Number_of_ABA_Iterations)]
+    aba_recvs = defaultdict(lambda: Queue())
+    aba_coin_recvs = defaultdict(lambda: Queue())
+    vote_recvs = defaultdict(lambda: Queue())
+
     cbc_recvs = [Queue() for _ in range(N)]
     coin_recv = Queue()
     commit_recvs = [Queue() for _ in range(N)]
 
     cbc_outputs = [Queue(1) for _ in range(N)]
     commit_outputs = [Queue(1) for _ in range(N)]
-    aba_outputs = [Queue(1) for _ in range(Number_of_ABA_Iterations)]
+    aba_outputs = defaultdict(lambda: Queue(1))
 
     is_cbc_delivered = [0] * N
     is_commit_delivered = [0] * N
@@ -201,21 +197,23 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     assert predicate(v)
     my_cbc_input.put_nowait(v)
 
+    wait_cbc_signal = Event()
+    wait_cbc_signal.clear()
+
     def wait_for_cbc_to_continue(leader):
         # Receive output from CBC broadcast for input values
         msg, Sigma = cbc_outputs[leader]()
-        print(predicate(msg))
         if predicate(msg):
             cbc_values[leader] = (msg, Sigma)  # May block
             is_cbc_delivered[leader] = 1
+            if sum(is_cbc_delivered) >= N - f:
+                wait_cbc_signal.set()
             # print("Leader %d finishes CBC for node %d" % (leader, pid) )
             # print(is_cbc_delivered)
 
     cbc_out_threads = [gevent.spawn(wait_for_cbc_to_continue, node) for node in range(N)]
 
-    while sum(is_cbc_delivered) < N - f:
-        gevent.sleep(0)
-        pass
+    wait_cbc_signal.wait()
 
     # print(is_cbc_delivered)
     # print(cbc_values)
@@ -232,19 +230,22 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
     my_commit_input.put_nowait(copy.deepcopy(is_cbc_delivered))  # Deepcopy prevents input changing while executing
 
+    wait_commit_signal = Event()
+    wait_commit_signal.clear()
+
     def wait_for_commit_to_continue(leader):
         # Receive output from CBC broadcast for commitment
         cl = commit_outputs[leader]()
         if (sum(cl[0]) >= N - f) and all(item == 0 or 1 for item in cl[0]): #
             commit_values[leader] = cl # May block
             is_commit_delivered[leader] = 1
+            if sum(is_commit_delivered) >= N - f:
+                wait_commit_signal.set()
             # print("Leader %d finishes COMMIT_CBC for node %d" % (leader, pid) )
 
     commit_out_threads = [gevent.spawn(wait_for_commit_to_continue, node) for node in range(N)]
 
-    while sum(is_commit_delivered) < N - f:
-        gevent.sleep(0)
-        pass
+    wait_commit_signal.wait()
 
     # print(is_commit_delivered)
     # print(commit_values)
@@ -263,33 +264,11 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     Repeatedly run biased ABA instances until 1 is output 
     """
 
-    votes = defaultdict(set)
-    msg_stop_signal = Event()
-    msg_stop_signal.clear()
-
-    def handle_vote_messages():
-        while not msg_stop_signal.ready():
-            gevent.sleep(0)
-            for r in range(Number_of_ABA_Iterations):
-                if not vote_recvs[r].empty():
-                    sender, msg = vote_recvs[r].get()
-                    a, ballot_bit, o = msg
-                    if (pi[r] == a) and (ballot_bit == 0 or ballot_bit == 1):
-                        if ballot_bit == 1:
-                            (m, Sig) = o
-                            digestFromLeader = PK1.hash_message(str((sid + 'CBC' + str(a), a, m)))
-                            PK1.verify_signature(Sig, digestFromLeader)
-                            votes[r].add((sender, msg))
-                        else:
-                            if commit_values[sender] is not None and commit_values[sender][a] == 0:
-                                votes[r].add((sender, msg))
-                if len(votes[r]) >= N - f:
-                    break
-
-    vote_msg_thread = gevent.spawn(handle_vote_messages)
-
+    r = 0
     a = None
-    for r in range(Number_of_ABA_Iterations):
+    votes = defaultdict(set)
+
+    while True:
 
         a = pi[r]
         if is_cbc_delivered[a] == 1:
@@ -300,9 +279,23 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         for j in range(N):
             send(j, ('VABA_VOTE', r, vote))
 
-        while len(votes[r]) < N - f:
-            gevent.sleep(0)
-            pass
+        ballot_counter = 0
+        while True:
+            sender, msg = vote_recvs[r].get()
+            a, ballot_bit, o = msg
+            if (pi[r] == a) and (ballot_bit == 0 or ballot_bit == 1):
+                if ballot_bit == 1:
+                    (m, Sig) = o
+                    digestFromLeader = PK1.hash_message(str((sid + 'CBC' + str(a), a, m)))
+                    PK1.verify_signature(Sig, digestFromLeader)
+                    votes[r].add((sender, msg))
+                    ballot_counter += 1
+                else:
+                    if commit_values[sender] is not None and commit_values[sender][a] == 0:
+                        votes[r].add((sender, msg))
+                        ballot_counter += 1
+            if len(votes[r]) >= N - f:
+                break
 
         # print(votes[r])
         aba_r_input = 0
@@ -345,10 +338,9 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         # print("Round", r, "ABA outputs", aba_r)
 
         if aba_r == 1:
-            msg_stop_signal.set()
-            # print(msg_stop_signal.is_set())
             break
-        else:
-            continue
+
+        r += 1
+
     assert a is not None
     decide(cbc_values[a][0])  # In rare cases, there could return None. We let higher level caller of VABA to deal that

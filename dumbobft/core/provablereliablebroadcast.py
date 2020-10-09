@@ -55,8 +55,6 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
         the leader.
 
     """
-    gevent.sleep(0)
-
     assert N >= 3*f + 1
     assert f >= 0
     assert 0 <= leader < N
@@ -117,7 +115,6 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
         return m
 
     while True:  # main receive loop
-        gevent.sleep(0)
         sender, msg = receive()
         if msg[0] == 'VAL' and fromLeader is None:
             # Validation

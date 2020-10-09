@@ -31,7 +31,6 @@ def handle_vacs_messages(recv_func, recv_queues):
     recv_queue = recv_queues._asdict()[tag]
     try:
         recv_queue.put_nowait((sender, msg))
-        print(444444444444)
     except AttributeError as e:
         # print((sender, msg))
         traceback.print_exc(e)
@@ -39,7 +38,6 @@ def handle_vacs_messages(recv_func, recv_queues):
 
 def vacs_msg_receiving_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0)
         handle_vacs_messages(recv_func, recv_queues)
 
 
@@ -62,8 +60,6 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
     :param send: send channel
     :param predicate: ``predicate(i, v)`` represents the externally validated condition where i represent proposer's pid
     """
-
-    gevent.sleep(0)
 
     assert PK.k == f + 1
     assert PK.l == N
@@ -127,7 +123,6 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
     v = input()
     assert predicate(pid, v)
-    print(pid, "VACS starts ...", v)
 
     for k in range(N):
         send(k, ('VACS_VAL', v))
@@ -135,15 +130,11 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
     values = [None] * N
     while True:
         j, vj = value_recv.get()
-        print(pid, predicate(j, vj))
         if predicate(j, vj):
             valueSenders.add(j)
             values[j] = vj
-            print(vj)
             if len(valueSenders) >= N - f:
                 break
-
-    print(5555555555)
 
     vaba_input.put(tuple(values))
     decide(list(vaba_output.get()))

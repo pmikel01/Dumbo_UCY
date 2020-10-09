@@ -11,7 +11,7 @@ from gevent.monkey import patch_all
 patch_all()
 
 # CBC
-def simple_router(N, maxdelay=3, seed=None):
+def simple_router(N, maxdelay=0.001, seed=None):
     """Builds a set of connected channels, with random delay
     @return (receives, sends)
     """

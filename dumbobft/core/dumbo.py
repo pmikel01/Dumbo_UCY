@@ -41,7 +41,6 @@ def broadcast_receiver(recv_func, recv_queues):
     if tag == BroadcastTag.ACS_PRBC.value:
         recv_queue = recv_queue[j]
     try:
-        print(sender, (tag, j, msg))
         recv_queue.put_nowait((sender, msg))
     except AttributeError as e:
         print("error", sender, (tag, j, msg))
@@ -50,7 +49,6 @@ def broadcast_receiver(recv_func, recv_queues):
 
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0)
         broadcast_receiver(recv_func, recv_queues)
 
 
@@ -112,7 +110,6 @@ class Dumbo():
         def _recv():
             """Receive messages."""
             while True:
-                gevent.sleep(0)
                 (sender, (r, msg)) = self._recv()
 
                 # Maintain an *unbounded* recv queue for each epoch
@@ -152,12 +149,12 @@ class Dumbo():
             send_r = _make_send(r)
             recv_r = self._per_round_recv[r].get
             new_tx = self._run_round(r, tx_to_send, send_r, recv_r)
-            #print('new block at %d:' % self.id, new_tx)
+            print('new block at %d:' % self.id, new_tx)
             if self.logger != None: self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.round) + str(new_tx))
 
             # Remove all of the new transactions from the buffer
             self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx not in new_tx]
-            #print('buffer at %d:' % self.id, self.transaction_buffer)
+            print('buffer at %d:' % self.id, self.transaction_buffer)
             if self.logger != None: self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
 
             self.round += 1     # Increment the round
@@ -184,10 +181,7 @@ class Dumbo():
         N = self.N
         f = self.f
 
-
-
-        # Launch  PABA
-        prbc_recvs = [Queue() for _ in range(N)]  # noqa: E221
+        prbc_recvs = [Queue() for _ in range(N)]
         vacs_recv = Queue()
 
         my_prbc_input = Queue(1)
@@ -232,7 +226,7 @@ class Dumbo():
         # N instances of ABA, RBC
         for j in range(N):
             _setup_prbc(j)
-            _setup_vacs()
+        _setup_vacs()
 
         # One instance of TPKE
         def tpke_bcast(o):

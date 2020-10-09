@@ -41,7 +41,6 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
                 sent from ``leader`` after receiving :math:``N-f`` ``CBC_ECHO`` messages
                 where Sigma is computed over {sigma_i} in these ``CBC_ECHO`` messages
     """
-    gevent.sleep(0)
 
     assert N >= 3*f + 1
     assert f >= 0
@@ -75,7 +74,6 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
 
     # Handle all consensus messages
     while True:
-        gevent.sleep(0)
         (j, msg) = receive()
         if msg[0] == 'CBC_SEND' and digestFromLeader is None:
             # CBC_SEND message
@@ -86,7 +84,6 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
             digestFromLeader = PK1.hash_message(str((sid, leader, m)))
             # print("Node", pid, "has digest:", digestFromLeader, "for leader", leader, "session id", sid, "message", m)
             send(leader, ('CBC_ECHO', m, serialize(SK1.sign(digestFromLeader))))
-            print(pid, pid, pid, pid)
         elif msg[0] == 'CBC_ECHO':
             # CBC_READY message
             if pid != leader:

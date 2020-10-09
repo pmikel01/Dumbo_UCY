@@ -4,7 +4,6 @@ import gevent
 from collections import namedtuple
 from enum import Enum
 
-from gevent import time
 from gevent.queue import Queue
 
 from honeybadgerbft.core.commoncoin import shared_coin
@@ -44,7 +43,6 @@ def broadcast_receiver(recv_func, recv_queues):
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
         broadcast_receiver(recv_func, recv_queues)
-        time.sleep(0)
 
 
 class HoneyBadgerBFT():
