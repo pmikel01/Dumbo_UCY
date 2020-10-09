@@ -219,9 +219,19 @@ class Dumbo():
                 """Threshold encryption broadcast."""
                 send(k, ('ACS_VACS', '', o))
 
+            def vacs_predicate(j, vj):
+                try:
+                    sid, roothash, Sigma = vj
+                    digest = self.sPK1.hash_message(str((sid, j, roothash)))
+                    assert self.sPK1.verify_signature(Sigma, digest)
+                    return True
+                except AssertionError:
+                    print("Failed to verify proof for RBC")
+                    return False
+
             gevent.spawn(validatedcommonsubset, sid+'ABA', pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
                          vacs_input.get, vacs_output.put_nowait,
-                         vacs_recv.get, vacs_send)
+                         vacs_recv.get, vacs_send, vacs_predicate)
 
         # N instances of ABA, RBC
         for j in range(N):
@@ -269,3 +279,5 @@ class Dumbo():
                 block.add(tx)
 
         return list(block)
+
+    # TODO： make help and callhelp threads to handle the rare cases when vacs (vaba) returns None
