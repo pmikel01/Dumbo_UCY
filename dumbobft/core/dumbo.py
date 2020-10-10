@@ -1,19 +1,15 @@
 import json
 import traceback
-
 import gevent
-
 from collections import namedtuple
 from enum import Enum
-
-from gevent import monkey, time
+from gevent import monkey
 from gevent.queue import Queue
-
 from dumbobft.core.dumbocommonsubset import dumbocommonsubset
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
-from honeybadgerbft.core.honeybadger_block import honeybadger_block
 
+from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
 
 monkey.patch_all()
@@ -209,7 +205,7 @@ class Dumbo():
 
             # Only leader gets input
             prbc_input = my_prbc_input.get if j == pid else None
-            prbc = gevent.spawn(provablereliablebroadcast, sid+'RBC'+str(j), pid, N, f, self.sPK1, self.sSK1, j,
+            prbc = gevent.spawn(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK1, self.sSK1, j,
                                prbc_input, prbc_recvs[j].get, prbc_send)
             prbc_outputs[j] = prbc.get  # block for output from rbc
 
@@ -229,13 +225,14 @@ class Dumbo():
                     print("Failed to verify proof for RBC")
                     return False
 
-            gevent.spawn(validatedcommonsubset, sid+'ABA', pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
+            gevent.spawn(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
                          vacs_input.get, vacs_output.put_nowait,
                          vacs_recv.get, vacs_send, vacs_predicate)
 
         # N instances of ABA, RBC
         for j in range(N):
             _setup_prbc(j)
+
         _setup_vacs()
 
         # One instance of TPKE

@@ -1,13 +1,12 @@
 import traceback
+import gevent
 from collections import namedtuple
 from enum import Enum
-
-import gevent
-from gevent import time, monkey
-
+from gevent import monkey
 from dumbobft.core.validatedagreement import validatedagreement
 from gevent.queue import Queue
 from honeybadgerbft.exceptions import UnknownTagError
+
 monkey.patch_all()
 
 

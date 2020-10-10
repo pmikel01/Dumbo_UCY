@@ -5,7 +5,7 @@ import gevent
 import numpy as np
 
 from collections import namedtuple
-from gevent import time, monkey
+from gevent import monkey
 from gevent.event import Event
 from enum import Enum
 from collections import defaultdict

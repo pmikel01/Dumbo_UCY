@@ -1,8 +1,5 @@
 from collections import defaultdict
-
-import gevent
-from gevent import time, monkey
-
+from gevent import monkey
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 
 monkey.patch_all()

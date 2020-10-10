@@ -1,5 +1,5 @@
 import gevent
-from gevent import time, monkey
+from gevent import monkey
 
 monkey.patch_all()
 

@@ -1,9 +1,6 @@
 # coding=utf-8
 from collections import defaultdict
-
-import gevent
 from gevent import monkey
-
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.reliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
