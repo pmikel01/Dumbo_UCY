@@ -1,19 +1,19 @@
 import logging
 import gevent
 import random
-
+import time
+import queue
 from gevent import monkey
 from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.core.binaryagreement import binaryagreement
 from honeybadgerbft.crypto.threshsig.boldyreva import dealer
 
-import time
-import queue
 
 monkey.patch_all()
 
 logger = logging.getLogger(__name__)
+
 
 def simple_aba_router(N, maxdelay=0.001, seed=None):
     """Builds a set of connected channels, with random delay

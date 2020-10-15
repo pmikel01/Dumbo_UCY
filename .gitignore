@@ -26,3 +26,7 @@ docs/_build/
 *.log
 
 *.out
+
+syntactictests/
+
+honeybadgerbft/crypto/cryptoprimitivetests/crypto_primitive_tests.py

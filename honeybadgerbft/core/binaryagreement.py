@@ -176,16 +176,16 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
     _thread_recv = gevent.spawn(_recv)
 
     # Block waiting for the input
-    #print(pid, sid, 'PRE-ENTERING CRITICAL')
+    # print(pid, sid, 'PRE-ENTERING CRITICAL')
     vi = input()
-    #print(pid, sid, 'PRE-EXITING CRITICAL', vi)
+    # print(pid, sid, 'PRE-EXITING CRITICAL', vi)
 
     assert vi in (0, 1)
     est = vi
     r = 0
     already_decided = None
     while True:  # Unbounded number of rounds
-        #print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
+        # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
 
         logger.info(f'Starting with est = {est}',
                     extra={'nodeid': pid, 'epoch': r})
@@ -194,14 +194,14 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
             est_sent[r][est] = True
             broadcast(('EST', r, est))
 
-        #print("debug", pid, sid, 'WAITS BIN VAL at epoch', r)
+        # print("debug", pid, sid, 'WAITS BIN VAL at epoch', r)
 
         while len(bin_values[r]) == 0:
             # Block until a value is output
             bv_signal.clear()
             bv_signal.wait()
 
-        #print("debug", pid, sid, 'GETS BIN VAL at epoch', r)
+        # print("debug", pid, sid, 'GETS BIN VAL at epoch', r)
 
         w = next(iter(bin_values[r]))  # take an element
         logger.debug(f"broadcast {('AUX', r, w)}",
@@ -262,10 +262,9 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
         )
         # Block until receiving the common coin value
 
-        #print("debug", pid, sid, 'fetchs a coin at epoch', r)
+        # print("debug", pid, sid, 'fetchs a coin at epoch', r)
         s = coin(r)
-        #print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
-
+        # print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
 
         logger.info(f'Received coin with value = {s}',
                     extra={'nodeid': pid, 'epoch': r})
@@ -277,9 +276,9 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
                 already_decided=already_decided,
                 decide=decide,
             )
-            #print('debug then decided:', already_decided, '%s' % sid)
+            # print('debug then decided:', already_decided, '%s' % sid)
         except AbandonedNodeError:
-            #print('debug node %d quits %s' % (pid, sid))
+            # print('debug node %d quits %s' % (pid, sid))
             # print('[sid:%s] [pid:%d] QUITTING in round %d' % (sid,pid,r)))
             logger.debug(f'QUIT!',
                          extra={'nodeid': pid, 'epoch': r})
@@ -287,7 +286,6 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
             return
 
         r += 1
-
 
 
 def set_new_estimate(*, values, s, already_decided, decide):

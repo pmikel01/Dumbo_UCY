@@ -1,14 +1,12 @@
 import random
-
 import gevent
 from gevent import Greenlet
 from gevent.queue import Queue
-
+from gevent import monkey
 from dumbobft.core.validatedagreement import validatedagreement
 from honeybadgerbft.crypto.threshsig.boldyreva import dealer
 
-from gevent.monkey import patch_all
-patch_all()
+monkey.patch_all()
 
 # CBC
 def simple_router(N, maxdelay=0.001, seed=None):

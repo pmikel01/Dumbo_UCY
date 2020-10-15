@@ -1,7 +1,7 @@
 import argparse
 import pickle
 
-from coincurve import PrivateKey
+from coincurve import PrivateKey, PublicKey
 
 
 def generate_key_list(players):

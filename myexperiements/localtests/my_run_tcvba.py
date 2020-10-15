@@ -1,15 +1,14 @@
 import logging
 import gevent
 import random
-
+import time
+import queue
 from gevent import monkey
 from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
 from mulebft.core.twovalueagreement import twovalueagreement
 from honeybadgerbft.crypto.threshsig.boldyreva import dealer
 
-import time
-import queue
 
 monkey.patch_all()
 

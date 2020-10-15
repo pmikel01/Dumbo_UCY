@@ -37,7 +37,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
     conf_sent = defaultdict(lambda: defaultdict(lambda: False))
     int_values = defaultdict(set)
 
-    # This event is triggered whenever bin_values or aux_values changes
+    # This event is triggered whenever int_values or aux_values changes
     bv_signal = Event()
 
     def broadcast(o):
@@ -64,7 +64,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
                         f'Redundant EST message received by {sender}: {msg}',
                         extra={'nodeid': pid, 'epoch': msg[1]}
                     )
-                    #raise RedundantMessageError(
+                    # raise RedundantMessageError(
                     #    'Redundant EST received {}'.format(msg))
                     continue
 
@@ -138,16 +138,16 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
     _thread_recv = gevent.spawn(_recv)
 
     # Block waiting for the input
-    #print(pid, sid, 'PRE-ENTERING CRITICAL')
+    # print(pid, sid, 'PRE-ENTERING CRITICAL')
     vi = input()
-    #print(pid, sid, 'PRE-EXITING CRITICAL', vi)
+    # print(pid, sid, 'PRE-EXITING CRITICAL', vi)
 
     assert type(vi) is int
     est = vi
     r = 0
     already_decided = None
     while True:  # Unbounded number of rounds
-        #print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
+        # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
 
         logger.info(f'Starting with est = {est}',
                     extra={'nodeid': pid, 'epoch': r})
@@ -156,14 +156,14 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
             est_sent[r][est] = True
             broadcast(('EST', r, est))
 
-        #print("debug", pid, sid, 'WAITS BIN VAL at epoch', r)
+        # print("debug", pid, sid, 'WAITS BIN VAL at epoch', r)
 
         while len(int_values[r]) == 0:
             # Block until a value is output
             bv_signal.clear()
             bv_signal.wait()
 
-        #print("debug", pid, sid, 'GETS BIN VAL at epoch', r)
+        # print("debug", pid, sid, 'GETS BIN VAL at epoch', r)
 
         w = next(iter(int_values[r]))  # take an element
         logger.debug(f"broadcast {('AUX', r, w)}",
@@ -227,10 +227,9 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
         )
         # Block until receiving the common coin value
 
-        #print("debug", pid, sid, 'fetchs a coin at epoch', r)
+        # print("debug", pid, sid, 'fetchs a coin at epoch', r)
         s = coin(r)
-        #print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
-
+        # print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
 
         logger.info(f'Received coin with value = {s}',
                     extra={'nodeid': pid, 'epoch': r})
@@ -242,9 +241,9 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
                 already_decided=already_decided,
                 decide=decide,
             )
-            #print('debug then decided:', already_decided, '%s' % sid)
+            # print('debug then decided:', already_decided, '%s' % sid)
         except AbandonedNodeError:
-            #print('debug node %d quits %s' % (pid, sid))
+            # print('debug node %d quits %s' % (pid, sid))
             # print('[sid:%s] [pid:%d] QUITTING in round %d' % (sid,pid,r)))
             logger.debug(f'QUIT!',
                          extra={'nodeid': pid, 'epoch': r})
@@ -257,6 +256,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
 def set_new_estimate(*, values, s, already_decided, decide):
     if len(values) == 1:
         v = next(iter(values))
+        assert type(v) is int
         if (v % 2) == s:
             if already_decided is None:
                 already_decided = v
@@ -272,8 +272,10 @@ def set_new_estimate(*, values, s, already_decided, decide):
                 raise AbandonedNodeError
         est = v
     else:
-        assert len(values) == 2
         vals = tuple(values)
+        assert len(values) == 2
+        assert type(vals[0]) is int
+        assert type(vals[1]) is int
         assert abs(vals[0] - vals[1]) == 1
         if vals[0] % 2 == s:
             est = vals[0]

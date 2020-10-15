@@ -1,5 +1,6 @@
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from honeybadgerbft.crypto.threshsig import boldyreva
 from honeybadgerbft.crypto.threshenc import tpke
+from honeybadgerbft.crypto.ecdsa import ecdsa
 import pickle
 import os
 
@@ -10,10 +11,13 @@ def trusted_key_gen(N=4, f=1, seed=None):
     ePK, eSKs = tpke.dealer(N, f+1)
 
     # Generate threshold sig keys for coin (thld f+1)
-    sPK, sSKs = dealer(N, f+1, seed=seed)
+    sPK, sSKs = boldyreva.dealer(N, f+1, seed=seed)
 
     # Generate threshold sig keys for cbc (thld n-f)
-    sPK1, sSK1s = dealer(N, N-f, seed=seed)
+    sPK1, sSK1s = boldyreva.dealer(N, N-f, seed=seed)
+
+    # Generate ECDSA sig keys
+    sPK2s, sSK2s = ecdsa.pki(N)
 
     # Save all keys to files
     if 'keys' not in os.listdir(os.getcwd()):
@@ -40,6 +44,13 @@ def trusted_key_gen(N=4, f=1, seed=None):
         with open(os.getcwd() + '/keys/' + 'eSK-' + str(i) + '.key', 'wb') as fp:
             pickle.dump(eSKs[i], fp)
 
+    for i in range(N):
+        with open(os.getcwd() + '/keys/' + 'sSK2-' + str(i) + '.key', 'wb') as fp:
+            pickle.dump(sSK2s[i].secret, fp)
+
+    for i in range(N):
+        with open(os.getcwd() + '/keys/' + 'sPK2-' + str(i) + '.key', 'wb') as fp:
+            pickle.dump(sPK2s[i].format(), fp)
 
 if __name__ == '__main__':
     
