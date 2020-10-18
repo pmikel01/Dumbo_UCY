@@ -99,8 +99,6 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
             if msg[0] == 'EST':
                 # BV_Broadcast message
                 _, r, v = msg
-
-
                 assert v in (0, 1)
                 if sender in est_values[r][v]:
                     # FIXME: raise or continue? For now will raise just
