@@ -21,7 +21,7 @@ def fastpath(sid, pid, N, f, get_input, put_output, S, B, T, h_genesis, PK1, SK1
     :param int pid: ``0 <= pid < N``
     :param int N:  at least 3
     :param int f: fault tolerance, ``N >= 3f + 1``
-    :param get_input: a function to get input TXs, e.g., input(B) gets B TXs
+    :param get_input: a function to get input TXs, e.g., input() to get a transaction
     :param put_output: a function to deliver output blocks, e.g., output(block)
     :param PK1: ``boldyreva.TBLSPublicKey`` with threshold N-f
     :param SK1: ``boldyreva.TBLSPrivateKey`` with threshold N-f
@@ -108,15 +108,19 @@ def fastpath(sid, pid, N, f, get_input, put_output, S, B, T, h_genesis, PK1, SK1
                     digest = PK1.hash_message(str((h_p, slot-1)))
                     assert PK1.verify_signature(Sig, digest)
                 except AssertionError:
-                    print("Signature failed!")
+                    print("Notarization signature failed!")
                     continue
+                try:
+                    assert len(signed_batches) >= N - f
+                except AssertionError:
+                    print("Not enough batches!")
 
                 for item in signed_batches:
                     proposer, (tx_batch, sig) = item
                     try:
                         ecdsa_vrfy(PK2s[proposer], tx_batch, sig)
                     except AssertionError:
-                        print("Signature failed!")
+                        print("Batch signatures failed!")
                         continue
 
                 decides[slot].put((h_p, Sig, signed_batches))
@@ -132,7 +136,7 @@ def fastpath(sid, pid, N, f, get_input, put_output, S, B, T, h_genesis, PK1, SK1
         if slot_cur == SLOTS_NUM + 1 or slot_cur == SLOTS_NUM + 2:
             tx_batch = 'Dummy'
         else:
-            tx_batch = json.dumps(get_input(BATCH_SIZE))
+            tx_batch = json.dumps([get_input() for _ in range(BATCH_SIZE)])
         sig_tx = ecdsa_sign(SK2, tx_batch)
 
         send(leader, ('VOTE', slot_cur, h_prev, sig_prev, tx_batch, sig_tx))
