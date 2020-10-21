@@ -49,7 +49,7 @@ def broadcast_receiver_loop(recv_func, recv_queues):
 
 
 class Dumbo():
-    r"""HoneyBadgerBFT object used to run the protocol.
+    r"""Dumbo object used to run the protocol.
 
     :param str sid: The base name of the common coin that will be used to
         derive a nonce to uniquely identify the coin.
@@ -57,9 +57,13 @@ class Dumbo():
     :param int B: Batch size of transactions.
     :param int N: Number of nodes in the network.
     :param int f: Number of faulty nodes that can be tolerated.
-    :param str sPK: Public key of the threshold signature
+    :param str sPK: Public key of the (f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
-    :param str sSK: Signing key of the threshold signature
+    :param str sSK: Signing key of the (f, N) threshold signature
+        (:math:`\mathsf{TSIG}`) scheme.
+    :param str sPK1: Public key of the (N-f, N) threshold signature
+        (:math:`\mathsf{TSIG}`) scheme.
+    :param str sSK1: Signing key of the (N-f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
     :param str ePK: Public key of the threshold encryption
         (:math:`\mathsf{TPKE}`) scheme.
@@ -101,7 +105,7 @@ class Dumbo():
         self.transaction_buffer.append(tx)
 
     def run(self):
-        """Run the HoneyBadgerBFT protocol."""
+        """Run the Dumbo protocol."""
 
         def _recv():
             """Receive messages."""
