@@ -42,7 +42,7 @@ def simple_router(N, maxdelay=0.01, seed=None):
 
 
 ### Test asynchronous common subset
-def _test_honeybadger(N=4, f=1, seed=None):
+def _test_dumbo(N=4, f=1, seed=None):
     sid = 'sidA'
     # Generate threshold sig keys for thld f+1
     sPK, sSKs = dealer(N, f+1, seed=seed)
@@ -105,9 +105,9 @@ def _test_honeybadger(N=4, f=1, seed=None):
     print('time cost: ', time_end-time_start, 's')
 
 
-def test_honeybadger():
-    _test_honeybadger()
+def test_dumbo():
+    _test_dumbo()
 
 
 if __name__ == '__main__':
-    test_honeybadger()
+    test_dumbo()

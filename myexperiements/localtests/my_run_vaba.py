@@ -88,4 +88,4 @@ def test_vaba(N, f, seed):
 
 
 if __name__ == '__main__':
-    test_vaba(19, 6, None)
+    test_vaba(4, 1, None)

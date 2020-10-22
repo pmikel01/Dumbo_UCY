@@ -15,7 +15,7 @@ def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
 
 
-def simple_router(N, maxdelay=0.01, seed=None):
+def simple_router(N, maxdelay=0.1, seed=None):
     """Builds a set of connected channels, with random delay
     @return (receives, sends)
     """
@@ -47,8 +47,8 @@ def _test_fast(N=4, f=1, leader=None, seed=None):
     # Test everything when runs are OK
     sid = 'sidA1'
     BATCH_SIZE = 2
-    SLOTS_NUM = 10
-    TIMEOUT = 2
+    SLOTS_NUM = 100
+    TIMEOUT = 0.35
     GENESIS = hash('GENESIS')
 
     # Note thld siganture for CBC has a threshold different from common coin's
@@ -66,7 +66,7 @@ def _test_fast(N=4, f=1, leader=None, seed=None):
 
     threads = []
 
-    for i in range(N):
+    for i in range(N-1):
 
         t = Greenlet(fastpath, sid, i, N, f,
                      inputs[i].get, outputs[i].put_nowait, SLOTS_NUM, BATCH_SIZE, TIMEOUT, GENESIS,
@@ -77,14 +77,10 @@ def _test_fast(N=4, f=1, leader=None, seed=None):
 
     gevent.joinall(threads)
 
-    # for t in threads:
-    #    print(t.value)
-    # Assert the CBC-delivered values are same to the input
-
 
 def test_fast(N, f, seed):
     _test_fast(N=N, f=f, seed=seed)
 
 
 if __name__ == '__main__':
-    test_fast(100, 33, None)
+    test_fast(4, 1, None)

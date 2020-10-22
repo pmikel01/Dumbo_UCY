@@ -8,6 +8,7 @@ from gevent.queue import Queue
 from dumbobft.core.dumbocommonsubset import dumbocommonsubset
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
+from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
@@ -149,12 +150,12 @@ class Dumbo():
             send_r = _make_send(r)
             recv_r = self._per_round_recv[r].get
             new_tx = self._run_round(r, tx_to_send, send_r, recv_r)
-            print('new block at %d:' % self.id, new_tx)
+            # print('new block at %d:' % self.id, new_tx)
             if self.logger != None: self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.round) + str(new_tx))
 
             # Remove all of the new transactions from the buffer
             self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx not in new_tx]
-            print('buffer at %d:' % self.id, self.transaction_buffer)
+            # print('buffer at %d:' % self.id, self.transaction_buffer)
             if self.logger != None: self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
 
             self.round += 1     # Increment the round
@@ -221,9 +222,9 @@ class Dumbo():
 
             def vacs_predicate(j, vj):
                 try:
-                    sid, roothash, Sigma = vj
+                    sid, roothash, raw_Sig = vj
                     digest = self.sPK1.hash_message(str((sid, j, roothash)))
-                    assert self.sPK1.verify_signature(Sigma, digest)
+                    assert self.sPK1.verify_signature(deserialize1(raw_Sig), digest)
                     return True
                 except AssertionError:
                     print("Failed to verify proof for RBC")

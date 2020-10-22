@@ -14,6 +14,7 @@ from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.core.binaryagreement import binaryagreement
 from dumbobft.core.consistentbroadcast import consistentbroadcast
 from honeybadgerbft.exceptions import UnknownTagError
+from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 
 monkey.patch_all()
 
@@ -202,9 +203,9 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
     def wait_for_cbc_to_continue(leader):
         # Receive output from CBC broadcast for input values
-        msg, Sigma = cbc_outputs[leader]()
+        msg, raw_Sigma = cbc_outputs[leader]()
         if predicate(msg):
-            cbc_values[leader] = (msg, Sigma)  # May block
+            cbc_values[leader] = (msg, raw_Sigma)  # May block
             is_cbc_delivered[leader] = 1
             if sum(is_cbc_delivered) >= N - f:
                 wait_cbc_signal.set()
@@ -285,9 +286,9 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
             a, ballot_bit, o = msg
             if (pi[r] == a) and (ballot_bit == 0 or ballot_bit == 1):
                 if ballot_bit == 1:
-                    (m, Sig) = o
+                    (m, raw_Sig) = o
                     digestFromLeader = PK1.hash_message(str((sid + 'CBC' + str(a), a, m)))
-                    PK1.verify_signature(Sig, digestFromLeader)
+                    PK1.verify_signature(deserialize1(raw_Sig), digestFromLeader)
                     votes[r].add((sender, msg))
                     ballot_counter += 1
                 else:

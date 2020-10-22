@@ -1,12 +1,15 @@
 import random
 import traceback
 
-from myexperiements.sockettest.socket_server import HoneyBadgerBFTNode
+from myexperiements.sockettest.hbbft_node import HoneyBadgerBFTNode
+from myexperiements.sockettest.dumbo_node import DumboBFTNode
 
 
 def instantiate_hbbft_node(sid, i, B, N, f, addresses, K):
-    badger = HoneyBadgerBFTNode(sid, i, B, N, f, addresses, K)
-    badger.run_hbbft_instance()
+    dumbo = DumboBFTNode(sid, i, B, N, f, addresses, K)
+    dumbo.run_hbbft_instance()
+    #badger = HoneyBadgerBFTNode(sid, i, B, N, f, addresses, K)
+    #badger.run_hbbft_instance()
 
 
 if __name__ == '__main__':

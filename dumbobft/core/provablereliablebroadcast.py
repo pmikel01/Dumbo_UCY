@@ -112,7 +112,9 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
         return m
 
     while True:  # main receive loop
+
         sender, msg = receive()
+
         if msg[0] == 'VAL' and fromLeader is None:
             # Validation
             (_, roothash, branch, stripe) = msg
@@ -186,5 +188,5 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
                 sigmas = dict(list(readySigShares.items())[:N - f])
                 Sigma = PK1.combine_shares(sigmas)
                 value = decode_output(roothash)
-                proof = (sid, roothash, Sigma)
+                proof = (sid, roothash, serialize(Sigma))
                 return value, proof
