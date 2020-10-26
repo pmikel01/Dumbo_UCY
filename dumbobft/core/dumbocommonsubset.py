@@ -19,7 +19,7 @@ def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out):
         string
     """
 
-    assert len(prbc_out) == N
+    #assert len(prbc_out) == N
     #assert len(vacs_in) == 1
     #assert len(vacs_out) == 1
 

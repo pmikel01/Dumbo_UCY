@@ -6,10 +6,10 @@ from myexperiements.sockettest.dumbo_node import DumboBFTNode
 
 
 def instantiate_hbbft_node(sid, i, B, N, f, addresses, K):
-    dumbo = DumboBFTNode(sid, i, B, N, f, addresses, K)
-    dumbo.run_hbbft_instance()
-    #badger = HoneyBadgerBFTNode(sid, i, B, N, f, addresses, K)
-    #badger.run_hbbft_instance()
+    #dumbo = DumboBFTNode(sid, i, B, N, f, addresses, K)
+    #dumbo.run_hbbft_instance()
+    badger = HoneyBadgerBFTNode(sid, i, B, N, f, addresses, K)
+    badger.run_hbbft_instance()
 
 
 if __name__ == '__main__':

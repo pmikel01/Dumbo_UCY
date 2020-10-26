@@ -58,7 +58,7 @@ def _test_dumbo(N=4, f=1, seed=None):
     router_seed = rnd.random()
     sends, recvs = simple_router(N, seed=router_seed)
 
-    badgers = [None] * N
+    dumbos = [None] * N
     threads = [None] * N
     
     # This is an experiment parameter to specify the maximum round number 
@@ -66,9 +66,8 @@ def _test_dumbo(N=4, f=1, seed=None):
     B = 1
 
 
-
     for i in range(N):
-        badgers[i] = Dumbo(sid, i, B, N, f,
+        dumbos[i] = Dumbo(sid, i, B, N, f,
                                     sPK, sSKs[i], sPK1, sSK1s[i], ePK, eSKs[i],
                                     sends[i], recvs[i], K)
         #print(sPK, sSKs[i], ePK, eSKs[i])
@@ -77,10 +76,10 @@ def _test_dumbo(N=4, f=1, seed=None):
     for r in range(K * B):
         for i in range(N):
             #if i == 1: continue
-            badgers[i].submit_tx('<[HBBFT Input %d]>' % (i+10*r))
+            dumbos[i].submit_tx('<[HBBFT Input %d]>' % (i+10*r))
 
     for i in range(N):
-        threads[i] = gevent.spawn(badgers[i].run)
+        threads[i] = gevent.spawn(dumbos[i].run)
 
 
 

@@ -1,4 +1,6 @@
 import json
+import traceback
+
 import gevent
 
 from collections import namedtuple
@@ -105,18 +107,10 @@ class HoneyBadgerBFT():
 
                 # Maintain an *unbounded* recv queue for each epoch
                 if r not in self._per_round_recv:
-                    # Buffer this message
-                    assert r >= self.round      # pragma: no cover
                     self._per_round_recv[r] = Queue()
 
-                _recv = self._per_round_recv[r]
-                if _recv is not None:
-                    # Queue it
-                    _recv.put((sender, msg))
-
-                # else:
-                # We have already closed this
-                # round and will stop participating!
+                # Buffer this message
+                self._per_round_recv[r].put_nowait((sender, msg))
 
         self._recv_thread = gevent.spawn(_recv)
 
@@ -126,8 +120,10 @@ class HoneyBadgerBFT():
             if r not in self._per_round_recv:
                 self._per_round_recv[r] = Queue()
 
-            # Select all the transactions (TODO: actual random selection)
-            tx_to_send = self.transaction_buffer[:self.B]
+            # Select B transactions (TODO: actual random selection)
+            tx_to_send = []
+            for _ in range(self.B):
+                tx_to_send.append(self.transaction_buffer.pop())
 
             # TODO: Wait a bit if transaction buffer is not full
 
@@ -140,17 +136,24 @@ class HoneyBadgerBFT():
             send_r = _make_send(r)
             recv_r = self._per_round_recv[r].get
             new_tx = self._run_round(r, tx_to_send, send_r, recv_r)
-            #print('new block at %d:' % self.id, new_tx)
-            if self.logger != None: self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.round) + str(new_tx))
 
-            # Remove all of the new transactions from the buffer
-            self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx not in new_tx]
+            #print('new block at %d:' % self.id, new_tx)
+            if self.logger != None:
+                self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.round) + str(new_tx))
+
+            # Remove output transactions from the backlog buffer
+            for _tx in tx_to_send:
+                if _tx not in new_tx:
+                    self.transaction_buffer.appendleft(_tx)
+
             #print('buffer at %d:' % self.id, self.transaction_buffer)
-            if self.logger != None: self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
+            if self.logger != None:
+                self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
 
             self.round += 1     # Increment the round
             if self.round >= self.K:
                 break   # Only run one round for now
+
         if self.logger != None:
             self.logger.info("node %d breaks" % self.id)
         else:
