@@ -1,6 +1,7 @@
 import hashlib
 import pickle
 import random
+from collections import deque
 
 import gevent
 from gevent import Greenlet
@@ -9,6 +10,7 @@ from gevent.queue import Queue
 from honeybadgerbft.crypto.threshsig.boldyreva import dealer
 from honeybadgerbft.crypto.ecdsa.ecdsa import pki
 from mulebft.core.fastpath import fastpath
+from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 
 
 def hash(x):
@@ -45,10 +47,12 @@ def simple_router(N, maxdelay=0.1, seed=None):
 
 def _test_fast(N=4, f=1, leader=None, seed=None):
     # Test everything when runs are OK
-    sid = 'sidA1'
+    sid = 'sidA'
+    leader = 1
+
     BATCH_SIZE = 2
-    SLOTS_NUM = 100
-    TIMEOUT = 0.35
+    SLOTS_NUM = 10
+    TIMEOUT = 0.3
     GENESIS = hash('GENESIS')
 
     # Note thld siganture for CBC has a threshold different from common coin's
@@ -56,7 +60,7 @@ def _test_fast(N=4, f=1, leader=None, seed=None):
     PK2s, SK2s = pki(N)
 
     inputs = [Queue() for _ in range(N)]
-    outputs = [Queue() for _ in range(N)]
+    outputs = [deque() for _ in range(N)]
 
     for i in range(N):
         for j in range(BATCH_SIZE * SLOTS_NUM):
@@ -66,16 +70,24 @@ def _test_fast(N=4, f=1, leader=None, seed=None):
 
     threads = []
 
-    for i in range(N-1):
+    for i in range(N):
 
-        t = Greenlet(fastpath, sid, i, N, f,
-                     inputs[i].get, outputs[i].put_nowait, SLOTS_NUM, BATCH_SIZE, TIMEOUT, GENESIS,
+        t = Greenlet(fastpath, sid, i, N, f, leader,
+                     inputs[i].get, outputs[i].append, SLOTS_NUM, BATCH_SIZE, TIMEOUT, GENESIS,
                      PK1, SK1s[i], PK2s, SK2s[i], recvs[i], sends[i])
 
         t.start()
         threads.append(t)
 
     gevent.joinall(threads)
+    _, (h, raw_Sigma) = threads[0].get()
+
+    notarized_block = outputs[0].pop()
+    print(notarized_block)
+
+    print(hash((notarized_block[0], notarized_block[1], notarized_block[2], hash(notarized_block[3]))) == h)
+
+    print(PK1.verify_signature(deserialize1(raw_Sigma), PK1.hash_message(h)))
 
 
 def test_fast(N, f, seed):
