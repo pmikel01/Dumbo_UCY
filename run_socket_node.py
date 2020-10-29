@@ -3,14 +3,18 @@ import traceback
 
 from myexperiements.sockettest.hbbft_node import HoneyBadgerBFTNode
 from myexperiements.sockettest.dumbo_node import DumboBFTNode
+from myexperiements.sockettest.mule_node import MuleBFTNode
 
 
-def instantiate_hbbft_node(sid, i, B, N, f, addresses, K):
+def instantiate_bft_node(sid, i, B, N, f, addresses, K):
     #dumbo = DumboBFTNode(sid, i, B, N, f, addresses, K)
-    #dumbo.run_hbbft_instance()
-    badger = HoneyBadgerBFTNode(sid, i, B, N, f, addresses, K)
-    badger.run_hbbft_instance()
-
+    #dumbo.run_dumbo_instance()
+    #badger = HoneyBadgerBFTNode(sid, i, B, N, f, addresses, K)
+    #badger.run_hbbft_instance()
+    S = 50
+    T = 0.05
+    mule = MuleBFTNode(sid, i, S, T, B, N, f, addresses, K)
+    mule.run_mule_instance()
 
 if __name__ == '__main__':
 
@@ -57,7 +61,7 @@ if __name__ == '__main__':
         # print(addresses)
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
-        instantiate_hbbft_node(sid, i, B, N, f, addresses, K)
+        instantiate_bft_node(sid, i, B, N, f, addresses, K)
     except FileNotFoundError or AssertionError as e:
         #print(e)
         traceback.print_exc()

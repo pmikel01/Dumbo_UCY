@@ -9,7 +9,7 @@ from dumbobft.core.dumbocommonsubset import dumbocommonsubset
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
-
+from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
 
@@ -58,13 +58,13 @@ class Dumbo():
     :param int B: Batch size of transactions.
     :param int N: Number of nodes in the network.
     :param int f: Number of faulty nodes that can be tolerated.
-    :param str sPK: Public key of the (f, N) threshold signature
+    :param TBLSPublicKey sPK: Public key of the (f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
-    :param str sSK: Signing key of the (f, N) threshold signature
+    :param TBLSPrivateKey sSK: Signing key of the (f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
-    :param str sPK1: Public key of the (N-f, N) threshold signature
+    :param TBLSPublicKey sPK1: Public key of the (N-f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
-    :param str sSK1: Signing key of the (N-f, N) threshold signature
+    :param TBLSPrivateKey sSK1: Signing key of the (N-f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
     :param str ePK: Public key of the threshold encryption
         (:math:`\mathsf{TPKE}`) scheme.
@@ -103,7 +103,7 @@ class Dumbo():
         #print('backlog_tx', self.id, tx)
         if self.logger != None:
             self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
-
+        # Insert transactions to the end of TX buffer
         self.transaction_buffer.append(tx)
 
     def run(self):
@@ -132,7 +132,7 @@ class Dumbo():
             # Select B transactions (TODO: actual random selection)
             tx_to_send = []
             for _ in range(self.B):
-                tx_to_send.append(self.transaction_buffer.pop())
+                tx_to_send.append(self.transaction_buffer.popleft())
 
             def _make_send(r):
                 def _send(j, o):
@@ -147,7 +147,7 @@ class Dumbo():
             if self.logger != None:
                 self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.round) + str(new_tx))
 
-            # Remove output transactions from the backlog buffer
+            # Put undelivered but committed TXs back to the backlog buffer
             for _tx in tx_to_send:
                 if _tx not in new_tx:
                     self.transaction_buffer.appendleft(_tx)
@@ -182,6 +182,7 @@ class Dumbo():
 
         prbc_recvs = [Queue() for _ in range(N)]
         vacs_recv = Queue()
+        tpke_recv = Queue()
 
         my_prbc_input = Queue(1)
         vacs_input = Queue(1)
@@ -249,9 +250,8 @@ class Dumbo():
                 """
                 for j in range(N):
                     send(j, o)
-            broadcast(('TPKE', 0, o))
+            broadcast(('TPKE', '', o))
 
-        tpke_recv = Queue()
 
         # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
         dumboacs = gevent.spawn(dumbocommonsubset, pid, N, f, prbc_outputs,

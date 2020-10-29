@@ -63,7 +63,7 @@ def _test_dumbo(N=4, f=1, seed=None):
     
     # This is an experiment parameter to specify the maximum round number 
     K = 10
-    B = 1
+    B = 10
 
 
     for i in range(N):

@@ -4,18 +4,24 @@ import os
 import pickle
 
 from gevent import time
-from dumbobft.core.dumbo import Dumbo
+from mulebft.core.mule import Mule
 from myexperiements.sockettest.make_random_tx import tx_generator
 from myexperiements.sockettest.socket_server import Node, set_logger_of_node
+from coincurve import PrivateKey, PublicKey
 
 
-def load_key(id):
+def load_key(id, N):
 
     with open(os.getcwd() + '/keys/' + 'sPK.key', 'rb') as fp:
         sPK = pickle.load(fp)
 
     with open(os.getcwd() + '/keys/' + 'sPK1.key', 'rb') as fp:
         sPK1 = pickle.load(fp)
+
+    sPK2s = []
+    for i in range(N):
+        with open(os.getcwd() + '/keys/' + 'sPK2-' + str(i) + '.key', 'rb') as fp:
+            sPK2s.append(PublicKey(pickle.load(fp)))
 
     with open(os.getcwd() + '/keys/' + 'ePK.key', 'rb') as fp:
         ePK = pickle.load(fp)
@@ -26,26 +32,29 @@ def load_key(id):
     with open(os.getcwd() + '/keys/' + 'sSK1-' + str(id) + '.key', 'rb') as fp:
         sSK1 = pickle.load(fp)
 
+    with open(os.getcwd() + '/keys/' + 'sSK2-' + str(id) + '.key', 'rb') as fp:
+        sSK2 = PrivateKey(pickle.load(fp))
+
     with open(os.getcwd() + '/keys/' + 'eSK-' + str(id) + '.key', 'rb') as fp:
         eSK = pickle.load(fp)
 
-    return sPK, sPK1, ePK, sSK, sSK1, eSK
+    return sPK, sPK1, sPK2s, ePK, sSK, sSK1, sSK2, eSK
 
 
-class DumboBFTNode (Dumbo):
+class MuleBFTNode (Mule):
 
-    def __init__(self, sid, id, B, N, f, addresses_list: list, K=3, mode='debug', tx_buffer=None):
-        self.sPK, self.sPK1, self.ePK, self.sSK, self.sSK1, self.eSK = load_key(id)
-        Dumbo.__init__(self, sid, id, B, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.ePK, self.eSK, send=None, recv=None, K=K, logger=set_logger_of_node(id))
+    def __init__(self, sid, id, S, T, B, N, f, addresses_list: list, K=3, mode='debug', tx_buffer=None):
+        self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
+        Mule.__init__(self, sid, id, S, T, B, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, logger=set_logger_of_node(id))
         self.server = Node(id=id, ip=addresses_list[id][0], port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
         self.mode = mode
         self._prepare_bootstrap()
 
     def _prepare_bootstrap(self):
         if self.mode == 'test' or 'debug':
-            for r in range(self.K * self.B):
+            for r in range(self.K * self.B * self.SLOTS_NUM):
                 tx = tx_generator(250) # Set each dummy TX to be 250 Byte
-                Dumbo.submit_tx(self, tx)
+                Mule.submit_tx(self, tx)
         else:
             pass
             # TODO: submit transactions through tx_buffer
@@ -61,7 +70,7 @@ class DumboBFTNode (Dumbo):
         self._send = self.server.send
         self._recv = self.server.recv
 
-    def run_dumbo_instance(self):
+    def run_mule_instance(self):
         self.start_socket_server()
         time.sleep(3)
         gevent.sleep(3)
@@ -71,9 +80,9 @@ class DumboBFTNode (Dumbo):
         self.run()
 
 
-def main(sid, i, B, N, f, addresses, K):
-    badger = DumboBFTNode(sid, i, B, N, f, addresses, K)
-    badger.run_dumbo_instance()
+def main(sid, i, S, T, B, N, f, addresses, K):
+    mule = MuleBFTNode(sid, i, S, T, B, N, f, addresses, K)
+    mule.run_mule_instance()
 
 
 if __name__ == '__main__':
@@ -102,6 +111,10 @@ if __name__ == '__main__':
     B = args.B
     K = args.K
 
+    # Epoch Setup
+    S = 50
+    T = 0.05  # Timeout
+
     # Random generator
     rnd = random.Random(sid)
 
@@ -111,4 +124,4 @@ if __name__ == '__main__':
     addresses = [(host, port_base + 200 * i) for i in range(N)]
     print(addresses)
 
-    main(sid, i, B, N, f, addresses, K)
+    main(sid, i, S, T, B, N, f, addresses, K)

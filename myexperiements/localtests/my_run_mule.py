@@ -33,7 +33,6 @@ def simple_router(N, maxdelay=0.001, seed=None):
     def makeRecv(j):
         def _recv():
             (i, o) = queues[j].get()
-            print(j, (i, o))
             # print 'RECV %8s [%2d -> %2d]' % (o[0], i, j)
             return (i, o)
 
@@ -44,8 +43,10 @@ def simple_router(N, maxdelay=0.001, seed=None):
 
 
 ### Test asynchronous common subset
-def _test_dumbo(N=4, f=1, seed=None):
+def _test_mule(N=4, f=1, seed=None):
+
     sid = 'sidA'
+
     # Generate threshold sig keys for thld f+1
     sPK, sSKs = dealer(N, f + 1, seed=seed)
 
@@ -68,9 +69,9 @@ def _test_dumbo(N=4, f=1, seed=None):
 
     # This is an experiment parameter to specify the maximum round number
     K = 10
-    S = 10
+    B = 10
+    S = 100
     T = 1
-    B = 1
 
     for i in range(N):
         badgers[i] = Mule(sid, i, S, T, B, N, f,
@@ -107,9 +108,9 @@ def _test_dumbo(N=4, f=1, seed=None):
     print('time cost: ', time_end - time_start, 's')
 
 
-def test_dumbo():
-    _test_dumbo()
+def test_mule():
+    _test_mule()
 
 
 if __name__ == '__main__':
-    test_dumbo()
+    test_mule()

@@ -17,7 +17,7 @@ def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
 
 
-def simple_router(N, maxdelay=0.1, seed=None):
+def simple_router(N, maxdelay=1, seed=None):
     """Builds a set of connected channels, with random delay
     @return (receives, sends)
     """
@@ -52,7 +52,7 @@ def _test_fast(N=4, f=1, leader=None, seed=None):
 
     BATCH_SIZE = 2
     SLOTS_NUM = 10
-    TIMEOUT = 0.3
+    TIMEOUT = 2.5
     GENESIS = hash('GENESIS')
 
     # Note thld siganture for CBC has a threshold different from common coin's
@@ -80,7 +80,7 @@ def _test_fast(N=4, f=1, leader=None, seed=None):
         threads.append(t)
 
     gevent.joinall(threads)
-    _, (h, raw_Sigma) = threads[0].get()
+    (h, raw_Sigma) = threads[0].get()
 
     notarized_block = outputs[0].pop()
     print(notarized_block)

@@ -1,16 +1,23 @@
 import hashlib
+import json
 import pickle
-from enum import Enum
 import traceback
 import gevent
 from gevent.queue import Queue
 from collections import namedtuple, deque
-from honeybadgerbft.exceptions import UnknownTagError
+from enum import Enum
 
-from honeybadgerbft.core.commoncoin import shared_coin
 from mulebft.core.fastpath import fastpath
 from mulebft.core.twovalueagreement import twovalueagreement
+from dumbobft.core.validatedcommonsubset import validatedcommonsubset
+from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
+from dumbobft.core.dumbocommonsubset import dumbocommonsubset
+from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
+from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
+from honeybadgerbft.crypto.ecdsa.ecdsa import PrivateKey
+from honeybadgerbft.core.commoncoin import shared_coin
+from honeybadgerbft.exceptions import UnknownTagError
 
 
 def hash(x):
@@ -22,11 +29,14 @@ class BroadcastTag(Enum):
     FAST = 'FAST'
     VIEW_CHANGE = 'VIEW_CHANGE'
     VIEW_COIN = 'VIEW_COIN'
+    ACS_PRBC = 'ACS_PRBC'
+    ACS_VACS = 'ACS_VACS'
+    TPKE = 'TPKE'
 
 
 
 BroadcastReceiverQueues = namedtuple(
-    'BroadcastReceiverQueues', ('TCVBA', 'FAST', 'VIEW_CHANGE', 'VIEW_COIN'))
+    'BroadcastReceiverQueues', ('TCVBA', 'FAST', 'VIEW_CHANGE', 'VIEW_COIN', 'ACS_PRBC', 'ACS_VACS', 'TPKE'))
 
 
 def broadcast_receiver(recv_func, recv_queues):
@@ -38,13 +48,13 @@ def broadcast_receiver(recv_func, recv_queues):
             tag, BroadcastTag.__members__.keys()))
     recv_queue = recv_queues._asdict()[tag]
 
-    #if tag == BroadcastTag.ACS_PRBC.value:
-    #    recv_queue = recv_queue[j]
+    if tag == BroadcastTag.ACS_PRBC.value:
+        recv_queue = recv_queue[j]
     try:
         recv_queue.put_nowait((sender, msg))
     except AttributeError as e:
         print("error", sender, (tag, j, msg))
-        traceback.print_exc(e)
+        traceback.print_exc()
 
 
 def broadcast_receiver_loop(recv_func, recv_queues):
@@ -61,12 +71,12 @@ class Mule():
     :param int B: Batch size of transactions.
     :param int N: Number of nodes in the network.
     :param int f: Number of faulty nodes that can be tolerated.
-    :param str sPK: Public key of the (f, N) threshold signature.
-    :param str sSK: Signing key of the (f, N) threshold signature.
-    :param str sPK1: Public key of the (N-f, N) threshold signature.
-    :param str sSK1: Signing key of the (N-f, N) threshold signature.
-    :param str sPK2s: Public key(s) of ECDSA signature for all N parties.
-    :param str sSK2: Signing key of ECDSA signature.
+    :param TBLSPublicKey sPK: Public key of the (f, N) threshold signature.
+    :param TBLSPrivateKey sSK: Signing key of the (f, N) threshold signature.
+    :param TBLSPublicKey sPK1: Public key of the (N-f, N) threshold signature.
+    :param TBLSPrivateKey sSK1: Signing key of the (N-f, N) threshold signature.
+    :param list sPK2s: Public key(s) of ECDSA signature for all N parties.
+    :param PrivateKey sSK2: Signing key of ECDSA signature.
     :param str ePK: Public key of the threshold encryption.
     :param str eSK: Signing key of the threshold encryption.
     :param send:
@@ -108,7 +118,8 @@ class Mule():
         :param tx: Transaction to append to the buffer.
         """
         # print('backlog_tx', self.id, tx)
-        if self.logger != None: self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
+        if self.logger != None:
+            self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
         self.transaction_buffer.append(tx)
 
     def run(self):
@@ -190,18 +201,25 @@ class Mule():
         tcvba_recv = Queue()
         coin_recv = Queue()
 
+        prbc_recvs = [Queue() for _ in range(N)]
+        vacs_recv = Queue()
+        tpke_recv = Queue()
+
         recv_queues = BroadcastReceiverQueues(
             TCVBA=tcvba_recv,
             FAST=fast_recv,
             VIEW_CHANGE=viewchange_recv,
             VIEW_COIN=coin_recv,
+            ACS_PRBC=prbc_recvs,
+            ACS_VACS=vacs_recv,
+            TPKE=tpke_recv,
         )
         gevent.spawn(broadcast_receiver_loop, recv, recv_queues)
 
         tcvba_input = Queue(1)
         tcvba_output = Queue(1)
 
-        fast_blocks = deque()  # The blocks that receives
+        fast_blocks = Queue()  # The blocks that receives
 
         viewchange_counter = 0
         viewchange_max_slot = 0
@@ -212,7 +230,7 @@ class Mule():
                 send(k, ('FAST', '', o))
 
             fast_thread = gevent.spawn(fastpath, epoch_id, pid, N, f, leader,
-                                       self.transaction_buffer.pop, fast_blocks.append,
+                                       self.transaction_buffer.popleft, fast_blocks.put,
                                        S, B, T, hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                                        fast_recv.get, fastpath_send)
 
@@ -268,7 +286,7 @@ class Mule():
                         print("False view change with invalid notarization")
                         continue  # go to next iteration without counting ViewChange Counter
                 else:
-                    assert notarized_block_header != (0, '', '', '')
+                    assert notarized_block_header_j == None
                     slot_num = 0
 
                 viewchange_counter += 1
@@ -285,34 +303,141 @@ class Mule():
         fast_thread.join()
 
         # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
-        flag, notarization = fast_thread.get()
+        notarization = fast_thread.get()
 
-        notarized_block = fast_blocks.pop()
-
-        notarized_block_header = (0, '', '', '')
-        if notarized_block is not None:
-            payload_digest = hash(notarized_block[3])
-            notarized_block_header = (notarized_block[0], notarized_block[1], notarized_block[2], payload_digest)
-            # Remark that: notarized_block_header = (epoch_id, slot_num, Sig_p, payload_digest)
+        print(("Fast chain proof: ", notarization))
 
         if notarization is not None:
+
+            notarized_block = fast_blocks.queue[fast_blocks.qsize() - 1]
+            #notarized_block = fast_blocks.get()
+
+            payload_digest = hash(notarized_block[3])
+            notarized_block_header = (notarized_block[0], notarized_block[1], notarized_block[2], payload_digest)
+
             notarized_block_hash, notarized_block_raw_Sig = notarization
-            assert notarized_block_header != (0, '', '', '')
+
             assert hash(notarized_block_header) == notarized_block_hash
+
             o = (notarized_block_header, notarized_block_raw_Sig)
             for j in range(N):
                 send(j, ('VIEW_CHANGE', '', o))
+
         else:
-            assert notarized_block_header == (0, '', '', '')  # there is notarization, as long as the chain has a block
+            notarized_block_header = None
             o = (notarized_block_header, None)
             for j in range(N):
                 send(j, ('VIEW_CHANGE', '', o))
 
         #
         delivered_slots = tcvba_output.get()  # Block to receive the output
-        delivered_slots = min(delivered_slots - 1, 0)
+        delivered_slots = max(delivered_slots - 1, 0)
         #
-        if delivered_slots >= S:
+
+        print(("fast blocks: ", fast_blocks))
+
+        if delivered_slots > 0:
+
+            if self.logger != None:
+                self.logger.info('Backlogged tx at Node %d:' % self.id + str(fast_blocks))
             return fast_blocks
-        #
-        # TODO: include fallback path
+
+        else:
+
+            # Select B transactions (TODO: actual random selection)
+            tx_to_send = []
+
+            for _ in range(self.B):
+                try:
+                    tx_to_send.append(self.transaction_buffer.popleft())
+                except IndexError as e:
+                    tx_to_send.append("Dummy")
+
+            my_prbc_input = Queue(1)
+            vacs_input = Queue(1)
+            prbc_outputs = [Queue(1) for _ in range(N)]
+            vacs_output = Queue(1)
+
+            if self.logger != None:
+                self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
+
+            def _setup_prbc(j):
+                """Setup the sub protocols RBC, BA and common coin.
+
+                :param int j: Node index for which the setup is being done.
+                """
+
+                def prbc_send(k, o):
+                    """Reliable send operation.
+                    :param k: Node to send.
+                    :param o: Value to send.
+                    """
+                    send(k, ('ACS_PRBC', j, o))
+
+                # Only leader gets input
+                prbc_input = my_prbc_input.get if j == pid else None
+                prbc = gevent.spawn(provablereliablebroadcast, epoch_id+'PRBC'+str(j), pid, N, f, self.sPK1, self.sSK1, j,
+                                   prbc_input, prbc_recvs[j].get, prbc_send)
+                prbc_outputs[j] = prbc.get  # block for output from rbc
+
+            def _setup_vacs():
+
+                def vacs_send(k, o):
+                    """Threshold encryption broadcast."""
+                    send(k, ('ACS_VACS', '', o))
+
+                def vacs_predicate(j, vj):
+                    try:
+                        sid, roothash, raw_Sig = vj
+                        digest = self.sPK1.hash_message(str((sid, j, roothash)))
+                        assert self.sPK1.verify_signature(deserialize1(raw_Sig), digest)
+                        return True
+                    except AssertionError:
+                        print("Failed to verify proof for RBC")
+                        return False
+
+                gevent.spawn(validatedcommonsubset, epoch_id+'VACS', pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
+                             vacs_input.get, vacs_output.put_nowait,
+                             vacs_recv.get, vacs_send, vacs_predicate)
+
+            # N instances of ABA, RBC
+            for j in range(N):
+                _setup_prbc(j)
+
+            # One instance of (validated) ACS
+            _setup_vacs()
+
+            # One instance of TPKE
+            def tpke_bcast(o):
+                """Threshold encryption broadcast."""
+                def broadcast(o):
+                    """Multicast the given input ``o``.
+
+                    :param o: Input to multicast.
+                    """
+                    for j in range(N):
+                        send(j, o)
+                broadcast(('TPKE', '', o))
+
+            # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
+            dumboacs = gevent.spawn(dumbocommonsubset, pid, N, f, prbc_outputs,
+                               vacs_input.put_nowait,
+                               vacs_output.get)
+
+            _input = Queue(1)
+            _input.put(json.dumps(tx_to_send))
+
+            _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
+                              _input.get,
+                              acs_in=my_prbc_input.put_nowait, acs_out=dumboacs.get,
+                              tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
+
+            block = set()
+            for batch in _output:
+                decoded_batch = json.loads(batch.decode())
+                for tx in decoded_batch:
+                    block.add(tx)
+
+            print(("ACS block: ", block))
+
+            return list(block)
