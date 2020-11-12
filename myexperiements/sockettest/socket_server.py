@@ -84,6 +84,7 @@ class Node(Greenlet):
             _finish(e)
 
     def _serve_forever(self):
+        print("my IP is " + self.ip)
         self.server_sock = socket.socket()
         self.server_sock.bind((self.ip, self.port))
         self.server_sock.listen(5)
