@@ -3,6 +3,7 @@ import json
 import pickle
 import traceback
 import gevent
+import time
 from gevent.queue import Queue
 from collections import namedtuple, deque
 from enum import Enum
@@ -118,8 +119,8 @@ class Mule():
         :param tx: Transaction to append to the buffer.
         """
         # print('backlog_tx', self.id, tx)
-        if self.logger != None:
-            self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
+        #if self.logger != None:
+        #    self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
         self.transaction_buffer.append(tx)
 
     def run(self):
@@ -232,7 +233,7 @@ class Mule():
             fast_thread = gevent.spawn(fastpath, epoch_id, pid, N, f, leader,
                                        self.transaction_buffer.popleft, fast_blocks.put,
                                        S, B, T, hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
-                                       fast_recv.get, fastpath_send)
+                                       fast_recv.get, fastpath_send, self.logger)
 
             return fast_thread
 
@@ -358,8 +359,8 @@ class Mule():
             prbc_outputs = [Queue(1) for _ in range(N)]
             vacs_output = Queue(1)
 
-            if self.logger != None:
-                self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
+            # if self.logger != None: self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
+            start = time.time()
 
             def _setup_prbc(j):
                 """Setup the sub protocols RBC, BA and common coin.
@@ -438,6 +439,10 @@ class Mule():
                 for tx in decoded_batch:
                     block.add(tx)
 
-            print(("ACS block: ", block))
+            # print(("ACS block: ", block))
+            end = time.time()
+
+            if self.logger != None:
+                self.logger.info('ACS block Delay at Node %d: ' % self.id + str(end - start))
 
             return list(block)

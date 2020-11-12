@@ -12,7 +12,7 @@ def instantiate_bft_node(sid, i, B, N, f, addresses, K):
     #badger = HoneyBadgerBFTNode(sid, i, B, N, f, addresses, K)
     #badger.run_hbbft_instance()
     S = 50
-    T = 0.05
+    T = 1
     mule = MuleBFTNode(sid, i, S, T, B, N, f, addresses, K)
     mule.run_mule_instance()
 

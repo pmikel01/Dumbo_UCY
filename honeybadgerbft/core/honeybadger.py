@@ -94,7 +94,7 @@ class HoneyBadgerBFT():
         :param tx: Transaction to append to the buffer.
         """
         #print('backlog_tx', self.id, tx)
-        if self.logger != None: self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
+        #if self.logger != None: self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
         self.transaction_buffer.append(tx)
 
     def run(self):

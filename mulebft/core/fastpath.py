@@ -1,4 +1,5 @@
 import traceback
+import time
 from collections import defaultdict
 from gevent.event import Event
 from gevent.queue import Queue
@@ -18,7 +19,7 @@ def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
 
 
-def fastpath(sid, pid, N, f, leader, get_input, put_output, S, B, T, hash_genesis, PK1, SK1, PK2s, SK2, recv, send):
+def fastpath(sid, pid, N, f, leader, get_input, put_output, S, B, T, hash_genesis, PK1, SK1, PK2s, SK2, recv, send, logger=None):
     """Fast path, Byzantine Safe Broadcast
     :param str sid: ``the string of identifier``
     :param int pid: ``0 <= pid < N``
@@ -64,6 +65,9 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, S, B, T, hash_genesi
 
     slot_noncritical_signal = Event()
     slot_noncritical_signal.set()
+
+    s_times = [0] * (SLOTS_NUM + 3)
+    e_times = [0] * (SLOTS_NUM + 3)
 
     def bcast_to_all_but_not_me(m):
         for i in range(N):
@@ -184,6 +188,7 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, S, B, T, hash_genesi
 
         sig_prev = SK1.sign(PK1.hash_message(hash_prev))
 
+        s_times[slot_cur] = time.time()
         if slot_cur == SLOTS_NUM + 1 or slot_cur == SLOTS_NUM + 2:
             tx_batch = 'Dummy'
         else:
@@ -209,6 +214,10 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, S, B, T, hash_genesi
         if pending_block is not None:
             notraized_block = (pending_block[0], pending_block[1], pending_block[2], pending_block[4])
             put_output(notraized_block)
+            e_times[pending_block[1]] = time.time()
+            delay = e_times[pending_block[1]] - s_times[pending_block[1]]
+            logger.info('Fast block Delay at Node %d for epoch %s and slot %d: ' % (pid, sid, pending_block[1]) + str(delay))
+
 
         pending_block = (sid, slot_cur, h_p, raw_Sig, signed_batches)
         pending_block_header = (sid, slot_cur, h_p, hash(signed_batches))
