@@ -6,15 +6,19 @@ from myexperiements.sockettest.dumbo_node import DumboBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
 
 
-def instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T):
-    print(my_address)
-    print(addresses)
-    #dumbo = DumboBFTNode(sid, i, B, N, f, my_address, addresses, K)
-    #dumbo.run_dumbo_instance()
-    #badger = HoneyBadgerBFTNode(sid, i, B, N, f, my_address, addresses, K)
-    #badger.run_hbbft_instance()
-    mule = MuleBFTNode(sid, i, S, T, B, N, f, my_address, addresses, K)
-    mule.run_mule_instance()
+def instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T, protocol="mule"):
+    if protocol == 'dumbo':
+        dumbo = DumboBFTNode(sid, i, B, N, f, my_address, addresses, K)
+        dumbo.run_dumbo_instance()
+    elif protocol == "badger":
+        badger = HoneyBadgerBFTNode(sid, i, B, N, f, my_address, addresses, K)
+        badger.run_hbbft_instance()
+    elif protocol == "mule":
+        mule = MuleBFTNode(sid, i, S, T, B, N, f, my_address, addresses, K)
+        mule.run_mule_instance()
+    else:
+        print("Only support dumbo or badger or mule")
+
 
 if __name__ == '__main__':
 
@@ -35,7 +39,9 @@ if __name__ == '__main__':
     parser.add_argument('--S', metavar='S', required=False,
                         help='slots to execute', type=int, default=50)
     parser.add_argument('--T', metavar='T', required=False,
-                        help='fast path timeout', type=int, default=1)
+                        help='fast path timeout', type=float, default=1)
+    parser.add_argument('--P', metavar='P', required=False,
+                        help='protocol to execute', type=str, default="mule")
     args = parser.parse_args()
 
     # Some parameters

@@ -97,10 +97,10 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, S, B, T, hash_genesi
                     try:
                         assert slot == slot_cur
                     except AssertionError:
-                        if slot < slot_cur:
-                            print("Late vote from node %d! Not needed anymore..." % sender)
-                        else:
-                            print("Too early vote from node %d! I do not decide earlier block yet..." % sender)
+                        #if slot < slot_cur:
+                        #    print("Late vote from node %d! Not needed anymore..." % sender)
+                        #else:
+                        #    print("Too early vote from node %d! I do not decide earlier block yet..." % sender)
                         continue
 
                     try:
