@@ -53,6 +53,7 @@ if __name__ == '__main__':
     K = args.K
     S = args.S
     T = args.T
+    P = args.P
 
     # Random generator
     rnd = random.Random(sid)
@@ -76,7 +77,7 @@ if __name__ == '__main__':
         # print(addresses)
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
-        instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T)
+        instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T, P)
     except FileNotFoundError or AssertionError as e:
         #print(e)
         traceback.print_exc()
