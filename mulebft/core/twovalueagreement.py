@@ -96,9 +96,9 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
                     # because it appeared first, but maybe the protocol simply
                     # needs to continue.
                     print('Redundant AUX received', msg)
-                    raise RedundantMessageError(
-                        'Redundant AUX received {}'.format(msg))
-
+                    # raise RedundantMessageError(
+                    #    'Redundant AUX received {}'.format(msg))
+                    continue
                 logger.debug(
                     f'add sender = {sender} to aux_value[{r}][{v}] = {aux_values[r][v]}',
                     extra={'nodeid': pid, 'epoch': r},
@@ -120,8 +120,9 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
                     # with how other TAGs are handled. Will replace the raise
                     # with a continue statement as part of
                     # https://github.com/initc3/HoneyBadgerBFT-Python/issues/10
-                    raise RedundantMessageError(
-                        'Redundant CONF received {}'.format(msg))
+                    # raise RedundantMessageError(
+                    #    'Redundant CONF received {}'.format(msg))
+                    continue
                 conf_values[r][v].add(sender)
                 logger.debug(
                     f'add v = {v} to conf_value[{r}] = {conf_values[r]}',

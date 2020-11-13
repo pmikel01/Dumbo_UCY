@@ -1,5 +1,5 @@
 import json
-import traceback
+import traceback, time
 import gevent
 from collections import namedtuple, deque
 from enum import Enum
@@ -123,8 +123,13 @@ class Dumbo():
 
         self._recv_thread = gevent.spawn(_recv)
 
+        if self.logger != None: self.logger.info('Node %d starts to run at time:' % self.id + str(time.time()))
+
         while True:
             # For each round...
+
+            start = time.time()
+
             r = self.round
             if r not in self._per_round_recv:
                 self._per_round_recv[r] = Queue()
@@ -147,14 +152,19 @@ class Dumbo():
             if self.logger != None:
                 self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.round) + str(new_tx))
 
+            end = time.time()
+
+            if self.logger != None:
+                self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
+
             # Put undelivered but committed TXs back to the backlog buffer
             for _tx in tx_to_send:
                 if _tx not in new_tx:
                     self.transaction_buffer.appendleft(_tx)
 
             # print('buffer at %d:' % self.id, self.transaction_buffer)
-            if self.logger != None:
-                self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
+            #if self.logger != None:
+            #    self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
 
             self.round += 1     # Increment the round
             if self.round >= self.K:
@@ -192,7 +202,7 @@ class Dumbo():
 
 
         #print(pid, r, 'tx_to_send:', tx_to_send)
-        if self.logger != None: self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
+        #if self.logger != None: self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
 
         def _setup_prbc(j):
             """Setup the sub protocols RBC, BA and common coin.

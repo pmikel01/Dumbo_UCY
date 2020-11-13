@@ -34,10 +34,10 @@ def load_key(id):
 
 class DumboBFTNode (Dumbo):
 
-    def __init__(self, sid, id, B, N, f, addresses_list: list, K=3, mode='debug', tx_buffer=None):
+    def __init__(self, sid, id, B, N, f, my_address: str, addresses_list: list, K=3, mode='debug', tx_buffer=None):
         self.sPK, self.sPK1, self.ePK, self.sSK, self.sSK1, self.eSK = load_key(id)
         Dumbo.__init__(self, sid, id, B, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.ePK, self.eSK, send=None, recv=None, K=K, logger=set_logger_of_node(id))
-        self.server = Node(id=id, ip=addresses_list[id][0], port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
+        self.server = Node(id=id, ip=my_address, port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
         self.mode = mode
         self._prepare_bootstrap()
 

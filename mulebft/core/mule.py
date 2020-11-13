@@ -140,6 +140,8 @@ class Mule():
 
         self._recv_thread = gevent.spawn(_recv)
 
+        if self.logger != None: self.logger.info('Node %d starts to run at time:' % self.id + str(time.time()))
+
         while True:
             # For each epoch
             e = self.epoch
@@ -157,12 +159,12 @@ class Mule():
             new_tx = self._run_epoch(e, send_e, recv_e)
 
             # print('new block at %d:' % self.id, new_tx)
-            if self.logger != None:
-                self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.epoch) + str(new_tx))
+            #if self.logger != None:
+            #    self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.epoch) + str(new_tx))
 
             # print('buffer at %d:' % self.id, self.transaction_buffer)
-            if self.logger != None:
-                self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
+            #if self.logger != None:
+            #    self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
 
             self.epoch += 1  # Increment the round
             if self.epoch >= self.K:
@@ -230,8 +232,13 @@ class Mule():
             def fastpath_send(k, o):
                 send(k, ('FAST', '', o))
 
+            def fastpath_output(o):
+                if self.logger != None:
+                    self.logger.info('Node %d Delivers Fastpath Block in epoch %d: ' % (self.id, self.epoch) + str(o))
+                    fast_blocks.put(o)
+
             fast_thread = gevent.spawn(fastpath, epoch_id, pid, N, f, leader,
-                                       self.transaction_buffer.popleft, fast_blocks.put,
+                                       self.transaction_buffer.popleft, fastpath_output,
                                        S, B, T, hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                                        fast_recv.get, fastpath_send, self.logger)
 
@@ -335,12 +342,12 @@ class Mule():
         delivered_slots = max(delivered_slots - 1, 0)
         #
 
-        print(("fast blocks: ", fast_blocks))
+        #print(("fast blocks: ", fast_blocks))
 
         if delivered_slots > 0:
 
-            if self.logger != None:
-                self.logger.info('Backlogged tx at Node %d:' % self.id + str(fast_blocks))
+            #if self.logger != None:
+            #    self.logger.info('Fast block tx at Node %d:' % self.id + str(fast_blocks))
             return fast_blocks
 
         else:
@@ -439,10 +446,12 @@ class Mule():
                 for tx in decoded_batch:
                     block.add(tx)
 
-            # print(("ACS block: ", block))
             end = time.time()
 
             if self.logger != None:
-                self.logger.info('ACS block Delay at Node %d: ' % self.id + str(end - start))
+                self.logger.info('Node %d Delivers ACS Block %d: ' % (self.id, self.epoch) + str(block))
+
+            if self.logger != None:
+                self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
 
             return list(block)

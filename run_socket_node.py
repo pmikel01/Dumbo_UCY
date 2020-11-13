@@ -6,14 +6,14 @@ from myexperiements.sockettest.dumbo_node import DumboBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
 
 
-def instantiate_bft_node(sid, i, B, N, f, addresses, K):
-    #dumbo = DumboBFTNode(sid, i, B, N, f, addresses, K)
+def instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T):
+    print(my_address)
+    print(addresses)
+    #dumbo = DumboBFTNode(sid, i, B, N, f, my_address, addresses, K)
     #dumbo.run_dumbo_instance()
-    #badger = HoneyBadgerBFTNode(sid, i, B, N, f, addresses, K)
+    #badger = HoneyBadgerBFTNode(sid, i, B, N, f, my_address, addresses, K)
     #badger.run_hbbft_instance()
-    S = 50
-    T = 1
-    mule = MuleBFTNode(sid, i, S, T, B, N, f, addresses, K)
+    mule = MuleBFTNode(sid, i, S, T, B, N, f, my_address, addresses, K)
     mule.run_mule_instance()
 
 if __name__ == '__main__':
@@ -32,6 +32,10 @@ if __name__ == '__main__':
                         help='size of batch', type=int)
     parser.add_argument('--K', metavar='K', required=True,
                         help='rounds to execute', type=int)
+    parser.add_argument('--S', metavar='S', required=False,
+                        help='slots to execute', type=int, default=50)
+    parser.add_argument('--T', metavar='T', required=False,
+                        help='fast path timeout', type=int, default=1)
     args = parser.parse_args()
 
     # Some parameters
@@ -41,6 +45,8 @@ if __name__ == '__main__':
     f = args.f
     B = args.B
     K = args.K
+    S = args.S
+    T = args.T
 
     # Random generator
     rnd = random.Random(sid)
@@ -52,16 +58,19 @@ if __name__ == '__main__':
             for line in hosts:
                 params = line.split()
                 pid = int(params[0])
-                ip = params[1]
-                port = int(params[2])
+                priv_ip = params[1]
+                pub_ip = params[2]
+                port = int(params[3])
                 # print(pid, ip, port)
                 if pid not in range(N):
                     continue
-                addresses[pid] = (ip, port)
+                if pid == i:
+                    my_address = priv_ip
+                addresses[pid] = (pub_ip, port)
         # print(addresses)
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
-        instantiate_bft_node(sid, i, B, N, f, addresses, K)
+        instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T)
     except FileNotFoundError or AssertionError as e:
         #print(e)
         traceback.print_exc()
