@@ -43,6 +43,7 @@ class Node(Greenlet):
             self.logger = set_logger_of_node(self.id)
         else:
             self.logger = logger
+        self.stop = False
         Greenlet.__init__(self)
 
     def _run(self):
@@ -60,7 +61,7 @@ class Node(Greenlet):
 
         buf = b''
         try:
-            while True:
+            while not self.stop:
                 gevent.sleep(0)
                 buf += sock.recv(4096)
                 tmp = buf.split(self.SEP.encode('utf-8'), 1)
@@ -88,7 +89,7 @@ class Node(Greenlet):
         self.server_sock = socket.socket()
         self.server_sock.bind((self.ip, self.port))
         self.server_sock.listen(5)
-        while True:
+        while not self.stop:
             sock, address = self.server_sock.accept()
             gevent.spawn(self._handle_request, sock, address)
             self.logger.info('node id %d accepts a new socket from node %d' % (self.id, self._address_to_id(address)))
@@ -100,7 +101,7 @@ class Node(Greenlet):
     def connect_all(self):
         self.logger.info("node %d is fully meshing the network" % self.id)
         is_sock_connected = [False] * len(self.addresses_list)
-        while True:
+        while not self.stop:
             try:
                 for j in range(len(self.addresses_list)):
                     if not is_sock_connected[j]:
@@ -163,6 +164,9 @@ class Node(Greenlet):
 
     def recv(self):
         return self._recv()
+
+    def stop_service(self):
+        self.stop = True
 
     def _address_to_id(self, address: tuple):
         # print(address)

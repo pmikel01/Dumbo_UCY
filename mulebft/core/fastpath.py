@@ -214,9 +214,10 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, S, B, T, hash_genesi
         if pending_block is not None:
             notraized_block = (pending_block[0], pending_block[1], pending_block[2], pending_block[4])
             put_output(notraized_block)
-            e_times[pending_block[1]] = time.time()
-            delay = e_times[pending_block[1]] - s_times[pending_block[1]]
-            logger.info('Fast block Delay at Node %d for epoch %s and slot %d: ' % (pid, sid, pending_block[1]) + str(delay))
+            if pending_block[1] >= 2:
+                e_times[pending_block[1]-1] = time.time()
+                delay = e_times[pending_block[1]-1] - s_times[pending_block[1]-1]
+                logger.info('Fast block Delay at Node %d for Epoch %s and Slot %d: ' % (pid, sid, pending_block[1]-1) + str(delay))
 
 
         pending_block = (sid, slot_cur, h_p, raw_Sig, signed_batches)

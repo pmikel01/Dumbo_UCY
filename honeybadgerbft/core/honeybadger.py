@@ -86,6 +86,10 @@ class HoneyBadgerBFT():
         self._per_round_recv = {}  # Buffer of incoming messages
         self.K = K
 
+        self.s_time = 0
+        self.e_time = 0
+        self.txcnt = 0
+
     def submit_tx(self, tx):
         """Appends the given transaction to the transaction buffer.
 
@@ -112,7 +116,8 @@ class HoneyBadgerBFT():
 
         self._recv_thread = gevent.spawn(_recv)
 
-        if self.logger != None: self.logger.info('Node %d starts to run at time:' % self.id + str(time.time()))
+        self.s_time = time.time()
+        if self.logger != None: self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
         while True:
             # For each round...
@@ -142,12 +147,16 @@ class HoneyBadgerBFT():
 
             #print('new block at %d:' % self.id, new_tx)
             if self.logger != None:
-                self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.round) + str(new_tx))
+                #self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.round) + str(new_tx))
+                tx_cnt = str(new_tx).count("Dummy TX")
+                self.txcnt += tx_cnt
+                self.logger.info(
+                'Node %d Delivers ACS Block in Round %d with having %d TXs' % (self.id, r, tx_cnt))
 
             end = time.time()
 
             if self.logger != None:
-                self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
+                self.logger.info('ACS Block Delay at Round %d at Node %d: ' % (self.id, r) + str(end - start))
 
             # Remove output transactions from the backlog buffer
             for _tx in tx_to_send:
@@ -163,9 +172,11 @@ class HoneyBadgerBFT():
                 break   # Only run one round for now
 
         if self.logger != None:
-            self.logger.info("node %d breaks" % self.id)
+            self.e_time = time.time()
+            self.logger.info("node %d breaks in %f seconds with total delivered Txs %d" % (self.id, self.e_time-self.s_time, self.txcnt))
         else:
             print("node %d breaks" % self.id)
+
 
     def _run_round(self, r, tx_to_send, send, recv):
         """Run one protocol round.

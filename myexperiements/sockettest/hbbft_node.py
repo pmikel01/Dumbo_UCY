@@ -63,6 +63,7 @@ class HoneyBadgerBFTNode (HoneyBadgerBFT):
         time.sleep(3)
         gevent.sleep(3)
         self.run()
+        self.server.stop_service()
 
 
 def main(sid, i, B, N, f, addresses, K):

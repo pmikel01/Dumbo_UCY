@@ -113,6 +113,10 @@ class Mule():
 
         self.K = K
 
+        self.s_time = 0
+        self.e_time = 0
+        self.txcnt = 0
+
     def submit_tx(self, tx):
         """Appends the given transaction to the transaction buffer.
 
@@ -140,7 +144,8 @@ class Mule():
 
         self._recv_thread = gevent.spawn(_recv)
 
-        if self.logger != None: self.logger.info('Node %d starts to run at time:' % self.id + str(time.time()))
+        self.s_time = time.time()
+        if self.logger != None: self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
         while True:
             # For each epoch
@@ -171,7 +176,8 @@ class Mule():
                 break  # Only run one round for now
 
         if self.logger != None:
-            self.logger.info("node %d breaks" % self.id)
+            self.e_time = time.time()
+            self.logger.info("node %d breaks in %f seconds with total delivered Txs %d" % (self.id, self.e_time-self.s_time, self.txcnt))
         else:
             print("node %d breaks" % self.id)
 
@@ -222,7 +228,7 @@ class Mule():
         tcvba_input = Queue(1)
         tcvba_output = Queue(1)
 
-        fast_blocks = Queue()  # The blocks that receives
+        fast_blocks = Queue(1)  # The blocks that receives
 
         viewchange_counter = 0
         viewchange_max_slot = 0
@@ -234,7 +240,13 @@ class Mule():
 
             def fastpath_output(o):
                 if self.logger != None:
-                    self.logger.info('Node %d Delivers Fastpath Block in epoch %d: ' % (self.id, self.epoch) + str(o))
+                    if not fast_blocks.empty():
+                        final_block = fast_blocks.get()
+                        tx_cnt = str(final_block).count("Dummy TX")
+                        self.txcnt += tx_cnt
+                        #self.logger.info('Node %d Delivers Fastpath Block in epoch %d: ' % (self.id, self.epoch) + str(final_block))
+                        self.logger.info('Node %d Delivers Fastpath Block in Epoch %d at Slot %d with having %d TXs' %
+                                         (self.id, self.epoch, final_block[1], tx_cnt))
                     fast_blocks.put(o)
 
             fast_thread = gevent.spawn(fastpath, epoch_id, pid, N, f, leader,
@@ -313,7 +325,7 @@ class Mule():
         # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
         notarization = fast_thread.get()
 
-        print(("Fast chain proof: ", notarization))
+        #print(("Fast chain proof: ", notarization))
 
         if notarization is not None:
 
@@ -449,7 +461,12 @@ class Mule():
             end = time.time()
 
             if self.logger != None:
-                self.logger.info('Node %d Delivers ACS Block %d: ' % (self.id, self.epoch) + str(block))
+                blk = str(block)
+                #self.logger.info('Node %d Delivers ACS Block %d: ' % (self.id, self.epoch) + str(block))
+                tx_cnt = blk.count("Dummy TX")
+                self.txcnt += tx_cnt
+                self.logger.info(
+                'Node %d Delivers ACS Block in Epoch %d with having %d TXs' % (self.id, self.epoch, tx_cnt))
 
             if self.logger != None:
                 self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
