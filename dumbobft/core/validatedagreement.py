@@ -292,14 +292,10 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
                     votes[r].add((sender, msg))
                     ballot_counter += 1
                 else:
-                    try:
-                        if commit_values[sender] is not None and commit_values[sender][a] == 0:
-                            votes[r].add((sender, msg))
-                            ballot_counter += 1
-                    except IndexError as e:
-                        print("commit values index error: " + str((sender, a)))
-                        print(commit_values[sender])
-                        pass
+                    if commit_values[sender] is not None and commit_values[sender][0][a] == 0:
+                        votes[r].add((sender, msg))
+                        ballot_counter += 1
+
             if len(votes[r]) >= N - f:
                 break
 
