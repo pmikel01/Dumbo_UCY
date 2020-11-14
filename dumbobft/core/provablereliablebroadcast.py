@@ -60,7 +60,7 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
     K               = N - 2 * f  # Need this many to reconstruct. (# noqa: E221)
     EchoThreshold   = N - f      # Wait for this many ECHO to send READY. (# noqa: E221)
     ReadyThreshold  = f + 1      # Wait for this many READY to amplify READY. (# noqa: E221)
-    OutputThreshold = 2 * f + 1  # Wait for this many READY to output
+    OutputThreshold = N - f      # Wait for this many READY to output
     # NOTE: The above thresholds  are chosen to minimize the size
     # of the erasure coding stripes, i.e. to maximize K.
     # The following alternative thresholds are more canonical
@@ -185,7 +185,7 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
                 broadcast(('READY', roothash, serialize(SK1.sign(digest))))
 
             if len(ready[roothash]) >= OutputThreshold and echoCounter[roothash] >= K:
-                sigmas = dict(list(readySigShares.items())[:N - f])
+                sigmas = dict(list(readySigShares.items())[:OutputThreshold])
                 Sigma = PK1.combine_shares(sigmas)
                 value = decode_output(roothash)
                 proof = (sid, roothash, serialize(Sigma))

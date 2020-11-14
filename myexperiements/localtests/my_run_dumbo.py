@@ -42,7 +42,7 @@ def simple_router(N, maxdelay=0.01, seed=None):
 
 
 ### Test asynchronous common subset
-def _test_dumbo(N=4, f=1, seed=None):
+def _test_dumbo(N=8, f=2, seed=None):
     sid = 'sidA'
     # Generate threshold sig keys for thld f+1
     sPK, sSKs = dealer(N, f+1, seed=seed)
