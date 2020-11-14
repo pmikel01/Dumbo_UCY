@@ -2,7 +2,7 @@ import json
 import traceback, time
 import gevent
 
-from collections import namedtuple
+from collections import namedtuple, deque
 from enum import Enum
 
 from gevent.queue import Queue
@@ -82,7 +82,7 @@ class HoneyBadgerBFT():
         self._recv = recv
         self.logger = logger
         self.round = 0  # Current block number
-        self.transaction_buffer = []
+        self.transaction_buffer = deque()
         self._per_round_recv = {}  # Buffer of incoming messages
         self.K = K
 
@@ -131,7 +131,7 @@ class HoneyBadgerBFT():
             # Select B transactions (TODO: actual random selection)
             tx_to_send = []
             for _ in range(self.B):
-                tx_to_send.append(self.transaction_buffer.pop())
+                tx_to_send.append(self.transaction_buffer.popleft())
 
             # TODO: Wait a bit if transaction buffer is not full
 

@@ -69,6 +69,8 @@ class DumboBFTNode (Dumbo):
         time.sleep(3)
         gevent.sleep(3)
         self.run()
+        time.sleep(3)
+        gevent.sleep(3)
         self.server.stop_service()
 
 def main(sid, i, B, N, f, addresses, K):

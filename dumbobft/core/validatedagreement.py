@@ -294,6 +294,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
                 else:
                     if commit_values[sender] is not None and commit_values[sender][0][a] == 0:
                         votes[r].add((sender, msg))
+
                         ballot_counter += 1
 
             if len(votes[r]) >= N - f:
