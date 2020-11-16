@@ -4,7 +4,7 @@ import gevent
 import os
 
 from gevent import Greenlet
-from gevent import socket, monkey
+from gevent import socket, monkey, lock
 from gevent.queue import Queue
 import logging
 import traceback
@@ -44,6 +44,7 @@ class Node(Greenlet):
         else:
             self.logger = logger
         self.stop = False
+        self.s_lock = lock.RLock()
         Greenlet.__init__(self)
 
     def _run(self):
@@ -118,7 +119,7 @@ class Node(Greenlet):
         try:
             sock.connect(self.addresses_list[j])
             sock.sendall(('ping' + self.SEP).encode('utf-8'))
-            pong = sock.recv(4096)
+            pong = sock.recv(100000)
         except Exception as e1:
             return False
             #print(e1)
@@ -133,6 +134,7 @@ class Node(Greenlet):
 
     def _send(self, j: int, o: bytes):
         msg = b''.join([o, self.SEP.encode('utf-8')])
+        self.s_lock.acquire()
         for _ in range(3):
             try:
                 self.socks[j].sendall(msg)
@@ -143,6 +145,7 @@ class Node(Greenlet):
                 time.sleep(1)
                 gevent.sleep(1)
                 continue
+        self.s_lock.release()
             #print("fail to send msg")
             #try:
             #    self._connect(j)
