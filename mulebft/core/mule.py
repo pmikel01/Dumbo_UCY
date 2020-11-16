@@ -352,6 +352,7 @@ class Mule():
 
         #print(("Fast chain proof: ", notarization))
 
+        notarized_block = None
         if notarization is not None:
 
             notarized_block = latest_notarized_block
@@ -384,6 +385,7 @@ class Mule():
             #if self.logger != None:
             #    self.logger.info('Fast block tx at Node %d:' % self.id + str(fast_blocks))
             return notarized_block
+            #
 
         else:
 
