@@ -68,6 +68,11 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
 
     s_times = [0] * (SLOTS_NUM + 3)
     e_times = [0] * (SLOTS_NUM + 3)
+    txcnt =  [0] * (SLOTS_NUM + 3)
+    delay =  [0] * (SLOTS_NUM + 3)
+
+    epoch_txcnt = 0
+    weighted_delay = 0
 
     def bcast_to_all_but_not_me(m):
         for i in range(N):
@@ -184,7 +189,7 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
     """
 
     def one_slot():
-        nonlocal pending_block, notraized_block, hash_prev, slot_cur
+        nonlocal pending_block, notraized_block, hash_prev, slot_cur, epoch_txcnt, delay, e_times, s_times, txcnt, weighted_delay
 
         sig_prev = SK1.sign(PK1.hash_message(hash_prev))
 
@@ -214,11 +219,17 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
         if pending_block is not None:
             notraized_block = (pending_block[0], pending_block[1], pending_block[2], pending_block[4])
             put_output(notraized_block)
+            txcnt[pending_block[1]] = str(notraized_block).count("Dummy TX")
+
             if pending_block[1] >= 2:
                 e_times[pending_block[1]-1] = time.time()
-                delay = e_times[pending_block[1]-1] - s_times[pending_block[1]-1]
-                if logger is not None:
-                    logger.info('Fast block Delay at Node %d for Epoch %s and Slot %d: ' % (pid, sid, pending_block[1]-1) + str(delay))
+                delay[pending_block[1]-1] = e_times[pending_block[1]-1] - s_times[pending_block[1]-1]
+                weighted_delay = (epoch_txcnt * weighted_delay + txcnt[pending_block[1]-1] * delay[pending_block[1]-1]) / (epoch_txcnt + txcnt[pending_block[1]-1])
+                epoch_txcnt += txcnt[pending_block[1]-1]
+
+                #if logger is not None:
+                #    logger.info('Fast block Delay at Node %d for Epoch %s and Slot %d: ' % (pid, sid, pending_block[1]-1) + str(delay))
+
 
 
         pending_block = (sid, slot_cur, h_p, raw_Sig, signed_batches)
@@ -267,6 +278,6 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                 timeout.cancel()
 
     if notraized_block != None:
-        return pending_block[2], pending_block[3]  # represents fast_path successes
+        return pending_block[2], pending_block[3], (epoch_txcnt, weighted_delay)  # represents fast_path successes
     else:
         return None

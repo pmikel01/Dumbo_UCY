@@ -115,7 +115,9 @@ class Mule():
 
         self.s_time = 0
         self.e_time = 0
+
         self.txcnt = 0
+        self.txdelay = 0
 
         self.mute = mute
 
@@ -193,11 +195,13 @@ class Mule():
             if self.epoch >= self.K:
                 break  # Only run one round for now
 
+        self.e_time = time.time()
         if self.logger != None:
-            self.e_time = time.time()
-            self.logger.info("node %d breaks in %f seconds with total delivered Txs %d" % (self.id, self.e_time-self.s_time, self.txcnt))
+            self.logger.info("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
         else:
-            print("node %d breaks" % self.id)
+            print("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
+
+        gevent.sleep(5)
 
     def _recovery(self):
         # TODO: here to implement to recover blocks
@@ -261,15 +265,13 @@ class Mule():
                 send(k, ('FAST', '', o))
 
             def fastpath_output(o):
-                nonlocal latest_delivered_block, latest_notarized_block, tx_cnt
+                nonlocal latest_delivered_block, latest_notarized_block
                 if not fast_blocks.empty():
                     latest_delivered_block = fast_blocks.get()
-                    tx_cnt = str(latest_delivered_block).count("Dummy TX")
-                    self.txcnt += tx_cnt
-                    #self.logger.info('Node %d Delivers Fastpath Block in epoch %d: ' % (self.id, self.epoch) + str(final_block))
-                    if self.logger is not None:
-                        self.logger.info('Node %d Delivers Fastpath Block in Epoch %d at Slot %d with having %d TXs' %
-                                         (self.id, self.epoch, latest_delivered_block[1], tx_cnt))
+                    #tx_cnt = str(latest_delivered_block).count("Dummy TX")
+                    #self.txcnt += tx_cnt
+                    #if self.logger is not None:
+                    #    self.logger.info('Node %d Delivers Fastpath Block in Epoch %d at Slot %d with having %d TXs' % (self.id, self.epoch, latest_delivered_block[1], tx_cnt))
                 latest_notarized_block = o
                 fast_blocks.put(o)
 
@@ -359,7 +361,10 @@ class Mule():
             payload_digest = hash(notarized_block[3])
             notarized_block_header = (notarized_block[0], notarized_block[1], notarized_block[2], payload_digest)
 
-            notarized_block_hash, notarized_block_raw_Sig = notarization
+            notarized_block_hash, notarized_block_raw_Sig, (epoch_txcnt, weighted_delay) = notarization
+
+            self.txdelay = (self.txcnt * self.txdelay + epoch_txcnt * weighted_delay) / (self.txcnt + epoch_txcnt)
+            self.txcnt += epoch_txcnt
 
             assert hash(notarized_block_header) == notarized_block_hash
 
@@ -485,14 +490,20 @@ class Mule():
 
             end = time.time()
 
-            if self.logger != None:
-                blk = str(block)
-                #self.logger.info('Node %d Delivers ACS Block %d: ' % (self.id, self.epoch) + str(block))
-                tx_cnt = blk.count("Dummy TX")
-                self.txcnt += tx_cnt
-                self.logger.info('Node %d Delivers ACS Block in Epoch %d with having %d TXs' % (self.id, self.epoch, tx_cnt))
+            #if self.logger != None:
+            #    blk = str(block)
+            #    #self.logger.info('Node %d Delivers ACS Block %d: ' % (self.id, self.epoch) + str(block))
+            #    tx_cnt = blk.count("Dummy TX")
+            #    self.txcnt += tx_cnt
+            #    self.logger.info('Node %d Delivers ACS Block in Epoch %d with having %d TXs' % (self.id, self.epoch, tx_cnt))
 
-            if self.logger != None:
-                self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
+            blkcnt = str(block).count("Dummy TX")
+            blkdelay = end - start
+
+            self.txdelay = (self.txcnt * self.txdelay + blkcnt * blkdelay) / (self.txcnt + blkcnt)
+            self.txcnt += blkcnt
+
+            #if self.logger != None:
+            #    self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
 
             return list(block)

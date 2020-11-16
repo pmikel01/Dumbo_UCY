@@ -70,9 +70,9 @@ def _test_mule(N=4, f=1, seed=None):
     # This is an experiment parameter to specify the maximum round number
     K = 10
     Bfast = 1
-    Bacs = 10
+    Bacs = 7
     S = 100
-    T = 1
+    T = 0.03
 
     for i in range(N):
         badgers[i] = Mule(sid, i, S, T, Bfast, Bacs, N, f,
@@ -83,7 +83,7 @@ def _test_mule(N=4, f=1, seed=None):
     for r in range(100*K * max(Bfast * S, Bacs)):
         for i in range(N):
             # if i == 1: continue
-            badgers[i].submit_tx('<[HBBFT Input %d]>' % (i + 10 * r))
+            badgers[i].submit_tx('<[Dummy TX %d]>' % (i + 10 * r))
 
     for i in range(N):
         threads[i] = gevent.spawn(badgers[i].run)

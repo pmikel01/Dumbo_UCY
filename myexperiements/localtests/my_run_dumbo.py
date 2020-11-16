@@ -76,7 +76,7 @@ def _test_dumbo(N=8, f=2, seed=None):
     for r in range(K * B):
         for i in range(N):
             #if i == 1: continue
-            dumbos[i].submit_tx('<[HBBFT Input %d]>' % (i+10*r))
+            dumbos[i].submit_tx('<[Dummy TX %d]>' % (i+10*r))
 
     for i in range(N):
         threads[i] = gevent.spawn(dumbos[i].run)
