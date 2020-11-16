@@ -1,12 +1,10 @@
 import json
 import traceback, time
 import gevent
-
+import numpy as np
 from collections import namedtuple, deque
 from enum import Enum
-
 from gevent.queue import Queue
-
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.core.binaryagreement import binaryagreement
 from honeybadgerbft.core.reliablebroadcast import reliablebroadcast
@@ -68,7 +66,7 @@ class HoneyBadgerBFT():
     :param K: a test parameter to specify break out after K rounds
     """
 
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, ePK, eSK, send, recv, K=3, logger=None):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, ePK, eSK, send, recv, K=3, logger=None, mute=False):
         self.sid = sid
         self.id = pid
         self.B = B
@@ -90,6 +88,9 @@ class HoneyBadgerBFT():
         self.e_time = 0
         self.txcnt = 0
 
+        self.mute = mute
+
+
     def submit_tx(self, tx):
         """Appends the given transaction to the transaction buffer.
 
@@ -101,6 +102,21 @@ class HoneyBadgerBFT():
 
     def run(self):
         """Run the HoneyBadgerBFT protocol."""
+
+        if self.mute:
+
+            def send_blackhole(*args):
+                pass
+
+            def recv_blackhole(*args):
+                while True:
+                    time.sleep(1)
+                    pass
+
+            seed = int.from_bytes(self.sid.encode('utf-8'), 'little')
+            if self.id in np.random.RandomState(seed).permutation(self.N)[:int((self.N - 1) / 3)]:
+                self._send = send_blackhole
+                self._recv = recv_blackhole
 
         def _recv():
             """Receive messages."""

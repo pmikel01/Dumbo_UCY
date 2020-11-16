@@ -6,15 +6,15 @@ from myexperiements.sockettest.dumbo_node import DumboBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
 
 
-def instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T, protocol="mule"):
+def instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T, protocol="mule", mute=False, factor=1):
     if protocol == 'dumbo':
-        dumbo = DumboBFTNode(sid, i, B, N, f, my_address, addresses, K)
+        dumbo = DumboBFTNode(sid, i, B, N, f, my_address, addresses, K, mute=mute)
         dumbo.run_dumbo_instance()
     elif protocol == "badger":
-        badger = HoneyBadgerBFTNode(sid, i, B, N, f, my_address, addresses, K)
+        badger = HoneyBadgerBFTNode(sid, i, B, N, f, my_address, addresses, K, mute=mute)
         badger.run_hbbft_instance()
     elif protocol == "mule":
-        mule = MuleBFTNode(sid, i, S, T, B, N, f, my_address, addresses, K)
+        mule = MuleBFTNode(sid, i, S, T, int(factor*B/N), B, N, f, my_address, addresses, K, mute=mute)
         mule.run_mule_instance()
     else:
         print("Only support dumbo or badger or mule")
@@ -42,6 +42,11 @@ if __name__ == '__main__':
                         help='fast path timeout', type=float, default=1)
     parser.add_argument('--P', metavar='P', required=False,
                         help='protocol to execute', type=str, default="mule")
+    parser.add_argument('--M', metavar='M', required=False,
+                        help='whether to mute a third of nodes', type=bool, default=False)
+    parser.add_argument('--F', metavar='F', required=False,
+                        help='the parameter to time (B/N) to get the fast path batch size', type=float, default=1)
+
     args = parser.parse_args()
 
     # Some parameters
@@ -54,6 +59,8 @@ if __name__ == '__main__':
     S = args.S
     T = args.T
     P = args.P
+    M = args.M
+    F = args.F
 
     # Random generator
     rnd = random.Random(sid)
@@ -77,7 +84,7 @@ if __name__ == '__main__':
         # print(addresses)
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
-        instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T, P)
+        instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T, P, M, F)
     except FileNotFoundError or AssertionError as e:
         #print(e)
         traceback.print_exc()

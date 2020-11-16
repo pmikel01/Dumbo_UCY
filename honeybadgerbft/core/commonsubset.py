@@ -48,7 +48,7 @@ def commonsubset(pid, N, f, rbc_out, aba_in, aba_out):
                 if not aba_inputted[k]:
                     aba_inputted[k] = True
                     aba_in[k](0)
-                    print(pid, 'ABA[%d] input -> %d' % (k, 0))
+                    # print(pid, 'ABA[%d] input -> %d' % (k, 0))
         # print (pid, j, 'EXITING CRITICAL')
 
     # Wait for all binary agreements

@@ -41,7 +41,7 @@ def simple_router(N, maxdelay=0.01, seed=None):
 
 
 ### Test asynchronous common subset
-def _test_honeybadger(N=8, f=2, seed=None):
+def _test_honeybadger(N=5, f=1, seed=None):
     sid = 'sidA'
     # Generate threshold sig keys
     sPK, sSKs = dealer(N, f+1, seed=seed)
@@ -58,7 +58,7 @@ def _test_honeybadger(N=8, f=2, seed=None):
     threads = [None] * N
     
     # This is an experiment parameter to specify the maximum round number 
-    K = 10
+    K = 5
     B = 1
 
 

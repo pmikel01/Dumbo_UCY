@@ -19,7 +19,7 @@ def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
 
 
-def fastpath(sid, pid, N, f, leader, get_input, put_output, S, B, T, hash_genesis, PK1, SK1, PK2s, SK2, recv, send, logger=None):
+def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, hash_genesis, PK1, SK1, PK2s, SK2, recv, send, logger=None):
     """Fast path, Byzantine Safe Broadcast
     :param str sid: ``the string of identifier``
     :param int pid: ``0 <= pid < N``
@@ -32,18 +32,18 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, S, B, T, hash_genesi
     :param TBLSPrivateKey SK1: ``boldyreva.TBLSPrivateKey`` with threshold N-f
     :param list PK2s: an array of ``coincurve.PublicKey'', i.e., N public keys of ECDSA for all parties
     :param PublicKey SK2: ``coincurve.PrivateKey'', i.e., secret key of ECDSA
-    :param int T: timeout of a slot
-    :param int S: number of slots in a epoch
-    :param int B: batch size, i.e., the number of TXs in a batch
+    :param int Tout: timeout of a slot
+    :param int Snum: number of slots in a epoch
+    :param int Bsize: batch size, i.e., the number of TXs in a batch
     :param hash_genesis: the hash of genesis block
     :param recv: function to receive incoming messages
     :param send: function to send outgoing messages
     :return tuple: False to represent timeout, and True to represent success
     """
 
-    TIMEOUT = T
-    SLOTS_NUM = S
-    BATCH_SIZE = B
+    TIMEOUT = Tout
+    SLOTS_NUM = Snum
+    BATCH_SIZE = Bsize
 
     assert leader in range(N)
     slot_cur = 1
@@ -217,7 +217,8 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, S, B, T, hash_genesi
             if pending_block[1] >= 2:
                 e_times[pending_block[1]-1] = time.time()
                 delay = e_times[pending_block[1]-1] - s_times[pending_block[1]-1]
-                logger.info('Fast block Delay at Node %d for Epoch %s and Slot %d: ' % (pid, sid, pending_block[1]-1) + str(delay))
+                if logger is not None:
+                    logger.info('Fast block Delay at Node %d for Epoch %s and Slot %d: ' % (pid, sid, pending_block[1]-1) + str(delay))
 
 
         pending_block = (sid, slot_cur, h_p, raw_Sig, signed_batches)

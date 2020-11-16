@@ -11,7 +11,7 @@ from honeybadgerbft.crypto.ecdsa.ecdsa import pki
 monkey.patch_all()
 
 
-def simple_router(N, maxdelay=0.001, seed=None):
+def simple_router(N, maxdelay=0.01, seed=None):
     """Builds a set of connected channels, with random delay
 
     :return: (receives, sends)
@@ -33,7 +33,7 @@ def simple_router(N, maxdelay=0.001, seed=None):
     def makeRecv(j):
         def _recv():
             (i, o) = queues[j].get()
-            # print 'RECV %8s [%2d -> %2d]' % (o[0], i, j)
+            print ('RECV %8s [%2d -> %2d]' % (o, i, j))
             return (i, o)
 
         return _recv
@@ -69,17 +69,18 @@ def _test_mule(N=4, f=1, seed=None):
 
     # This is an experiment parameter to specify the maximum round number
     K = 10
-    B = 10
+    Bfast = 1
+    Bacs = 10
     S = 100
     T = 1
 
     for i in range(N):
-        badgers[i] = Mule(sid, i, S, T, B, N, f,
+        badgers[i] = Mule(sid, i, S, T, Bfast, Bacs, N, f,
                            sPK, sSKs[i], sPK1, sSK1s[i], sPK2s, sSK2s[i], ePK, eSKs[i],
                            sends[i], recvs[i], K)
         # print(sPK, sSKs[i], ePK, eSKs[i])
 
-    for r in range(K * B * S):
+    for r in range(100*K * max(Bfast * S, Bacs)):
         for i in range(N):
             # if i == 1: continue
             badgers[i].submit_tx('<[HBBFT Input %d]>' % (i + 10 * r))

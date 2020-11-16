@@ -43,16 +43,16 @@ def load_key(id, N):
 
 class MuleBFTNode (Mule):
 
-    def __init__(self, sid, id, S, T, B, N, f, my_address: str, addresses_list: list, K=3, mode='debug', tx_buffer=None):
+    def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, my_address: str, addresses_list: list, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
-        Mule.__init__(self, sid, id, S, T, B, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, logger=set_logger_of_node(id))
+        Mule.__init__(self, sid, id, S, T, Bfast, Bacs, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, logger=set_logger_of_node(id), mute=mute)
         self.server = Node(id=id, ip=my_address, port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
         self.mode = mode
         self._prepare_bootstrap()
 
     def _prepare_bootstrap(self):
-        if self.mode == 'test' or 'debug':
-            for r in range(self.K * self.B * self.SLOTS_NUM):
+        if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
+            for r in range(self.K * max(self.FAST_BATCH_SIZE * self.SLOTS_NUM, self.FALLBACK_BATCH_SIZE)):
                 tx = tx_generator(250) # Set each dummy TX to be 250 Byte
                 Mule.submit_tx(self, tx)
         else:

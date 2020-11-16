@@ -4,10 +4,10 @@ import pickle
 import traceback
 import gevent
 import time
+import numpy as np
 from gevent.queue import Queue
 from collections import namedtuple, deque
 from enum import Enum
-
 from mulebft.core.fastpath import fastpath
 from mulebft.core.twovalueagreement import twovalueagreement
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
@@ -85,15 +85,15 @@ class Mule():
     :param K: a test parameter to specify break out after K epochs
     """
 
-    def __init__(self, sid, pid, S, T, B, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, logger=None):
+    def __init__(self, sid, pid, S, T, Bfast, Bacs, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, logger=None, mute=False):
 
         self.SLOTS_NUM = S
         self.TIMEOUT = T
-        self.FAST_BATCH_SIZE = B
+        self.FAST_BATCH_SIZE = Bfast
+        self.FALLBACK_BATCH_SIZE = Bacs
 
         self.sid = sid
         self.id = pid
-        self.B = B
         self.N = N
         self.f = f
         self.sPK = sPK
@@ -117,6 +117,8 @@ class Mule():
         self.e_time = 0
         self.txcnt = 0
 
+        self.mute = mute
+
     def submit_tx(self, tx):
         """Appends the given transaction to the transaction buffer.
 
@@ -129,6 +131,21 @@ class Mule():
 
     def run(self):
         """Run the Mule protocol."""
+
+        if self.mute:
+
+            def send_blackhole(*args):
+                pass
+
+            def recv_blackhole(*args):
+                while True:
+                    time.sleep(1)
+                    pass
+
+            seed = int.from_bytes(self.sid.encode('utf-8'), 'little')
+            if self.id in np.random.RandomState(seed).permutation(self.N)[:int((self.N - 1) / 3)]:
+                self._send = send_blackhole
+                self._recv = recv_blackhole
 
         def _recv():
             """Receive messages."""
@@ -145,7 +162,8 @@ class Mule():
         self._recv_thread = gevent.spawn(_recv)
 
         self.s_time = time.time()
-        if self.logger != None: self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
+        if self.logger != None:
+            self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
         while True:
             # For each epoch
@@ -198,9 +216,10 @@ class Mule():
         pid = self.id
         N = self.N
         f = self.f
-        S = self.SLOTS_NUM
-        T = self.TIMEOUT
-        B = self.FAST_BATCH_SIZE
+
+        #S = self.SLOTS_NUM
+        #T = self.TIMEOUT
+        #B = self.FAST_BATCH_SIZE
 
         epoch_id = sid + 'FAST' + str(e)
         hash_genesis = hash(epoch_id)
@@ -230,6 +249,9 @@ class Mule():
 
         fast_blocks = Queue(1)  # The blocks that receives
 
+        latest_delivered_block = None
+        latest_notarized_block = None
+
         viewchange_counter = 0
         viewchange_max_slot = 0
 
@@ -239,19 +261,22 @@ class Mule():
                 send(k, ('FAST', '', o))
 
             def fastpath_output(o):
-                if self.logger != None:
-                    if not fast_blocks.empty():
-                        final_block = fast_blocks.get()
-                        tx_cnt = str(final_block).count("Dummy TX")
-                        self.txcnt += tx_cnt
-                        #self.logger.info('Node %d Delivers Fastpath Block in epoch %d: ' % (self.id, self.epoch) + str(final_block))
+                nonlocal latest_delivered_block, latest_notarized_block, tx_cnt
+                if not fast_blocks.empty():
+                    latest_delivered_block = fast_blocks.get()
+                    tx_cnt = str(latest_delivered_block).count("Dummy TX")
+                    self.txcnt += tx_cnt
+                    #self.logger.info('Node %d Delivers Fastpath Block in epoch %d: ' % (self.id, self.epoch) + str(final_block))
+                    if self.logger is not None:
                         self.logger.info('Node %d Delivers Fastpath Block in Epoch %d at Slot %d with having %d TXs' %
-                                         (self.id, self.epoch, final_block[1], tx_cnt))
-                    fast_blocks.put(o)
+                                         (self.id, self.epoch, latest_delivered_block[1], tx_cnt))
+                latest_notarized_block = o
+                fast_blocks.put(o)
 
             fast_thread = gevent.spawn(fastpath, epoch_id, pid, N, f, leader,
                                        self.transaction_buffer.popleft, fastpath_output,
-                                       S, B, T, hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
+                                       self.SLOTS_NUM, self.FAST_BATCH_SIZE, self.TIMEOUT,
+                                       hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                                        fast_recv.get, fastpath_send, self.logger)
 
             return fast_thread
@@ -329,9 +354,7 @@ class Mule():
 
         if notarization is not None:
 
-            notarized_block = fast_blocks.queue[fast_blocks.qsize() - 1]
-            #notarized_block = fast_blocks.get()
-
+            notarized_block = latest_notarized_block
             payload_digest = hash(notarized_block[3])
             notarized_block_header = (notarized_block[0], notarized_block[1], notarized_block[2], payload_digest)
 
@@ -360,14 +383,14 @@ class Mule():
 
             #if self.logger != None:
             #    self.logger.info('Fast block tx at Node %d:' % self.id + str(fast_blocks))
-            return fast_blocks
+            return notarized_block
 
         else:
 
             # Select B transactions (TODO: actual random selection)
             tx_to_send = []
 
-            for _ in range(self.B):
+            for _ in range(self.FALLBACK_BATCH_SIZE):
                 try:
                     tx_to_send.append(self.transaction_buffer.popleft())
                 except IndexError as e:
@@ -465,8 +488,7 @@ class Mule():
                 #self.logger.info('Node %d Delivers ACS Block %d: ' % (self.id, self.epoch) + str(block))
                 tx_cnt = blk.count("Dummy TX")
                 self.txcnt += tx_cnt
-                self.logger.info(
-                'Node %d Delivers ACS Block in Epoch %d with having %d TXs' % (self.id, self.epoch, tx_cnt))
+                self.logger.info('Node %d Delivers ACS Block in Epoch %d with having %d TXs' % (self.id, self.epoch, tx_cnt))
 
             if self.logger != None:
                 self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
