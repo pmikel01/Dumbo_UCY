@@ -73,8 +73,8 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
     :param decide: ``decide(0)`` or ``output(1)`` is eventually called
     :param send: send channel
     :param receive: receive channel
-    :return: blocks until
     """
+
     # Messages received are routed to either a shared coin, the broadcast, or AUX
     est_values = defaultdict(lambda: [set(), set()])
     aux_values = defaultdict(lambda: [set(), set()])

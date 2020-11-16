@@ -30,7 +30,7 @@ def set_logger_of_node(id: int):
 # Network node class: deal with socket communications
 class Node(Greenlet):
 
-    SEP = '\r\nSEP\r\n'
+    SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'
 
     def __init__(self, port: int, ip: str, id: int, addresses_list: list, logger=None):
         self.queue = Queue()
@@ -63,7 +63,7 @@ class Node(Greenlet):
         try:
             while not self.stop:
                 gevent.sleep(0)
-                buf += sock.recv(4096)
+                buf += sock.recv(100000)
                 tmp = buf.split(self.SEP.encode('utf-8'), 1)
                 while len(tmp) == 2:
                     buf = tmp[1]
@@ -82,7 +82,7 @@ class Node(Greenlet):
                     tmp = buf.split(self.SEP.encode('utf-8'), 1)
         except Exception as e:
             self.logger.error(str((e, traceback.print_exc())))
-            _finish(e)
+            #_finish(e)
 
     def _serve_forever(self):
         print("my IP is " + self.ip)
@@ -133,17 +133,23 @@ class Node(Greenlet):
 
     def _send(self, j: int, o: bytes):
         msg = b''.join([o, self.SEP.encode('utf-8')])
-        try:
-            self.socks[j].sendall(msg)
-        except Exception as e1:
-            self.logger.error("fail to send msg")
-            #print("fail to send msg")
+        for _ in range(3):
             try:
-                self._connect(j)
-                self.socks[j].connect(self.addresses_list[j])
                 self.socks[j].sendall(msg)
-            except Exception as e2:
-                self.logger.error(str((e1, e2, traceback.print_exc())))
+                break
+            except Exception as e1:
+                self.logger.error("fail to send msg")
+                self.logger.error(str((e1, traceback.print_exc())))
+                time.sleep(1)
+                gevent.sleep(1)
+                continue
+            #print("fail to send msg")
+            #try:
+            #    self._connect(j)
+            #    self.socks[j].connect(self.addresses_list[j])
+            #    self.socks[j].sendall(msg)
+            #except Exception as e2:
+            #    self.logger.error(str((e1, e2, traceback.print_exc())))
 
     def send(self, j: int, o: object):
         try:

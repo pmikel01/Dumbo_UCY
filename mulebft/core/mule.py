@@ -19,6 +19,7 @@ from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublic
 from honeybadgerbft.crypto.ecdsa.ecdsa import PrivateKey
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.exceptions import UnknownTagError
+from honeybadgerbft.core import binaryagreement
 
 
 def hash(x):
@@ -27,6 +28,8 @@ def hash(x):
 
 class BroadcastTag(Enum):
     TCVBA = 'TCVBA'
+    ABA = 'ABA'
+    ABA_COIN = 'ABA_COIN'
     FAST = 'FAST'
     VIEW_CHANGE = 'VIEW_CHANGE'
     VIEW_COIN = 'VIEW_COIN'
@@ -37,7 +40,7 @@ class BroadcastTag(Enum):
 
 
 BroadcastReceiverQueues = namedtuple(
-    'BroadcastReceiverQueues', ('TCVBA', 'FAST', 'VIEW_CHANGE', 'VIEW_COIN', 'ACS_PRBC', 'ACS_VACS', 'TPKE'))
+    'BroadcastReceiverQueues', ('TCVBA', 'ABA', 'ABA_COIN', 'FAST', 'VIEW_CHANGE', 'VIEW_COIN', 'ACS_PRBC', 'ACS_VACS', 'TPKE'))
 
 
 def broadcast_receiver(recv_func, recv_queues):
@@ -232,14 +235,19 @@ class Mule():
         viewchange_recv = Queue()
         tcvba_recv = Queue()
         coin_recv = Queue()
+        aba_coin_recv = Queue()
 
         prbc_recvs = [Queue() for _ in range(N)]
         vacs_recv = Queue()
         tpke_recv = Queue()
 
+        aba_recv = Queue()
+
         recv_queues = BroadcastReceiverQueues(
             TCVBA=tcvba_recv,
             FAST=fast_recv,
+            ABA=aba_recv,
+            ABA_COIN=aba_coin_recv,
             VIEW_CHANGE=viewchange_recv,
             VIEW_COIN=coin_recv,
             ACS_PRBC=prbc_recvs,
@@ -250,6 +258,9 @@ class Mule():
 
         tcvba_input = Queue(1)
         tcvba_output = Queue(1)
+
+        aba_input = Queue(1)
+        aba_output = Queue(1)
 
         fast_blocks = Queue(1)  # The blocks that receives
 
@@ -311,6 +322,46 @@ class Mule():
         # Setup VIEW CHANGE
         coin_thread = _setup_coin()
         tcvba_thread = _setup_tcvba(coin_thread)
+
+
+
+        # Do a little bit syncrhnonzation via ABA
+        if epoch_id == 0:
+
+            def _setup_aba_coin():
+                def coin_bcast(o):
+                    """Common coin multicast operation.
+                    :param o: Value to multicast.
+                    """
+                    for k in range(N):
+                        send(k, ('ABA_COIN', '', o))
+
+                coin = shared_coin(epoch_id, pid, N, f,
+                                   self.sPK, self.sSK,
+                                   coin_bcast, coin_recv.get)
+
+                return coin
+
+            def _setup_aba(coin):
+
+                def aba_send(k, o):
+                    send(k, ('ABA', '', o))
+
+                aba = gevent.spawn(binaryagreement, epoch_id, pid, N, f, coin,
+                                     aba_input.get, aba_output.put_nowait,
+                                     aba_recv.get, aba_send)
+
+                return aba
+
+            # Setup ABA SYNC
+            aba_coin_thread = _setup_aba_coin()
+            aba_thread = _setup_aba(aba_coin_thread)
+
+            aba_input.put_nowait(1)
+            aba_output.get()
+
+
+
 
         # Start the fast path
         leader = e % N
