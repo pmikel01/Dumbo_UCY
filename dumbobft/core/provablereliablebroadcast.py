@@ -162,8 +162,8 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
                 # print(digest)
                 broadcast(('READY', roothash, serialize(SK1.sign(digest))))
 
-            if len(ready[roothash]) >= OutputThreshold and echoCounter[roothash] >= K:
-                return decode_output(roothash), _
+            #if len(ready[roothash]) >= OutputThreshold and echoCounter[roothash] >= K:
+            #    return decode_output(roothash)
 
         elif msg[0] == 'READY':
             (_, roothash, raw_sigma) = msg

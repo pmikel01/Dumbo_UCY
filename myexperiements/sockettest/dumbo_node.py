@@ -68,9 +68,11 @@ class DumboBFTNode (Dumbo):
         self.server.start()
 
     def connect_socket_servers(self):
-        self.server.connect_all()
+        send_thread = self.server.connect_all()
         self._send = self.server.send
         self._recv = self.server.recv
+        return send_thread
+
 
     def run_dumbo_instance(self):
 
@@ -79,16 +81,17 @@ class DumboBFTNode (Dumbo):
         self.start_socket_server()
         time.sleep(3)
         gevent.sleep(3)
-        self.connect_socket_servers()
 
+        send_thread = self.connect_socket_servers()
         time.sleep(4)
         gevent.sleep(4)
 
-        self.run()
-
+        main_thread = gevent.spawn(self.run())
+        main_thread.join()
         time.sleep(3)
         gevent.sleep(3)
-        self.server.stop_service()
+
+        #send_thread.join()
 
 def main(sid, i, B, N, f, addresses, K):
     badger = DumboBFTNode(sid, i, B, N, f, addresses, K)

@@ -136,8 +136,6 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                         msg_noncritical_signal.set()
                         continue
 
-                    #if logger is not None: logger.info((sender, 'VOTE', slot, hash_p, raw_sig_p))
-
                     voters[slot_cur].add(sender)
                     votes[slot_cur][sender] = sig_p
                     batches[slot_cur][sender] = (tx_batch, tx_sig)
@@ -146,9 +144,9 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                         Simga = PK1.combine_shares(votes[slot_cur])
                         signed_batches = tuple(batches[slot_cur].items())
                         raw_Sig = serialize(Simga)
-                        decides[slot_cur].put((hash_p, raw_Sig, signed_batches))
                         bcast_to_all_but_not_me(('DECIDE', slot_cur, hash_prev, raw_Sig, signed_batches))
                         decide_sent[slot_cur] = True
+                        decides[slot_cur].put_nowait((hash_p, raw_Sig, signed_batches))
 
             if msg[0] == "DECIDE" and pid != leader:
 
@@ -185,9 +183,7 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                         msg_noncritical_signal.set()
                         continue
 
-                #if logger is not None: logger.info((sender, 'DECIDE', slot, hash_p, raw_Sig_p))
-
-                decides[slot_cur].put((hash_p, raw_Sig_p, signed_batches))
+                decides[slot_cur].put_nowait((hash_p, raw_Sig_p, signed_batches))
 
 
             msg_noncritical_signal.set()
@@ -220,17 +216,19 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
         try:
             sig_tx = ecdsa_sign(SK2, tx_batch)
             send(leader, ('VOTE', slot_cur, hash_prev, serialize(sig_prev), tx_batch, sig_tx))
-            #if logger is not None: logger.info(('VOTE', slot_cur, hash_prev, serialize(sig_prev)))
         except AttributeError as e:
             if logger is not None: logger.info(traceback.print_exc())
 
+
         (h_p, raw_Sig, signed_batches) = decides[slot_cur].get()  # Block to wait for the voted block
+
 
         ########################
         # Enter critical block #
         ########################
 
         slot_noncritical_signal.clear()
+        msg_noncritical_signal.wait()
 
         if pending_block is not None:
             notraized_block = (pending_block[0], pending_block[1], pending_block[2], pending_block[4])
@@ -246,11 +244,11 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                 #if logger is not None:
                 #    logger.info('Fast block Delay at Node %d for Epoch %s and Slot %d: ' % (pid, sid, pending_block[1]-1) + str(delay))
 
-
-
         pending_block = (sid, slot_cur, h_p, raw_Sig, signed_batches)
         pending_block_header = (sid, slot_cur, h_p, hash(signed_batches))
         hash_prev = hash(pending_block_header)
+
+        slot_cur = slot_cur + 1
 
         slot_noncritical_signal.set()
 
@@ -263,6 +261,7 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
     """
 
     recv_thread = gevent.spawn(handle_messages)
+    gevent.sleep(0)
 
     while slot_cur <= SLOTS_NUM + 2:
 
@@ -278,14 +277,13 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
         with Timeout(TIMEOUT):
 
             try:
-                slot_thread = gevent.spawn(one_slot)
-                slot_thread.join()
-                slot_cur = slot_cur + 1
+                one_slot()
+                gevent.sleep(0)
             except Timeout:
                 try:
                     msg_noncritical_signal.wait()
                     slot_noncritical_signal.wait()
-                    gevent.killall([slot_thread, recv_thread])
+                    gevent.killall([recv_thread])
                 except Timeout as e:
                     print("node " + str(pid) + " error: " + str(e))
                     break

@@ -36,10 +36,11 @@ class Node(Greenlet):
 
     def __init__(self, port: int, ip: str, id: int, addresses_list: list, logger=None):
 
-        self.SOCK_NUM = 5
+        self.SOCK_NUM = 2
 
         self.recv_queue = Queue()
         self.send_queue = Queue()
+
         self.ip = ip
         self.port = port
         self.id = id
@@ -121,7 +122,8 @@ class Node(Greenlet):
                     break
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
-        gevent.spawn(self.send_loop)
+        send_thread = gevent.spawn(self.send_loop)
+        return send_thread
 
     def _connect(self, j: int):
         for k in range(self.SOCK_NUM):
@@ -172,6 +174,10 @@ class Node(Greenlet):
 
     def send(self, j: int, o: object):
         self.send_queue.put((j, o))
+        print("send msg to " + str(j))
+        gevent.sleep(0)
+        time.sleep(0)
+
 
     def send_loop(self):
         selectors = [0] * len(self.addresses_list)
@@ -190,14 +196,12 @@ class Node(Greenlet):
                 continue
 
     def _recv(self):
-        #time.sleep(0.001)
-        #try:
         (i, o) = self.recv_queue.get()
-        #print("node %d is receving: " % self.id, (i, o))
+        print("recv msg from " + str(i))
+        gevent.sleep(0)
+        time.sleep(0)
         return (i, o)
-        #except Exception as e:
-        #   print(e)
-        #   pass
+
 
     def recv(self):
         return self._recv()

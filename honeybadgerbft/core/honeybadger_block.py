@@ -1,3 +1,6 @@
+import time
+
+import gevent
 from gevent import monkey
 
 from ..crypto.threshenc import tpke
@@ -73,7 +76,6 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
     acs_in(to_acs)
 
 
-
     # Wait for the corresponding ACS to finish
     vall = acs_out()
 
@@ -105,6 +107,8 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
     # Receive everyone's shares
     shares_received = {}
     while len(shares_received) < f+1:
+        gevent.sleep(0)
+        time.sleep(0)
         (j, raw_shares) = tpke_recv()
         shares = [tpke_deserialize(share) for share in raw_shares]
         if j in shares_received:

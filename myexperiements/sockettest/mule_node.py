@@ -86,17 +86,17 @@ class MuleBFTNode (Mule):
         time.sleep(3)
         gevent.sleep(3)
 
-        self.connect_socket_servers()
+        send_thread = self.connect_socket_servers()
         time.sleep(4)
         gevent.sleep(4)
 
-        self.run()
+        main_thread = gevent.spawn(self.run())
+        main_thread.join()
         time.sleep(3)
         gevent.sleep(3)
 
-        self.server.stop_service()
-        time.sleep(3)
-        gevent.sleep(3)
+        #send_thread.join()
+
 
 def main(sid, i, S, T, B, N, f, addresses, K):
     mule = MuleBFTNode(sid, i, S, T, B, N, f, addresses, K)
