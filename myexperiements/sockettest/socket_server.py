@@ -3,6 +3,8 @@ import pickle
 import gevent
 import os
 
+from multiprocessing.queues import Queue as mpQueue
+
 from gevent import Greenlet
 from gevent import socket, monkey, lock
 from gevent.queue import Queue
@@ -44,6 +46,8 @@ class Node(Greenlet):
             self.logger = set_logger_of_node(self.id)
         else:
             self.logger = logger
+        self.is_out_sock_connected = [False] * len(self.addresses_list)
+        self.is_in_sock_connected = [False] * len(self.addresses_list)
         self.stop = False
         self.s_lock = lock.BoundedSemaphore(1)
         Greenlet.__init__(self)
@@ -74,6 +78,7 @@ class Node(Greenlet):
                         if data == 'ping'.encode('utf-8'):
                             sock.sendall('pong'.encode('utf-8'))
                             self.logger.info("node {} is pinging node {}...".format(self._address_to_id(address), self.id))
+                            self.is_in_sock_connected[self._address_to_id(address)] = True
                         else:
                             (j, o) = (self._address_to_id(address), pickle.loads(data))
                             assert j in range(len(self.addresses_list))
@@ -101,16 +106,15 @@ class Node(Greenlet):
         pass
 
     def connect_all(self):
-        self.logger.info("node %d is fully meshing the network" % self.id)
-        is_sock_connected = [False] * len(self.addresses_list)
+        self.logger.info("node %d is establishing outgoing connections to the network" % self.id)
         while not self.stop:
             gevent.sleep(0)
             time.sleep(0)
             try:
                 for j in range(len(self.addresses_list)):
-                    if not is_sock_connected[j]:
-                        is_sock_connected[j] = self._connect(j)
-                if all(is_sock_connected):
+                    if not self.is_out_sock_connected[j]:
+                        self.is_out_sock_connected[j] = self._connect(j)
+                if all(self.is_out_sock_connected) and all(self.is_in_sock_connected):
                     break
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))

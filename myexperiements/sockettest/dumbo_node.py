@@ -39,16 +39,27 @@ class DumboBFTNode (Dumbo):
         Dumbo.__init__(self, sid, id, B, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.ePK, self.eSK, send=None, recv=None, K=K, logger=set_logger_of_node(id), mute=mute)
         self.server = Node(id=id, ip=my_address, port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
         self.mode = mode
-        self._prepare_bootstrap()
+        #self.prepare_bootstrap()
 
-    def _prepare_bootstrap(self):
-        if self.mode == 'test' or 'debug':
-            for r in range(self.K * self.B):
-                tx = tx_generator(250) # Set each dummy TX to be 250 Byte
-                Dumbo.submit_tx(self, tx)
+    def prepare_bootstrap(self):
+        self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
+        if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
+            tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
+            k = 0
+            for _ in range(self.K):
+                for r in range(self.B):
+                    Dumbo.submit_tx(self, tx.replace(">", hex(r) + ">"))
+                    k += 1
+                    if r % 50000 == 0:
+                        self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
+                        #gevent.sleep(0.1)
+                        #time.sleep(0.1)
+                gevent.sleep(0.1)
+                time.sleep(0.1)
         else:
             pass
             # TODO: submit transactions through tx_buffer
+        self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
 
     def start_socket_server(self):
         pid = os.getpid()
@@ -62,13 +73,19 @@ class DumboBFTNode (Dumbo):
         self._recv = self.server.recv
 
     def run_dumbo_instance(self):
+
+        gevent.spawn(self.prepare_bootstrap).join()
+
         self.start_socket_server()
         time.sleep(3)
         gevent.sleep(3)
         self.connect_socket_servers()
-        time.sleep(3)
-        gevent.sleep(3)
+
+        time.sleep(4)
+        gevent.sleep(4)
+
         self.run()
+
         time.sleep(3)
         gevent.sleep(3)
         self.server.stop_service()

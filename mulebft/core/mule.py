@@ -298,7 +298,7 @@ class Mule():
                 fast_blocks.put(o)
 
             fast_thread = gevent.spawn(fastpath, epoch_id, pid, N, f, leader,
-                                       self.transaction_buffer.get_nowait, fastpath_output,
+                                       self.transaction_buffer.get, fastpath_output,
                                        self.SLOTS_NUM, self.FAST_BATCH_SIZE, self.TIMEOUT,
                                        hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                                        fast_recv.get, fastpath_send, self.logger)
@@ -335,41 +335,41 @@ class Mule():
         tcvba_thread = _setup_tcvba(coin_thread)
 
 
-
-        # Do a little bit syncrhnonzation via ABA
-        if epoch_id == 0:
-
-            def _setup_aba_coin():
-                def coin_bcast(o):
-                    """Common coin multicast operation.
-                    :param o: Value to multicast.
-                    """
-                    for k in range(N):
-                        send(k, ('ABA_COIN', '', o))
-
-                coin = shared_coin(epoch_id, pid, N, f,
-                                   self.sPK, self.sSK,
-                                   coin_bcast, coin_recv.get)
-
-                return coin
-
-            def _setup_aba(coin):
-
-                def aba_send(k, o):
-                    send(k, ('ABA', '', o))
-
-                aba = gevent.spawn(binaryagreement, epoch_id, pid, N, f, coin,
-                                     aba_input.get, aba_output.put_nowait,
-                                     aba_recv.get, aba_send)
-
-                return aba
-
-            # Setup ABA SYNC
-            aba_coin_thread = _setup_aba_coin()
-            aba_thread = _setup_aba(aba_coin_thread)
-
-            aba_input.put_nowait(1)
-            aba_output.get()
+        #
+        # # Do a little bit syncrhnonzation via ABA
+        # if epoch_id == 0:
+        #
+        #     def _setup_aba_coin():
+        #         def coin_bcast(o):
+        #             """Common coin multicast operation.
+        #             :param o: Value to multicast.
+        #             """
+        #             for k in range(N):
+        #                 send(k, ('ABA_COIN', '', o))
+        #
+        #         coin = shared_coin(epoch_id, pid, N, f,
+        #                            self.sPK, self.sSK,
+        #                            coin_bcast, coin_recv.get)
+        #
+        #         return coin
+        #
+        #     def _setup_aba(coin):
+        #
+        #         def aba_send(k, o):
+        #             send(k, ('ABA', '', o))
+        #
+        #         aba = gevent.spawn(binaryagreement, epoch_id, pid, N, f, coin,
+        #                              aba_input.get, aba_output.put_nowait,
+        #                              aba_recv.get, aba_send)
+        #
+        #         return aba
+        #
+        #     # Setup ABA SYNC
+        #     aba_coin_thread = _setup_aba_coin()
+        #     aba_thread = _setup_aba(aba_coin_thread)
+        #
+        #     aba_input.put_nowait(1)
+        #     aba_output.get()
 
 
 
@@ -465,7 +465,7 @@ class Mule():
 
             for _ in range(self.FALLBACK_BATCH_SIZE):
                 try:
-                    tx_to_send.append(self.transaction_buffer.get_nowait())
+                    tx_to_send.append(self.transaction_buffer.get())
                 except IndexError as e:
                     tx_to_send.append("Dummy")
 

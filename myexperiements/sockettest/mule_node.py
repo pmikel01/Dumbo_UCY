@@ -51,13 +51,16 @@ class MuleBFTNode (Mule):
 
     def prepare_bootstrap(self):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
+        tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
+            k = 0
             for _ in range(self.K):
-                for r in range( max(self.FAST_BATCH_SIZE * self.SLOTS_NUM, self.FALLBACK_BATCH_SIZE)):
-                    tx = tx_generator(250) # Set each dummy TX to be 250 Byte
-                    Mule.submit_tx(self, tx)
-                gevent.sleep(2)
-                time.sleep(2)
+                for r in range(max(self.FAST_BATCH_SIZE * self.SLOTS_NUM, self.FALLBACK_BATCH_SIZE)):
+                    suffix = hex(self.id) + hex(r) + ">"
+                    Mule.submit_tx(self, tx[:-len(suffix)] + suffix)
+                    k += 1
+                    if r % 50000 == 0:
+                        self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
         else:
             pass
             # TODO: submit transactions through tx_buffer
@@ -77,20 +80,23 @@ class MuleBFTNode (Mule):
 
     def run_mule_instance(self):
 
+        gevent.spawn(self.prepare_bootstrap).join()
+
         self.start_socket_server()
         time.sleep(3)
         gevent.sleep(3)
-        self.connect_socket_servers()
 
-        gevent.spawn(self.prepare_bootstrap)
-        #time.sleep(5)
-        #gevent.sleep(5)
+        self.connect_socket_servers()
+        time.sleep(4)
+        gevent.sleep(4)
 
         self.run()
         time.sleep(3)
         gevent.sleep(3)
-        self.server.stop_service()
 
+        self.server.stop_service()
+        time.sleep(3)
+        gevent.sleep(3)
 
 def main(sid, i, S, T, B, N, f, addresses, K):
     mule = MuleBFTNode(sid, i, S, T, B, N, f, addresses, K)
