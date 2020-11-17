@@ -6,7 +6,7 @@ import gevent
 import time
 import numpy as np
 from gevent.queue import Queue
-from collections import namedtuple, deque
+from collections import namedtuple
 from enum import Enum
 from mulebft.core.fastpath import fastpath
 from mulebft.core.twovalueagreement import twovalueagreement
@@ -113,7 +113,7 @@ class Mule():
         self._recv = recv
         self.logger = logger
         self.epoch = 0  # Current block number
-        self.transaction_buffer = deque()
+        self.transaction_buffer = Queue()
         self._per_epoch_recv = {}  # Buffer of incoming messages
 
         self.K = K
@@ -134,7 +134,7 @@ class Mule():
         # print('backlog_tx', self.id, tx)
         #if self.logger != None:
         #    self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
-        self.transaction_buffer.append(tx)
+        self.transaction_buffer.put_nowait(tx)
 
     def run(self):
         """Run the Mule protocol."""
@@ -298,7 +298,7 @@ class Mule():
                 fast_blocks.put(o)
 
             fast_thread = gevent.spawn(fastpath, epoch_id, pid, N, f, leader,
-                                       self.transaction_buffer.popleft, fastpath_output,
+                                       self.transaction_buffer.get_nowait, fastpath_output,
                                        self.SLOTS_NUM, self.FAST_BATCH_SIZE, self.TIMEOUT,
                                        hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                                        fast_recv.get, fastpath_send, self.logger)
@@ -465,7 +465,7 @@ class Mule():
 
             for _ in range(self.FALLBACK_BATCH_SIZE):
                 try:
-                    tx_to_send.append(self.transaction_buffer.popleft())
+                    tx_to_send.append(self.transaction_buffer.get_nowait())
                 except IndexError as e:
                     tx_to_send.append("Dummy")
 

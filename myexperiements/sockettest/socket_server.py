@@ -45,7 +45,7 @@ class Node(Greenlet):
         else:
             self.logger = logger
         self.stop = False
-        #self.s_lock = lock.BoundedSemaphore(1)
+        self.s_lock = lock.BoundedSemaphore(1)
         Greenlet.__init__(self)
 
     def _run(self):
@@ -114,7 +114,7 @@ class Node(Greenlet):
                     break
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
-        gevent.spawn(self.send_loop)
+        #gevent.spawn(self.send_loop)
 
     def _connect(self, j: int):
         sock = socket.socket()
@@ -137,17 +137,16 @@ class Node(Greenlet):
 
     def _send(self, j: int, o: bytes):
         msg = b''.join([o, self.SEP.encode('utf-8')])
-        #self.s_lock.acquire()
-        for _ in range(3):
-            try:
-                self.socks[j].sendall(msg)
-                break
-            except Exception as e1:
-                self.logger.error("fail to send msg")
-                self.logger.error(str((e1, traceback.print_exc())))
-                continue
+        with self.s_lock:
+            for _ in range(3):
+                try:
+                    self.socks[j].sendall(msg)
+                    break
+                except Exception as e1:
+                    self.logger.error("fail to send msg")
+                    self.logger.error(str((e1, traceback.print_exc())))
+                    continue
 
-        #self.s_lock.release()
             #print("fail to send msg")
             #try:
             #    self._connect(j)
@@ -157,22 +156,29 @@ class Node(Greenlet):
             #    self.logger.error(str((e1, e2, traceback.print_exc())))
 
     def send(self, j: int, o: object):
-        self.send_queue.put_nowait((j, o))
+        try:
+            self._send(j, pickle.dumps(o))
+        except Exception as e:
+            self.logger.error(str(("problem objective when sending", o)))
+            traceback.print_exc(e)
 
-    def send_loop(self):
-        while True:
-            gevent.sleep(0)
-            time.sleep(0)
-            try:
-                (j, o) = self.send_queue.get_nowait()
-                #print((j, o))
-                try:
-                    self._send(j, pickle.dumps(o))
-                except Exception as e:
-                    self.logger.error(str(("problem objective when sending", o)))
-                    traceback.print_exc(e)
-            except:
-                continue
+    # def send(self, j: int, o: object):
+    #     self.send_queue.put_nowait((j, o))
+    #
+    # def send_loop(self):
+    #     while True:
+    #         gevent.sleep(0)
+    #         time.sleep(0)
+    #         try:
+    #             (j, o) = self.send_queue.get_nowait()
+    #             #print((j, o))
+    #             try:
+    #                 self._send(j, pickle.dumps(o))
+    #             except Exception as e:
+    #                 self.logger.error(str(("problem objective when sending", o)))
+    #                 traceback.print_exc(e)
+    #         except:
+    #             continue
 
     def _recv(self):
         #time.sleep(0.001)

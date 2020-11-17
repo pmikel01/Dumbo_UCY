@@ -2,7 +2,7 @@ import json
 import traceback, time
 import gevent
 import numpy as np
-from collections import namedtuple, deque
+from collections import namedtuple
 from enum import Enum
 from gevent import monkey
 from gevent.queue import Queue
@@ -92,7 +92,7 @@ class Dumbo():
         self._recv = recv
         self.logger = logger
         self.round = 0  # Current block number
-        self.transaction_buffer = deque()
+        self.transaction_buffer = Queue()
         self._per_round_recv = {}  # Buffer of incoming messages
 
         self.K = K
@@ -111,7 +111,7 @@ class Dumbo():
         #if self.logger != None:
         #    self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
         # Insert transactions to the end of TX buffer
-        self.transaction_buffer.append(tx)
+        self.transaction_buffer.put_nowait(tx)
 
     def run(self):
         """Run the Dumbo protocol."""
@@ -160,7 +160,7 @@ class Dumbo():
             # Select B transactions (TODO: actual random selection)
             tx_to_send = []
             for _ in range(self.B):
-                tx_to_send.append(self.transaction_buffer.popleft())
+                tx_to_send.append(self.transaction_buffer.get_nowait())
 
             def _make_send(r):
                 def _send(j, o):
@@ -187,7 +187,7 @@ class Dumbo():
             # Put undelivered but committed TXs back to the backlog buffer
             for _tx in tx_to_send:
                 if _tx not in new_tx:
-                    self.transaction_buffer.appendleft(_tx)
+                    self.transaction_buffer.put_nowait(_tx)
 
             # print('buffer at %d:' % self.id, self.transaction_buffer)
             #if self.logger != None:
