@@ -44,7 +44,7 @@ class Node(Greenlet):
         else:
             self.logger = logger
         self.stop = False
-        self.s_lock = lock.RLock()
+        self.s_lock = lock.BoundedSemaphore(1)
         Greenlet.__init__(self)
 
     def _run(self):
@@ -64,7 +64,7 @@ class Node(Greenlet):
         try:
             while not self.stop:
                 gevent.sleep(0)
-                buf += sock.recv(100000)
+                buf += sock.recv(5000)
                 tmp = buf.split(self.SEP.encode('utf-8'), 1)
                 while len(tmp) == 2:
                     buf = tmp[1]
@@ -119,7 +119,7 @@ class Node(Greenlet):
         try:
             sock.connect(self.addresses_list[j])
             sock.sendall(('ping' + self.SEP).encode('utf-8'))
-            pong = sock.recv(100000)
+            pong = sock.recv(5000)
         except Exception as e1:
             return False
             #print(e1)
@@ -142,9 +142,9 @@ class Node(Greenlet):
             except Exception as e1:
                 self.logger.error("fail to send msg")
                 self.logger.error(str((e1, traceback.print_exc())))
-                time.sleep(1)
-                gevent.sleep(1)
                 continue
+        time.sleep(1)
+        gevent.sleep(1)
         self.s_lock.release()
             #print("fail to send msg")
             #try:

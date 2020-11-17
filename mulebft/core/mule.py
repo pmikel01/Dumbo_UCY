@@ -194,15 +194,15 @@ class Mule():
             #if self.logger != None:
             #    self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
 
+            self.e_time = time.time()
+            if self.logger != None:
+                self.logger.info("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
+            else:
+                print("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
+
             self.epoch += 1  # Increment the round
             if self.epoch >= self.K:
-                break  # Only run one round for now
-
-        self.e_time = time.time()
-        if self.logger != None:
-            self.logger.info("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
-        else:
-            print("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
+                break
 
         gevent.sleep(5)
 
