@@ -114,39 +114,33 @@ class Node(Greenlet):
                     break
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
-        gevent.spawn(self.send_loop_0)
-        gevent.spawn(self.send_loop_1)
+        gevent.spawn(self.send_loop)
 
     def _connect(self, j: int):
-        sock1 = socket.socket()
-        sock2 = socket.socket()
-        sock1.bind((self.ip, self.port + 2*j + 1))
-        sock2.bind((self.ip, self.port + 2*j + 2))
+        sock = socket.socket()
+        sock.bind((self.ip, self.port + j + 1))
         try:
-            sock1.connect(self.addresses_list[j])
-            sock1.sendall(('ping' + self.SEP).encode('utf-8'))
-            pong1 = sock1.recv(5000)
-            sock2.connect(self.addresses_list[j])
-            sock2.sendall(('ping' + self.SEP).encode('utf-8'))
-            pong2 = sock2.recv(5000)
+            sock.connect(self.addresses_list[j])
+            sock.sendall(('ping' + self.SEP).encode('utf-8'))
+            pong = sock.recv(5000)
         except Exception as e1:
             return False
             #print(e1)
             #traceback.print_exc()
-        if pong1.decode('utf-8') == 'pong' and pong2.decode('utf-8') == 'pong':
+        if pong.decode('utf-8') == 'pong':
             self.logger.info("node {} is ponging node {}...".format(j, self.id))
-            self.socks[j] = (sock1, sock2)
+            self.socks[j] = sock
             return True
         else:
             self.logger.info("fails to build connect from {} to {}".format(self.id, j))
             return False
 
-    def _send(self, j: int, o: bytes, select: int):
+    def _send(self, j: int, o: bytes):
         msg = b''.join([o, self.SEP.encode('utf-8')])
         #self.s_lock.acquire()
         for _ in range(3):
             try:
-                self.socks[j][select].sendall(msg)
+                self.socks[j].sendall(msg)
                 break
             except Exception as e1:
                 self.logger.error("fail to send msg")
@@ -165,8 +159,7 @@ class Node(Greenlet):
     def send(self, j: int, o: object):
         self.send_queue.put_nowait((j, o))
 
-    def send_loop_0(self):
-        selector = 0
+    def send_loop(self):
         while True:
             gevent.sleep(0)
             time.sleep(0)
@@ -174,23 +167,7 @@ class Node(Greenlet):
                 (j, o) = self.send_queue.get_nowait()
                 #print((j, o))
                 try:
-                    self._send(j, pickle.dumps(o), selector)
-                except Exception as e:
-                    self.logger.error(str(("problem objective when sending", o)))
-                    traceback.print_exc(e)
-            except:
-                continue
-
-    def send_loop_1(self):
-        selector = 1
-        while True:
-            gevent.sleep(0)
-            time.sleep(0)
-            try:
-                (j, o) = self.send_queue.get_nowait()
-                #print((j, o))
-                try:
-                    self._send(j, pickle.dumps(o), selector)
+                    self._send(j, pickle.dumps(o))
                 except Exception as e:
                     self.logger.error(str(("problem objective when sending", o)))
                     traceback.print_exc(e)
