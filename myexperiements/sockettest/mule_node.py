@@ -48,16 +48,21 @@ class MuleBFTNode (Mule):
         Mule.__init__(self, sid, id, S, T, Bfast, Bacs, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, logger=set_logger_of_node(id), mute=mute)
         self.server = Node(id=id, ip=my_address, port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
         self.mode = mode
-        self._prepare_bootstrap()
 
-    def _prepare_bootstrap(self):
+    def prepare_bootstrap(self):
+        self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
-            for r in range(self.K * max(self.FAST_BATCH_SIZE * self.SLOTS_NUM, self.FALLBACK_BATCH_SIZE)):
-                tx = tx_generator(250) # Set each dummy TX to be 250 Byte
-                Mule.submit_tx(self, tx)
+            for _ in range(self.K):
+                for r in range( max(self.FAST_BATCH_SIZE * self.SLOTS_NUM, self.FALLBACK_BATCH_SIZE)):
+                    tx = tx_generator(250) # Set each dummy TX to be 250 Byte
+                    Mule.submit_tx(self, tx)
+                gevent.sleep(2)
+                time.sleep(2)
         else:
             pass
             # TODO: submit transactions through tx_buffer
+        self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
+
 
     def start_socket_server(self):
         pid = os.getpid()
@@ -71,12 +76,16 @@ class MuleBFTNode (Mule):
         self._recv = self.server.recv
 
     def run_mule_instance(self):
+
         self.start_socket_server()
         time.sleep(3)
         gevent.sleep(3)
         self.connect_socket_servers()
-        time.sleep(3)
-        gevent.sleep(3)
+
+        gevent.spawn(self.prepare_bootstrap)
+        #time.sleep(5)
+        #gevent.sleep(5)
+
         self.run()
         time.sleep(3)
         gevent.sleep(3)
