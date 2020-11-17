@@ -33,7 +33,8 @@ class Node(Greenlet):
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'
 
     def __init__(self, port: int, ip: str, id: int, addresses_list: list, logger=None):
-        self.queue = Queue()
+        self.recv_queue = Queue()
+        self.send_queue = Queue()
         self.ip = ip
         self.port = port
         self.id = id
@@ -44,7 +45,7 @@ class Node(Greenlet):
         else:
             self.logger = logger
         self.stop = False
-        self.s_lock = lock.BoundedSemaphore(1)
+        #self.s_lock = lock.BoundedSemaphore(1)
         Greenlet.__init__(self)
 
     def _run(self):
@@ -76,7 +77,7 @@ class Node(Greenlet):
                         else:
                             (j, o) = (self._address_to_id(address), pickle.loads(data))
                             assert j in range(len(self.addresses_list))
-                            gevent.spawn(self.queue.put_nowait((j, o)))
+                            gevent.spawn(self.recv_queue.put_nowait((j, o)))
                     else:
                         self.logger.error('syntax error messages')
                         raise ValueError
@@ -103,15 +104,17 @@ class Node(Greenlet):
         self.logger.info("node %d is fully meshing the network" % self.id)
         is_sock_connected = [False] * len(self.addresses_list)
         while not self.stop:
+            gevent.sleep(0)
+            time.sleep(0)
             try:
                 for j in range(len(self.addresses_list)):
                     if not is_sock_connected[j]:
                         is_sock_connected[j] = self._connect(j)
                 if all(is_sock_connected):
                     break
-                time.sleep(1)
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
+        gevent.spawn(self.send_loop)
 
     def _connect(self, j: int):
         sock = socket.socket()
@@ -134,7 +137,7 @@ class Node(Greenlet):
 
     def _send(self, j: int, o: bytes):
         msg = b''.join([o, self.SEP.encode('utf-8')])
-        self.s_lock.acquire()
+        #self.s_lock.acquire()
         for _ in range(3):
             try:
                 self.socks[j].sendall(msg)
@@ -143,9 +146,8 @@ class Node(Greenlet):
                 self.logger.error("fail to send msg")
                 self.logger.error(str((e1, traceback.print_exc())))
                 continue
-        time.sleep(1)
-        gevent.sleep(1)
-        self.s_lock.release()
+
+        #self.s_lock.release()
             #print("fail to send msg")
             #try:
             #    self._connect(j)
@@ -155,16 +157,27 @@ class Node(Greenlet):
             #    self.logger.error(str((e1, e2, traceback.print_exc())))
 
     def send(self, j: int, o: object):
-        try:
-            self._send(j, pickle.dumps(o))
-        except Exception as e:
-            self.logger.error(str(("problem objective when sending", o)))
-            traceback.print_exc(e)
+        self.send_queue.put_nowait((j, o))
+
+    def send_loop(self):
+        while True:
+            gevent.sleep(0)
+            time.sleep(0)
+            try:
+                (j, o) = self.send_queue.get_nowait()
+                #print((j, o))
+                try:
+                    self._send(j, pickle.dumps(o))
+                except Exception as e:
+                    self.logger.error(str(("problem objective when sending", o)))
+                    traceback.print_exc(e)
+            except:
+                continue
 
     def _recv(self):
         #time.sleep(0.001)
         #try:
-        (i, o) = self.queue.get()
+        (i, o) = self.recv_queue.get()
         #print("node %d is receving: " % self.id, (i, o))
         return (i, o)
         #except Exception as e:

@@ -63,6 +63,8 @@ def broadcast_receiver(recv_func, recv_queues):
 
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
+        gevent.sleep(0)
+        time.sleep(0)
         broadcast_receiver(recv_func, recv_queues)
 
 
@@ -144,6 +146,7 @@ class Mule():
 
             def recv_blackhole(*args):
                 while True:
+                    gevent.sleep(1)
                     time.sleep(1)
                     pass
 
@@ -155,6 +158,10 @@ class Mule():
         def _recv():
             """Receive messages."""
             while True:
+
+                gevent.sleep(0)
+                time.sleep(0)
+
                 (sender, (r, msg)) = self._recv()
 
                 # Maintain an *unbounded* recv queue for each epoch
@@ -171,6 +178,10 @@ class Mule():
             self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
         while True:
+
+            gevent.sleep(0)
+            time.sleep(0)
+
             # For each epoch
             e = self.epoch
             if e not in self._per_epoch_recv:
@@ -372,6 +383,10 @@ class Mule():
             nonlocal viewchange_counter, viewchange_max_slot
 
             while True:
+
+                gevent.sleep(0)
+                time.sleep(0)
+
                 j, (notarized_block_header_j, notarized_block_raw_Sig_j) = viewchange_recv.get()
                 if notarized_block_raw_Sig_j is not None:
                     (_, slot_num, Sig_p, _) = notarized_block_header_j
