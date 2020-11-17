@@ -41,6 +41,8 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
     :return tuple: False to represent timeout, and True to represent success
     """
 
+    #if logger is not None: logger.info("Entering fast path of epoch %d" % pid)
+
     TIMEOUT = Tout
     SLOTS_NUM = Snum
     BATCH_SIZE = Bsize
@@ -83,6 +85,10 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
         nonlocal leader, hash_prev, pending_block, notraized_block, batches, voters, votes, slot_cur
 
         while True:
+
+            gevent.sleep(0)
+            time.sleep(0)
+
             (sender, msg) = recv()
             assert sender in range(N)
 
@@ -103,31 +109,34 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                         assert slot == slot_cur
                     except AssertionError:
                         #if slot < slot_cur:
-                        #    print("Late vote from node %d! Not needed anymore..." % sender)
+                        #    if logger is not None: logger.info("Late vote from node %d! Not needed anymore..." % sender)
                         #else:
-                        #    print("Too early vote from node %d! I do not decide earlier block yet..." % sender)
+                        #    if logger is not None: logger.info("Too early vote from node %d! I do not decide earlier block yet..." % sender)
+                        msg_noncritical_signal.set()
                         continue
 
                     try:
                         assert hash_p == hash_prev
                     except AssertionError:
-                        print("False vote from node %d though within the same slot!" % sender)
+                        if logger is not None: logger.info("False vote from node %d though within the same slot!" % sender)
                         msg_noncritical_signal.set()
                         continue
 
                     try:
                         assert PK1.verify_share(sig_p, sender, PK1.hash_message(hash_p))
                     except AssertionError:
-                        print("Vote signature failed!")
+                        if logger is not None: logger.info("Vote signature failed!")
                         msg_noncritical_signal.set()
                         continue
 
                     try:
                         assert ecdsa_vrfy(PK2s[sender], tx_batch, tx_sig)
                     except AssertionError:
-                        print("Batch signature failed!")
+                        if logger is not None: logger.info("Batch signature failed!")
                         msg_noncritical_signal.set()
                         continue
+
+                    #if logger is not None: logger.info((sender, 'VOTE', slot, hash_p, raw_sig_p))
 
                     voters[slot_cur].add(sender)
                     votes[slot_cur][sender] = sig_p
@@ -149,21 +158,21 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                 try:
                     assert slot == slot_cur
                 except AssertionError:
-                    print("Out of synchronization")
+                    if logger is not None: logger.info("Out of synchronization")
                     msg_noncritical_signal.set()
                     continue
 
                 try:
                     assert PK1.verify_signature(Sig_p, PK1.hash_message(hash_p))
                 except AssertionError:
-                    print("Notarization signature failed!")
+                    if logger is not None: logger.info("Notarization signature failed!")
                     msg_noncritical_signal.set()
                     continue
 
                 try:
                     assert len(signed_batches) >= N - f
                 except AssertionError:
-                    print("Not enough batches!")
+                    if logger is not None: logger.info("Not enough batches!")
                     msg_noncritical_signal.set()
                     continue
 
@@ -172,11 +181,14 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                     try:
                         ecdsa_vrfy(PK2s[proposer], tx_batch, sig)
                     except AssertionError:
-                        print("Batches signatures failed!")
+                        if logger is not None: logger.info("Batches signatures failed!")
                         msg_noncritical_signal.set()
                         continue
 
+                #if logger is not None: logger.info((sender, 'DECIDE', slot, hash_p, raw_Sig_p))
+
                 decides[slot_cur].put((hash_p, raw_Sig_p, signed_batches))
+
 
             msg_noncritical_signal.set()
 
@@ -191,22 +203,26 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
     def one_slot():
         nonlocal pending_block, notraized_block, hash_prev, slot_cur, epoch_txcnt, delay, e_times, s_times, txcnt, weighted_delay
 
+        #if logger is not None: logger.info("Entering slot %d" % slot_cur)
+
         sig_prev = SK1.sign(PK1.hash_message(hash_prev))
 
         s_times[slot_cur] = time.time()
+
         if slot_cur == SLOTS_NUM + 1 or slot_cur == SLOTS_NUM + 2:
             tx_batch = 'Dummy'
         else:
             try:
                 tx_batch = json.dumps([get_input() for _ in range(BATCH_SIZE)])
             except IndexError as e:
-                tx_batch = json.dumps(['Dummy' for _ in range(BATCH_SIZE)])
+                tx_batch = json.dumps(['Dummy TX' for _ in range(BATCH_SIZE)])
 
         try:
             sig_tx = ecdsa_sign(SK2, tx_batch)
             send(leader, ('VOTE', slot_cur, hash_prev, serialize(sig_prev), tx_batch, sig_tx))
+            #if logger is not None: logger.info(('VOTE', slot_cur, hash_prev, serialize(sig_prev)))
         except AttributeError as e:
-            traceback.print_exc(e)
+            if logger is not None: logger.info(traceback.print_exc())
 
         (h_p, raw_Sig, signed_batches) = decides[slot_cur].get()  # Block to wait for the voted block
 
@@ -249,6 +265,10 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
     recv_thread = gevent.spawn(handle_messages)
 
     while slot_cur <= SLOTS_NUM + 2:
+
+        gevent.sleep(0)
+        time.sleep(0)
+
         msg_noncritical_signal.wait()
         slot_noncritical_signal.wait()
 

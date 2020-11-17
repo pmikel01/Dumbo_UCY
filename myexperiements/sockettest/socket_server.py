@@ -35,13 +35,16 @@ class Node(Greenlet):
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'
 
     def __init__(self, port: int, ip: str, id: int, addresses_list: list, logger=None):
+
+        self.SOCK_NUM = 5
+
         self.recv_queue = Queue()
         self.send_queue = Queue()
         self.ip = ip
         self.port = port
         self.id = id
         self.addresses_list = addresses_list
-        self.socks = [None for _ in self.addresses_list]
+        self.socks = [ [None] * self.SOCK_NUM for _ in self.addresses_list]
         if logger is None:
             self.logger = set_logger_of_node(self.id)
         else:
@@ -49,7 +52,7 @@ class Node(Greenlet):
         self.is_out_sock_connected = [False] * len(self.addresses_list)
         self.is_in_sock_connected = [False] * len(self.addresses_list)
         self.stop = False
-        self.s_lock = lock.BoundedSemaphore(1)
+        #self.s_lock = lock.BoundedSemaphore(1)
         Greenlet.__init__(self)
 
     def _run(self):
@@ -118,38 +121,39 @@ class Node(Greenlet):
                     break
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
-        #gevent.spawn(self.send_loop)
+        gevent.spawn(self.send_loop)
 
     def _connect(self, j: int):
-        sock = socket.socket()
-        sock.bind((self.ip, self.port + j + 1))
-        try:
-            sock.connect(self.addresses_list[j])
-            sock.sendall(('ping' + self.SEP).encode('utf-8'))
-            pong = sock.recv(5000)
-        except Exception as e1:
-            return False
+        for k in range(self.SOCK_NUM):
+            sock = socket.socket()
+            sock.bind((self.ip, self.port + self.SOCK_NUM * j + 1 + k))
+            try:
+                sock.connect(self.addresses_list[j])
+                sock.sendall(('ping' + self.SEP).encode('utf-8'))
+                pong = sock.recv(5000)
+            except Exception as e1:
+                return False
             #print(e1)
             #traceback.print_exc()
-        if pong.decode('utf-8') == 'pong':
-            self.logger.info("node {} is ponging node {}...".format(j, self.id))
-            self.socks[j] = sock
-            return True
-        else:
-            self.logger.info("fails to build connect from {} to {}".format(self.id, j))
-            return False
+            if pong.decode('utf-8') == 'pong':
+                self.logger.info("node {} is ponging node {}...".format(j, self.id))
+                self.socks[j][k] = sock
+            else:
+                self.logger.info("fails to build connect from {} to {}".format(self.id, j))
+                return False
+        return True
 
-    def _send(self, j: int, o: bytes):
+    def _send(self, j: int, o: bytes, select: int):
         msg = b''.join([o, self.SEP.encode('utf-8')])
-        with self.s_lock:
-            for _ in range(3):
-                try:
-                    self.socks[j].sendall(msg)
-                    break
-                except Exception as e1:
-                    self.logger.error("fail to send msg")
-                    self.logger.error(str((e1, traceback.print_exc())))
-                    continue
+        #with self.s_lock:
+        for _ in range(3):
+            try:
+                self.socks[j][select].sendall(msg)
+                break
+            except Exception as e1:
+                self.logger.error("fail to send msg")
+                self.logger.error(str((e1, traceback.print_exc())))
+                continue
 
             #print("fail to send msg")
             #try:
@@ -159,30 +163,31 @@ class Node(Greenlet):
             #except Exception as e2:
             #    self.logger.error(str((e1, e2, traceback.print_exc())))
 
-    def send(self, j: int, o: object):
-        try:
-            self._send(j, pickle.dumps(o))
-        except Exception as e:
-            self.logger.error(str(("problem objective when sending", o)))
-            traceback.print_exc(e)
-
     # def send(self, j: int, o: object):
-    #     self.send_queue.put_nowait((j, o))
-    #
-    # def send_loop(self):
-    #     while True:
-    #         gevent.sleep(0)
-    #         time.sleep(0)
-    #         try:
-    #             (j, o) = self.send_queue.get_nowait()
-    #             #print((j, o))
-    #             try:
-    #                 self._send(j, pickle.dumps(o))
-    #             except Exception as e:
-    #                 self.logger.error(str(("problem objective when sending", o)))
-    #                 traceback.print_exc(e)
-    #         except:
-    #             continue
+    #     try:
+    #         self._send(j, pickle.dumps(o))
+    #     except Exception as e:
+    #         self.logger.error(str(("problem objective when sending", o)))
+    #         traceback.print_exc(e)
+
+    def send(self, j: int, o: object):
+        self.send_queue.put((j, o))
+
+    def send_loop(self):
+        selectors = [0] * len(self.addresses_list)
+        while True:
+            gevent.sleep(0)
+            time.sleep(0)
+            try:
+                (j, o) = self.send_queue.get_nowait()
+                selectors[j] = (selectors[j] + 1) % self.SOCK_NUM
+                try:
+                    self._send(j, pickle.dumps(o), selectors[j])
+                except Exception as e:
+                    self.logger.error(str(("problem objective when sending", o)))
+                    traceback.print_exc(e)
+            except:
+                continue
 
     def _recv(self):
         #time.sleep(0.001)

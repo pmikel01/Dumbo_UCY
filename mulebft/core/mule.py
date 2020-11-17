@@ -298,10 +298,10 @@ class Mule():
                 fast_blocks.put(o)
 
             fast_thread = gevent.spawn(fastpath, epoch_id, pid, N, f, leader,
-                                       self.transaction_buffer.get, fastpath_output,
-                                       self.SLOTS_NUM, self.FAST_BATCH_SIZE, self.TIMEOUT,
-                                       hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
-                                       fast_recv.get, fastpath_send, self.logger)
+                                   self.transaction_buffer.get_nowait, fastpath_output,
+                                   self.SLOTS_NUM, self.FAST_BATCH_SIZE, self.TIMEOUT,
+                                   hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
+                                   fast_recv.get, fastpath_send, self.logger)
 
             return fast_thread
 
@@ -378,6 +378,8 @@ class Mule():
         leader = e % N
         fast_thread = _setup_fastpath(leader)
 
+        if self.logger is not None: self.logger.info("epoch %d with fast path leader %d" % (e, leader))
+
         #
         def handle_viewchange_msg():
             nonlocal viewchange_counter, viewchange_max_slot
@@ -396,7 +398,7 @@ class Mule():
                         notarized_hash = self.sPK1.hash_message(notarized_block_hash_j)
                         assert self.sPK1.verify_signature(notarized_Sig_j, notarized_hash)
                     except AssertionError:
-                        print("False view change with invalid notarization")
+                        if self.logger is not None: self.logger.info("False view change with invalid notarization")
                         continue  # go to next iteration without counting ViewChange Counter
                 else:
                     assert notarized_block_header_j == None
@@ -465,7 +467,7 @@ class Mule():
 
             for _ in range(self.FALLBACK_BATCH_SIZE):
                 try:
-                    tx_to_send.append(self.transaction_buffer.get())
+                    tx_to_send.append(self.transaction_buffer.get_nowait())
                 except IndexError as e:
                     tx_to_send.append("Dummy")
 

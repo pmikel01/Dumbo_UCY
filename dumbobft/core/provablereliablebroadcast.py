@@ -1,5 +1,8 @@
 # coding=utf-8
+import time
 from collections import defaultdict
+
+import gevent
 from gevent import monkey
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.reliablebroadcast import encode, decode
@@ -113,6 +116,9 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
 
     while True:  # main receive loop
 
+        gevent.sleep(0)
+        time.sleep(0)
+
         sender, msg = receive()
 
         if msg[0] == 'VAL' and fromLeader is None:
@@ -157,7 +163,7 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
                 broadcast(('READY', roothash, serialize(SK1.sign(digest))))
 
             if len(ready[roothash]) >= OutputThreshold and echoCounter[roothash] >= K:
-                return decode_output(roothash)
+                return decode_output(roothash), _
 
         elif msg[0] == 'READY':
             (_, roothash, raw_sigma) = msg

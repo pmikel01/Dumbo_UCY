@@ -54,7 +54,7 @@ class MuleBFTNode (Mule):
         tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
             k = 0
-            for _ in range(self.K):
+            for _ in range(self.K + 1):
                 for r in range(max(self.FAST_BATCH_SIZE * self.SLOTS_NUM, self.FALLBACK_BATCH_SIZE)):
                     suffix = hex(self.id) + hex(r) + ">"
                     Mule.submit_tx(self, tx[:-len(suffix)] + suffix)

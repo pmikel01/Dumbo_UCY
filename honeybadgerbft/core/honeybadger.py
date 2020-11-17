@@ -41,6 +41,8 @@ def broadcast_receiver(recv_func, recv_queues):
 
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
+        gevent.sleep(0)
+        time.sleep(0)
         broadcast_receiver(recv_func, recv_queues)
 
 
@@ -110,6 +112,7 @@ class HoneyBadgerBFT():
 
             def recv_blackhole(*args):
                 while True:
+                    gevent.sleep(1)
                     time.sleep(1)
                     pass
 
@@ -121,6 +124,10 @@ class HoneyBadgerBFT():
         def _recv():
             """Receive messages."""
             while True:
+
+                gevent.sleep(0)
+                time.sleep(0)
+
                 (sender, (r, msg)) = self._recv()
 
                 # Maintain an *unbounded* recv queue for each epoch
@@ -137,6 +144,9 @@ class HoneyBadgerBFT():
 
         while True:
             # For each round...
+
+            gevent.sleep(0)
+            time.sleep(0)
 
             start = time.time()
 
