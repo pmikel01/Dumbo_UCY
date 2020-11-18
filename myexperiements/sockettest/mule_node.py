@@ -86,7 +86,7 @@ class MuleBFTNode (Mule):
         time.sleep(3)
         gevent.sleep(3)
 
-        send_thread = self.connect_socket_servers()
+        self.connect_socket_servers()
         time.sleep(4)
         gevent.sleep(4)
 

@@ -185,9 +185,9 @@ class Dumbo():
                 self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
 
             # Put undelivered but committed TXs back to the backlog buffer
-            for _tx in tx_to_send:
-                if _tx not in new_tx:
-                    self.transaction_buffer.put_nowait(_tx)
+            #for _tx in tx_to_send:
+            #    if _tx not in new_tx:
+            #        self.transaction_buffer.put_nowait(_tx)
 
             # print('buffer at %d:' % self.id, self.transaction_buffer)
             #if self.logger != None:

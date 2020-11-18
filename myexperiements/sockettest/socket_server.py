@@ -53,7 +53,8 @@ class Node(Greenlet):
         self.is_out_sock_connected = [False] * len(self.addresses_list)
         self.is_in_sock_connected = [False] * len(self.addresses_list)
         self.stop = False
-        #self.s_lock = lock.BoundedSemaphore(1)
+        self.s_locks = [lock.BoundedSemaphore(self.SOCK_NUM) for _ in range(len(self.addresses_list))]
+
         Greenlet.__init__(self)
 
     def _run(self):
@@ -122,8 +123,8 @@ class Node(Greenlet):
                     break
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
-        send_thread = gevent.spawn(self.send_loop)
-        return send_thread
+        #send_thread = gevent.spawn(self.send_loop)
+        #return send_thread
 
     def _connect(self, j: int):
         for k in range(self.SOCK_NUM):
@@ -173,31 +174,38 @@ class Node(Greenlet):
     #         traceback.print_exc(e)
 
     def send(self, j: int, o: object):
-        self.send_queue.put((j, o))
-        print("send msg to " + str(j))
-        gevent.sleep(0)
-        time.sleep(0)
-
-
-    def send_loop(self):
-        selectors = [0] * len(self.addresses_list)
-        while True:
-            gevent.sleep(0)
-            time.sleep(0)
+        with self.s_locks[j]:
             try:
-                (j, o) = self.send_queue.get_nowait()
-                selectors[j] = (selectors[j] + 1) % self.SOCK_NUM
-                try:
-                    self._send(j, pickle.dumps(o), selectors[j])
-                except Exception as e:
-                    self.logger.error(str(("problem objective when sending", o)))
-                    traceback.print_exc(e)
-            except:
-                continue
+                self._send(j, pickle.dumps(o), self.s_locks[j].counter)
+            except Exception as e:
+                self.logger.error(str(("problem objective when sending", o)))
+                traceback.print_exc()
+
+    # def send(self, j: int, o: object):
+    #     self.send_queue.put((j, o))
+    #     print("send msg to " + str(j))
+    #     gevent.sleep(0)
+    #     time.sleep(0)
+
+    # def send_loop(self):
+    #     selectors = [0] * len(self.addresses_list)
+    #     while True:
+    #         gevent.sleep(0)
+    #         time.sleep(0)
+    #         try:
+    #             (j, o) = self.send_queue.get_nowait()
+    #             selectors[j] = (selectors[j] + 1) % self.SOCK_NUM
+    #             try:
+    #                 self._send(j, pickle.dumps(o), selectors[j])
+    #             except Exception as e:
+    #                 self.logger.error(str(("problem objective when sending", o)))
+    #                 traceback.print_exc(e)
+    #         except:
+    #             continue
 
     def _recv(self):
         (i, o) = self.recv_queue.get()
-        print("recv msg from " + str(i))
+        #print("recv msg from " + str(i))
         gevent.sleep(0)
         time.sleep(0)
         return (i, o)
