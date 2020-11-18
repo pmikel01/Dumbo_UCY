@@ -36,7 +36,7 @@ class Node(Greenlet):
 
     def __init__(self, port: int, ip: str, id: int, addresses_list: list, logger=None):
 
-        self.SOCK_NUM = 2
+        self.SOCK_NUM = 1
 
         self.recv_queue = Queue()
         self.send_queue = Queue()
@@ -129,7 +129,8 @@ class Node(Greenlet):
     def _connect(self, j: int):
         for k in range(self.SOCK_NUM):
             sock = socket.socket()
-            sock.bind((self.ip, self.port + self.SOCK_NUM * j + 1 + k))
+            if self.ip == '127.0.0.1':
+                sock.bind((self.ip, self.port + self.SOCK_NUM * j + 1 + k))
             try:
                 sock.connect(self.addresses_list[j])
                 sock.sendall(('ping' + self.SEP).encode('utf-8'))
@@ -148,7 +149,6 @@ class Node(Greenlet):
 
     def _send(self, j: int, o: bytes, select: int):
         msg = b''.join([o, self.SEP.encode('utf-8')])
-        #with self.s_lock:
         for _ in range(3):
             try:
                 self.socks[j][select].sendall(msg)

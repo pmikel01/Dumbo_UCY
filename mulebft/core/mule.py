@@ -74,7 +74,8 @@ class Mule():
     :param str sid: The base name of the common coin that will be used to
         derive a nonce to uniquely identify the coin.
     :param int pid: Node id.
-    :param int B: Batch size of transactions.
+    :param int Bfast: Batch size of transactions.
+    :param int Bacs: Batch size of transactions.
     :param int N: Number of nodes in the network.
     :param int f: Number of faulty nodes that can be tolerated.
     :param TBLSPublicKey sPK: Public key of the (f, N) threshold signature.
