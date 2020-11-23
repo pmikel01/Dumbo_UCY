@@ -8,7 +8,7 @@ from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.reliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 
-monkey.patch_all()
+monkey.patch_all(thread=False)
 
 
 def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):

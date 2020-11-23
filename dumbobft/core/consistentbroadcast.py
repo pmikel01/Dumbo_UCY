@@ -2,7 +2,7 @@ from collections import defaultdict
 from gevent import monkey
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 
-monkey.patch_all()
+monkey.patch_all(thread=False)
 
 
 def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):

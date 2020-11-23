@@ -1,13 +1,19 @@
+import logging
 import random
+from typing import List
+
 import gevent
 import os
 import pickle
 
-from gevent import time
+from gevent import time, monkey
 from mulebft.core.mule import Mule
 from myexperiements.sockettest.make_random_tx import tx_generator
-from myexperiements.sockettest.socket_server import Node, set_logger_of_node
 from coincurve import PrivateKey, PublicKey
+from multiprocessing import Value as mpValue, Queue as mpQueue, Process
+
+#monkey.patch_all(thread=False, socket=False)
+monkey.patch_all(thread=False)
 
 
 def load_key(id, N):
@@ -41,13 +47,17 @@ def load_key(id, N):
     return sPK, sPK1, sPK2s, ePK, sSK, sSK1, sSK2, eSK
 
 
-class MuleBFTNode (Mule):
+class MuleBFTNode (Mule, Process):
 
-    def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, my_address: str, addresses_list: list, K=3, mode='debug', mute=False, tx_buffer=None):
+    def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, recv_q: mpQueue, send_q: mpQueue, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
-        Mule.__init__(self, sid, id, S, T, int(Bfast/N), int(Bacs/N), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, logger=set_logger_of_node(id), mute=mute)
-        self.server = Node(id=id, ip=my_address, port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
+        self.recv_queue = recv_q
+        self.send_queue = send_q
+        self.ready = ready
+        self.stop = stop
         self.mode = mode
+        Mule.__init__(self, sid, id, S, T, max(int(Bfast/N), 1), max(int(Bacs/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
+        Process.__init__(self)
 
     def prepare_bootstrap(self):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
@@ -66,41 +76,25 @@ class MuleBFTNode (Mule):
             # TODO: submit transactions through tx_buffer
         self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
 
+    def run(self):
 
-    def start_socket_server(self):
         pid = os.getpid()
-        #print('pid: ', pid)
-        self.logger.info('node id %d is running on pid %d' % (self.id, pid))
-        self.server.start()
+        self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
+        self._send = lambda j, o: self.send_queue.put_nowait((j, o))
+        self._recv = lambda: self.recv_queue.get_nowait()
+        self.prepare_bootstrap()
 
-    def connect_socket_servers(self):
-        self.server.connect_all()
-        self._send = self.server.send
-        self._recv = self.server.recv
+        while not self.ready.value:
+            time.sleep(1)
+            gevent.sleep(1)
 
-    def run_mule_instance(self):
-
-        gevent.spawn(self.prepare_bootstrap).join()
-
-        self.start_socket_server()
-        time.sleep(3)
-        gevent.sleep(3)
-
-        self.connect_socket_servers()
-        time.sleep(4)
-        gevent.sleep(4)
-
-        main_thread = gevent.spawn(self.run())
-        main_thread.join()
-        time.sleep(3)
-        gevent.sleep(3)
-
-        #send_thread.join()
+        self.run_bft()
+        self.stop.value = True
 
 
 def main(sid, i, S, T, B, N, f, addresses, K):
     mule = MuleBFTNode(sid, i, S, T, B, N, f, addresses, K)
-    mule.run_mule_instance()
+    mule.run_bft()
 
 
 if __name__ == '__main__':

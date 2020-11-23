@@ -5,7 +5,7 @@ from gevent import monkey
 
 from ..crypto.threshenc import tpke
 import os, logging
-monkey.patch_all()
+monkey.patch_all(thread=False)
 
 logger = logging.getLogger(__name__)
 

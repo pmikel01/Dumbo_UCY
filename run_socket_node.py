@@ -1,26 +1,31 @@
-import gevent.monkey; gevent.monkey.patch_all()
-
+import time
 import random
 import traceback
+import gevent
 
-from myexperiements.sockettest.hbbft_node import HoneyBadgerBFTNode
+from typing import List
+
+from gevent import monkey
+monkey.patch_all(thread=False)
+
 from myexperiements.sockettest.dumbo_node import DumboBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
+from myexperiements.sockettest.socket_server import NetworkServer
+from multiprocessing import Value as mpValue, Queue as mpQueue
+from ctypes import c_bool
 
-
-def instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T, protocol="mule", mute=False, factor=1):
+def instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q: mpQueue, send_q: mpQueue, ready: mpValue, stop: mpValue, protocol="mule", mute=False, factor=1):
+    bft = None
     if protocol == 'dumbo':
-        dumbo = DumboBFTNode(sid, i, B, N, f, my_address, addresses, K, mute=mute)
-        dumbo.run_dumbo_instance()
-    elif protocol == "badger":
-        badger = HoneyBadgerBFTNode(sid, i, B, N, f, my_address, addresses, K, mute=mute)
-        badger.run_hbbft_instance()
+        bft = DumboBFTNode(sid, i, B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
     elif protocol == "mule":
-        mule = MuleBFTNode(sid, i, S, T, int(factor*B/N), B, N, f, my_address, addresses, K, mute=mute)
-        mule.run_mule_instance()
+        bft = MuleBFTNode(sid, i, S, T, int(factor*B/N), B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
     else:
-        print("Only support dumbo or badger or mule")
+        print("Only support dumbo or mule")
+    return bft
 
+def instantiate_network_server(port: int, my_ip: str, id: int, addresses_list: list, recv_q: mpQueue, send_q: mpQueue, ready: mpValue, stop: mpValue):
+    return NetworkServer(port, my_ip, id, addresses_list, recv_q, send_q, ready, stop)
 
 if __name__ == '__main__':
 
@@ -81,18 +86,45 @@ if __name__ == '__main__':
                 if pid not in range(N):
                     continue
                 if pid == i:
-                    my_address = priv_ip
+                    my_address = (priv_ip, port)
                 addresses[pid] = (pub_ip, port)
-        # print(addresses)
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
-        instantiate_bft_node(sid, i, B, N, f, my_address, addresses, K, S, T, P, M, F)
+
+        recv_q = mpQueue()
+        send_q = mpQueue()
+        ready = mpValue(c_bool, False)
+        stop = mpValue(c_bool, False)
+        print(ready.value)
+        print(stop.value)
+
+        #pool = Pool(processes=2)
+
+        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q, send_q, ready, stop, P, M, F)
+        net = instantiate_network_server(my_address[1], my_address[0], i, addresses, recv_q, send_q, ready, stop)
+
+        #pool.apply_async(net.start)
+
+        net.start()
+        bft.start()
+        #bft.join()
+
+        #bft_proc = Process(target=bft.run)
+        #net_proc = Process(target=net.run)
+
+        #bft_proc.start()
+        #net_proc.start()
+
+        #while not stop.value:
+        #    time.sleep(2)
+        #    gevent.sleep(2)
+
+        bft.join()
+        print("bft finished")
+        print("network finished")
+        print(stop.value)
+        net.join()
+
     except FileNotFoundError or AssertionError as e:
-        #print(e)
         traceback.print_exc()
-        #print("hosts.config is not correctly read... ")
-        #host = "127.0.0.1"
-        #port_base = int(rnd.random() * 5 + 1) * 10000
-        #addresses = [(host, port_base + 200 * i) for i in range(N)]
-        #print(addresses)
-    #instantiate_hbbft_node(sid, i, B, N, f, addresses, K)
+

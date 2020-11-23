@@ -1,10 +1,13 @@
 import hashlib
 import json
+import logging
+import os
 import pickle
 import traceback
 import gevent
 import time
 import numpy as np
+from gevent import monkey
 from gevent.queue import Queue
 from collections import namedtuple
 from enum import Enum
@@ -20,7 +23,22 @@ from honeybadgerbft.crypto.ecdsa.ecdsa import PrivateKey
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.exceptions import UnknownTagError
 from honeybadgerbft.core import binaryagreement
+monkey.patch_all(thread=False)
 
+#monkey.patch_all(thread=False, socket=False)
+
+def set_consensus_log(id: int):
+    logger = logging.getLogger("consensus-node-"+str(id))
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
+    if 'log' not in os.listdir(os.getcwd()):
+        os.mkdir(os.getcwd() + '/log')
+    full_path = os.path.realpath(os.getcwd()) + '/log/' + "consensus-node-"+str(id) + ".log"
+    file_handler = logging.FileHandler(full_path)
+    file_handler.setFormatter(formatter)  # 可以通过setFormatter指定输出格式
+    logger.addHandler(file_handler)
+    return logger
 
 def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
@@ -91,7 +109,7 @@ class Mule():
     :param K: a test parameter to specify break out after K epochs
     """
 
-    def __init__(self, sid, pid, S, T, Bfast, Bacs, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, logger=None, mute=False):
+    def __init__(self, sid, pid, S, T, Bfast, Bacs, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, mute=False):
 
         self.SLOTS_NUM = S
         self.TIMEOUT = T
@@ -112,7 +130,7 @@ class Mule():
         self.eSK = eSK
         self._send = send
         self._recv = recv
-        self.logger = logger
+        self.logger = set_consensus_log(pid)
         self.epoch = 0  # Current block number
         self.transaction_buffer = Queue()
         self._per_epoch_recv = {}  # Buffer of incoming messages
@@ -137,7 +155,7 @@ class Mule():
         #    self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
         self.transaction_buffer.put_nowait(tx)
 
-    def run(self):
+    def run_bft(self):
         """Run the Mule protocol."""
 
         if self.mute:
@@ -159,18 +177,19 @@ class Mule():
         def _recv():
             """Receive messages."""
             while True:
-
                 gevent.sleep(0)
                 time.sleep(0)
-
-                (sender, (r, msg)) = self._recv()
-
-                # Maintain an *unbounded* recv queue for each epoch
-                if r not in self._per_epoch_recv:
-                    self._per_epoch_recv[r] = Queue()
-
-                # Buffer this message
-                self._per_epoch_recv[r].put_nowait((sender, msg))
+                try:
+                    (sender, (r, msg)) = self._recv()
+                    # Maintain an *unbounded* recv queue for each epoch
+                    if r not in self._per_epoch_recv:
+                        self._per_epoch_recv[r] = Queue()
+                    # Buffer this message
+                    self._per_epoch_recv[r].put_nowait((sender, msg))
+                except:
+                    continue
+                gevent.sleep(0)
+                time.sleep(0)
 
         self._recv_thread = gevent.spawn(_recv)
 
@@ -188,13 +207,12 @@ class Mule():
             if e not in self._per_epoch_recv:
                 self._per_epoch_recv[e] = Queue()
 
-            def _make_send(e):
+            def make_epoch_send(e):
                 def _send(j, o):
                     self._send(j, (e, o))
-
                 return _send
 
-            send_e = _make_send(e)
+            send_e = make_epoch_send(e)
             recv_e = self._per_epoch_recv[e].get
             new_tx = self._run_epoch(e, send_e, recv_e)
 
@@ -216,7 +234,8 @@ class Mule():
             if self.epoch >= self.K:
                 break
 
-        gevent.sleep(5)
+            gevent.sleep(0)
+            time.sleep(0)
 
     def _recovery(self):
         # TODO: here to implement to recover blocks
@@ -266,13 +285,10 @@ class Mule():
             ACS_VACS=vacs_recv,
             TPKE=tpke_recv,
         )
-        gevent.spawn(broadcast_receiver_loop, recv, recv_queues)
+        recv_t = gevent.spawn(broadcast_receiver_loop, recv, recv_queues)
 
         tcvba_input = Queue(1)
         tcvba_output = Queue(1)
-
-        aba_input = Queue(1)
-        aba_output = Queue(1)
 
         fast_blocks = Queue(1)  # The blocks that receives
 
@@ -331,57 +347,6 @@ class Mule():
 
             return tcvba
 
-        # Setup VIEW CHANGE
-        coin_thread = _setup_coin()
-        tcvba_thread = _setup_tcvba(coin_thread)
-
-
-        #
-        # # Do a little bit syncrhnonzation via ABA
-        # if epoch_id == 0:
-        #
-        #     def _setup_aba_coin():
-        #         def coin_bcast(o):
-        #             """Common coin multicast operation.
-        #             :param o: Value to multicast.
-        #             """
-        #             for k in range(N):
-        #                 send(k, ('ABA_COIN', '', o))
-        #
-        #         coin = shared_coin(epoch_id, pid, N, f,
-        #                            self.sPK, self.sSK,
-        #                            coin_bcast, coin_recv.get)
-        #
-        #         return coin
-        #
-        #     def _setup_aba(coin):
-        #
-        #         def aba_send(k, o):
-        #             send(k, ('ABA', '', o))
-        #
-        #         aba = gevent.spawn(binaryagreement, epoch_id, pid, N, f, coin,
-        #                              aba_input.get, aba_output.put_nowait,
-        #                              aba_recv.get, aba_send)
-        #
-        #         return aba
-        #
-        #     # Setup ABA SYNC
-        #     aba_coin_thread = _setup_aba_coin()
-        #     aba_thread = _setup_aba(aba_coin_thread)
-        #
-        #     aba_input.put_nowait(1)
-        #     aba_output.get()
-
-
-
-
-        # Start the fast path
-        leader = e % N
-        fast_thread = _setup_fastpath(leader)
-
-        if self.logger is not None: self.logger.info("epoch %d with fast path leader %d" % (e, leader))
-
-        #
         def handle_viewchange_msg():
             nonlocal viewchange_counter, viewchange_max_slot
 
@@ -413,7 +378,13 @@ class Mule():
                     tcvba_input.put_nowait(viewchange_max_slot)
                     break
 
-        vc_thread = gevent.spawn(handle_viewchange_msg)
+
+        # Start the fast path
+        leader = e % N
+        fast_thread = _setup_fastpath(leader)
+
+        #if self.logger is not None:
+        #    self.logger.info("epoch %d with fast path leader %d" % (e, leader))
 
         # Block to wait the fast path returns
         fast_thread.join()
@@ -421,7 +392,13 @@ class Mule():
         # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
         notarization = fast_thread.get()
 
-        #print(("Fast chain proof: ", notarization))
+        print(("Fast chain proof: ", notarization))
+
+
+        # Setup VIEW CHANGE
+        vc_thread = gevent.spawn(handle_viewchange_msg)
+        coin_thread = _setup_coin()
+        tcvba_thread = _setup_tcvba(coin_thread)
 
         notarized_block = None
         if notarization is not None:
@@ -458,6 +435,7 @@ class Mule():
 
             #if self.logger != None:
             #    self.logger.info('Fast block tx at Node %d:' % self.id + str(fast_blocks))
+            recv_t.kill()
             return notarized_block
             #
 
@@ -575,4 +553,5 @@ class Mule():
             #if self.logger != None:
             #    self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
 
+            recv_t.kill()
             return list(block)

@@ -6,7 +6,7 @@ import pickle
 from gevent import time
 from honeybadgerbft.core.honeybadger import HoneyBadgerBFT
 from myexperiements.sockettest.make_random_tx import tx_generator
-from myexperiements.sockettest.socket_server import Node, set_logger_of_node
+from multiprocessing import Value as mpValue, Queue as mpQueue, Process
 
 
 def load_key(id):
@@ -51,7 +51,7 @@ class HoneyBadgerBFTNode (HoneyBadgerBFT):
         self.server.start()
 
     def connect_socket_servers(self):
-        self.server.connect_all()
+        self.server.connect_and_send_forever()
         self._send = self.server.send
         self._recv = self.server.recv
 

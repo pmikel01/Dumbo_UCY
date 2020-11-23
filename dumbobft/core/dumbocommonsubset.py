@@ -1,7 +1,8 @@
 import gevent
 from gevent import monkey
 
-monkey.patch_all()
+monkey.patch_all(thread=False)
+
 
 def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out):
     """The BKR93 algorithm for asynchronous common subset.

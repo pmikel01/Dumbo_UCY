@@ -7,12 +7,12 @@ from gevent import Timeout, monkey
 from honeybadgerbft.crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
-
+import os
 import json
 import gevent
 import hashlib, pickle
 
-monkey.patch_all()
+monkey.patch_all(thread=False)
 
 
 def hash(x):
@@ -90,6 +90,8 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
             time.sleep(0)
 
             (sender, msg) = recv()
+            #logger.info("receving a fast path msg " + str((sender, msg)))
+
             assert sender in range(N)
 
             ########################
@@ -108,6 +110,7 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                     try:
                         assert slot == slot_cur
                     except AssertionError:
+                        #print("vote out of sync...")
                         #if slot < slot_cur:
                         #    if logger is not None: logger.info("Late vote from node %d! Not needed anymore..." % sender)
                         #else:
@@ -145,6 +148,7 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                         signed_batches = tuple(batches[slot_cur].items())
                         raw_Sig = serialize(Simga)
                         bcast_to_all_but_not_me(('DECIDE', slot_cur, hash_prev, raw_Sig, signed_batches))
+                        #if logger is not None: logger.info("Decide made and sent")
                         decide_sent[slot_cur] = True
                         decides[slot_cur].put_nowait((hash_p, raw_Sig, signed_batches))
 
@@ -199,6 +203,8 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
     def one_slot():
         nonlocal pending_block, notraized_block, hash_prev, slot_cur, epoch_txcnt, delay, e_times, s_times, txcnt, weighted_delay
 
+        #print('3')
+
         #if logger is not None: logger.info("Entering slot %d" % slot_cur)
 
         sig_prev = SK1.sign(PK1.hash_message(hash_prev))
@@ -219,6 +225,7 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
         except AttributeError as e:
             if logger is not None: logger.info(traceback.print_exc())
 
+        #print('4')
 
         (h_p, raw_Sig, signed_batches) = decides[slot_cur].get()  # Block to wait for the voted block
 
@@ -264,12 +271,19 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
     gevent.sleep(0)
 
     while slot_cur <= SLOTS_NUM + 2:
+        #print('0')
 
-        gevent.sleep(0)
-        time.sleep(0)
+        #logger.info("entering fastpath slot %d ..." % slot_cur)
+
+        #print(msg_noncritical_signal.is_set())
+        #print(slot_noncritical_signal.is_set())
+
+        #print('1')
 
         msg_noncritical_signal.wait()
         slot_noncritical_signal.wait()
+
+        #print('2')
 
         timeout = Timeout(TIMEOUT, False)
         timeout.start()
@@ -287,11 +301,6 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                 except Timeout as e:
                     print("node " + str(pid) + " error: " + str(e))
                     break
-                #if pending_block is not None:
-                #    assert notraized_block is not None
-                #    return (pending_block[2], pending_block[3])  # represents fast_path fails with timeout, but still delivers some blocks
-                #else:
-                #    return None  # fast_path fails and delivers nothing useful
             finally:
                 timeout.cancel()
 

@@ -1,4 +1,6 @@
 import json
+import logging
+import os
 import traceback, time
 import gevent
 import numpy as np
@@ -14,7 +16,20 @@ from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublic
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
 
-monkey.patch_all()
+#monkey.patch_all(thread=False, socket=False)
+
+def set_consensus_log(id: int):
+    logger = logging.getLogger("consensus-node-"+str(id))
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
+    if 'log' not in os.listdir(os.getcwd()):
+        os.mkdir(os.getcwd() + '/log')
+    full_path = os.path.realpath(os.getcwd()) + '/log/' + "consensus-node-"+str(id) + ".log"
+    file_handler = logging.FileHandler(full_path)
+    file_handler.setFormatter(formatter)  # 可以通过setFormatter指定输出格式
+    logger.addHandler(file_handler)
+    return logger
 
 
 class BroadcastTag(Enum):
@@ -76,7 +91,7 @@ class Dumbo():
     :param K: a test parameter to specify break out after K rounds
     """
 
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, ePK, eSK, send, recv, K=3, logger=None, mute=False):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, ePK, eSK, send, recv, K=3, mute=False):
         self.sid = sid
         self.id = pid
         self.B = B
@@ -90,7 +105,7 @@ class Dumbo():
         self.eSK = eSK
         self._send = send
         self._recv = recv
-        self.logger = logger
+        self.logger = set_consensus_log(pid)
         self.round = 0  # Current block number
         self.transaction_buffer = Queue()
         self._per_round_recv = {}  # Buffer of incoming messages
@@ -113,7 +128,7 @@ class Dumbo():
         # Insert transactions to the end of TX buffer
         self.transaction_buffer.put_nowait(tx)
 
-    def run(self):
+    def run_bft(self):
         """Run the Dumbo protocol."""
 
         if self.mute:
@@ -134,14 +149,19 @@ class Dumbo():
         def _recv():
             """Receive messages."""
             while True:
-                (sender, (r, msg)) = self._recv()
+                try:
+                    (sender, (r, msg)) = self._recv()
 
-                # Maintain an *unbounded* recv queue for each epoch
-                if r not in self._per_round_recv:
-                    self._per_round_recv[r] = Queue()
+                    # Maintain an *unbounded* recv queue for each epoch
+                    if r not in self._per_round_recv:
+                        self._per_round_recv[r] = Queue()
 
-                # Buffer this message
-                self._per_round_recv[r].put_nowait((sender, msg))
+                    # Buffer this message
+                    self._per_round_recv[r].put_nowait((sender, msg))
+                except:
+                    continue
+                gevent.sleep(0)
+                time.sleep(0)
 
         self._recv_thread = gevent.spawn(_recv)
 

@@ -1,7 +1,7 @@
 import gevent
 from gevent import monkey
 
-monkey.patch_all()
+monkey.patch_all(thread=False)
 
 
 def commonsubset(pid, N, f, rbc_out, aba_in, aba_out):

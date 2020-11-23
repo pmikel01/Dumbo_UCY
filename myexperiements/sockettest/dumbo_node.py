@@ -6,7 +6,7 @@ import pickle
 from gevent import time
 from dumbobft.core.dumbo import Dumbo
 from myexperiements.sockettest.make_random_tx import tx_generator
-from myexperiements.sockettest.socket_server import Node, set_logger_of_node
+from multiprocessing import Value as mpValue, Queue as mpQueue, Process
 
 
 def load_key(id):
@@ -32,14 +32,17 @@ def load_key(id):
     return sPK, sPK1, ePK, sSK, sSK1, eSK
 
 
-class DumboBFTNode (Dumbo):
+class DumboBFTNode (Dumbo, Process):
 
-    def __init__(self, sid, id, B, N, f, my_address: str, addresses_list: list, K=3, mode='debug', mute=False, tx_buffer=None):
+    def __init__(self, sid, id, B, N, f, recv_q: mpQueue, send_q: mpQueue, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.ePK, self.sSK, self.sSK1, self.eSK = load_key(id)
-        Dumbo.__init__(self, sid, id, int(B/N), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.ePK, self.eSK, send=None, recv=None, K=K, logger=set_logger_of_node(id), mute=mute)
-        self.server = Node(id=id, ip=my_address, port=addresses_list[id][1], addresses_list=addresses_list, logger=self.logger)
+        self.recv_queue = recv_q
+        self.send_queue = send_q
+        self.ready = ready
+        self.stop = stop
         self.mode = mode
-        #self.prepare_bootstrap()
+        Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
+        Process.__init__(self)
 
     def prepare_bootstrap(self):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
@@ -52,48 +55,29 @@ class DumboBFTNode (Dumbo):
                     k += 1
                     if r % 50000 == 0:
                         self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
-                        #gevent.sleep(0.1)
-                        #time.sleep(0.1)
-                gevent.sleep(0.1)
-                time.sleep(0.1)
         else:
             pass
             # TODO: submit transactions through tx_buffer
         self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
 
-    def start_socket_server(self):
+    def run(self):
+
         pid = os.getpid()
-        #print('pid: ', pid)
-        self.logger.info('node id %d is running on pid %d' % (self.id, pid))
-        self.server.start()
+        self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
+        self._send = lambda j, o: self.send_queue.put_nowait((j, o))
+        self._recv = lambda: self.recv_queue.get_nowait()
+        self.prepare_bootstrap()
 
-    def connect_socket_servers(self):
-        send_thread = self.server.connect_all()
-        self._send = self.server.send
-        self._recv = self.server.recv
-        return send_thread
+        while not self.ready.value:
+            time.sleep(1)
+            gevent.sleep(1)
 
-
-    def run_dumbo_instance(self):
-
-        gevent.spawn(self.prepare_bootstrap).join()
-
-        self.start_socket_server()
-        time.sleep(3)
-        gevent.sleep(3)
-
-        self.connect_socket_servers()
-        time.sleep(4)
-        gevent.sleep(4)
-
-        main_thread = gevent.spawn(self.run())
-        main_thread.join()
-        time.sleep(3)
-        gevent.sleep(3)
+        self.run_bft()
+        self.stop.value = True
 
 def main(sid, i, B, N, f, addresses, K):
     badger = DumboBFTNode(sid, i, B, N, f, addresses, K)
-    badger.run_dumbo_instance()
+    badger.run_bft()
 
 
 if __name__ == '__main__':

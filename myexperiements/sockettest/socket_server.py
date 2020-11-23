@@ -1,79 +1,57 @@
 import time
 import pickle
+from typing import List
+
 import gevent
 import os
 
-from multiprocessing.queues import Queue as mpQueue
-
-from gevent import Greenlet
+from multiprocessing import Value as mpValue, Queue as mpQueue, Process, Semaphore as mpSemaphore
 from gevent import socket, monkey, lock
-from gevent.queue import Queue
+
 import logging
 import traceback
 
-monkey.patch_all()
+#monkey.patch_all(thread=False, socket=False)
+monkey.patch_all(thread=False)
 
-
-def set_logger_of_node(id: int):
-    logger = logging.getLogger("node-"+str(id))
-    logger.setLevel(logging.DEBUG)
-    # logger.setLevel(logging.INFO)
-    formatter = logging.Formatter(
-        '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
-    if 'log' not in os.listdir(os.getcwd()):
-        os.mkdir(os.getcwd() + '/log')
-    full_path = os.path.realpath(os.getcwd()) + '/log/' + "node-"+str(id) + ".log"
-    file_handler = logging.FileHandler(full_path)
-    file_handler.setFormatter(formatter)  # 可以通过setFormatter指定输出格式
-    logger.addHandler(file_handler)
-    return logger
 
 
 # Network node class: deal with socket communications
-class Node(Greenlet):
+class NetworkServer (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'
 
-    def __init__(self, port: int, ip: str, id: int, addresses_list: list, logger=None):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, recv_q: mpQueue, send_q: mpQueue, ready: mpValue, stop: mpValue):
 
-        self.SOCK_NUM = 1
+        self.recv_queue = recv_q
+        self.send_queue = send_q
+        self.ready = ready
+        self.stop = stop
 
-        self.recv_queue = Queue()
-        self.send_queue = Queue()
-
-        self.ip = ip
+        self.ip = my_ip
         self.port = port
         self.id = id
         self.addresses_list = addresses_list
-        self.socks = [ [None] * self.SOCK_NUM for _ in self.addresses_list]
-        if logger is None:
-            self.logger = set_logger_of_node(self.id)
-        else:
-            self.logger = logger
-        self.is_out_sock_connected = [False] * len(self.addresses_list)
-        self.is_in_sock_connected = [False] * len(self.addresses_list)
-        self.stop = False
-        self.s_locks = [lock.BoundedSemaphore(self.SOCK_NUM) for _ in range(len(self.addresses_list))]
+        self.N = len(self.addresses_list)
 
-        Greenlet.__init__(self)
+        self.logger = self._set_network_logger(self.id)
 
-    def _run(self):
-        self.logger.info("node %d starts to run..." % self.id)
-        self._serve_forever()
+        self.is_out_sock_connected = [False] * self.N
+        self.is_in_sock_connected = [False] * self.N
 
-    def _handle_request(self, sock, address):
+        self.socks = [None for _ in self.addresses_list]
+        self.sock_locks = [lock.Semaphore() for _ in self.addresses_list]
 
-        def _finish(e: Exception):
-            self.logger.error("node %d's server is closing..." % self.id)
-            self.logger.error(str(e))
-            print(e)
-            print("node %d's server is closing..." % self.id)
-            pass
+        super().__init__()
 
+    def _handle_ingoing_msg(self, sock, address):
+
+        jid = self._address_to_id(address)
         buf = b''
         try:
-            while not self.stop:
+            while not self.stop.value:
                 gevent.sleep(0)
+                time.sleep(0)
                 buf += sock.recv(5000)
                 tmp = buf.split(self.SEP.encode('utf-8'), 1)
                 while len(tmp) == 2:
@@ -82,148 +60,155 @@ class Node(Greenlet):
                     if data != '' and data:
                         if data == 'ping'.encode('utf-8'):
                             sock.sendall('pong'.encode('utf-8'))
-                            self.logger.info("node {} is pinging node {}...".format(self._address_to_id(address), self.id))
-                            self.is_in_sock_connected[self._address_to_id(address)] = True
+                            self.logger.info("node {} is pinging node {}...".format(jid, self.id))
+                            self.is_in_sock_connected[jid] = True
                         else:
-                            (j, o) = (self._address_to_id(address), pickle.loads(data))
-                            assert j in range(len(self.addresses_list))
-                            gevent.spawn(self.recv_queue.put_nowait((j, o)))
+                            (j, o) = (jid, pickle.loads(data))
+                            assert j in range(self.N)
+                            self.recv_queue.put_nowait((j, o))
+                            #self.logger.info('recv' + str((j, o)))
                     else:
                         self.logger.error('syntax error messages')
                         raise ValueError
                     tmp = buf.split(self.SEP.encode('utf-8'), 1)
+                gevent.sleep(0)
+                time.sleep(0)
         except Exception as e:
             self.logger.error(str((e, traceback.print_exc())))
-            #_finish(e)
 
-    def _serve_forever(self):
+    def _listen_and_recv_forever(self):
+        pid = os.getpid()
+        self.logger.info('node %d\'s socket server starts to listen ingoing connections on process id %d' % (self.id, pid))
         print("my IP is " + self.ip)
         self.server_sock = socket.socket()
         self.server_sock.bind((self.ip, self.port))
         self.server_sock.listen(5)
-        while not self.stop:
+        handle_msg_threads = []
+        while not self.stop.value:
+            gevent.sleep(0)
+            time.sleep(0)
             sock, address = self.server_sock.accept()
-            gevent.spawn(self._handle_request, sock, address)
+            msg_t = gevent.spawn(self._handle_ingoing_msg, sock, address)
+            handle_msg_threads.append(msg_t)
             self.logger.info('node id %d accepts a new socket from node %d' % (self.id, self._address_to_id(address)))
             gevent.sleep(0)
+            time.sleep(0)
+        #gevent.joinall(handle_msg_threads)
+        #gevent.sleep(5)
+        #time.sleep(5)
 
-    def _watchdog_deamon(self):
-        pass
-
-    def connect_all(self):
-        self.logger.info("node %d is establishing outgoing connections to the network" % self.id)
-        while not self.stop:
+    def _connect_and_send_forever(self):
+        pid = os.getpid()
+        self.logger.info('node %d\'s socket client starts to make outgoing connections on process id %d' % (self.id, pid))
+        while not self.stop.value:
             gevent.sleep(0)
             time.sleep(0)
             try:
-                for j in range(len(self.addresses_list)):
+                for j in range(self.N):
                     if not self.is_out_sock_connected[j]:
                         self.is_out_sock_connected[j] = self._connect(j)
                 if all(self.is_out_sock_connected) and all(self.is_in_sock_connected):
+                    with self.ready.get_lock():
+                        self.ready.value = True
                     break
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
-        #send_thread = gevent.spawn(self.send_loop)
-        #return send_thread
+            gevent.sleep(0)
+        #send_thread = gevent.spawn(self._send_loop)
+        #send_thread.join()
+        self._send_loop()
+        #gevent.sleep(5)
+        #time.sleep(5)
 
     def _connect(self, j: int):
-        for k in range(self.SOCK_NUM):
-            sock = socket.socket()
-            if self.ip == '127.0.0.1':
-                sock.bind((self.ip, self.port + self.SOCK_NUM * j + 1 + k))
-            try:
-                sock.connect(self.addresses_list[j])
-                sock.sendall(('ping' + self.SEP).encode('utf-8'))
-                pong = sock.recv(5000)
-            except Exception as e1:
-                return False
-            #print(e1)
-            #traceback.print_exc()
-            if pong.decode('utf-8') == 'pong':
-                self.logger.info("node {} is ponging node {}...".format(j, self.id))
-                self.socks[j][k] = sock
-            else:
-                self.logger.info("fails to build connect from {} to {}".format(self.id, j))
-                return False
+        sock = socket.socket()
+        if self.ip == '127.0.0.1':
+            sock.bind((self.ip, self.port + j + 1))
+        try:
+            sock.connect(self.addresses_list[j])
+            sock.sendall(('ping' + self.SEP).encode('utf-8'))
+            pong = sock.recv(5000)
+        except Exception as e1:
+            return False
+        if pong.decode('utf-8') == 'pong':
+            self.logger.info("node {} is ponging node {}...".format(j, self.id))
+            self.socks[j] = sock
+        else:
+            self.logger.info("fails to build connect from {} to {}".format(self.id, j))
+            return False
         return True
 
-    def _send(self, j: int, o: bytes, select: int):
+    def _send(self, j: int, o: bytes):
         msg = b''.join([o, self.SEP.encode('utf-8')])
         for _ in range(3):
+            self.sock_locks[j].acquire()
             try:
-                self.socks[j][select].sendall(msg)
+                self.socks[j].sendall(msg)
+                #print('send2' + str((j, pickle.loads(o))))
+                self.sock_locks[j].release()
                 break
             except Exception as e1:
                 self.logger.error("fail to send msg")
                 self.logger.error(str((e1, traceback.print_exc())))
+                self.sock_locks[j].release()
                 continue
 
-            #print("fail to send msg")
-            #try:
-            #    self._connect(j)
-            #    self.socks[j].connect(self.addresses_list[j])
-            #    self.socks[j].sendall(msg)
-            #except Exception as e2:
-            #    self.logger.error(str((e1, e2, traceback.print_exc())))
 
-    # def send(self, j: int, o: object):
-    #     try:
-    #         self._send(j, pickle.dumps(o))
-    #     except Exception as e:
-    #         self.logger.error(str(("problem objective when sending", o)))
-    #         traceback.print_exc(e)
-
-    def send(self, j: int, o: object):
-        with self.s_locks[j]:
+    def _send_loop(self):
+        i = 0
+        while not self.stop.value:
+            gevent.sleep(0)
+            time.sleep(0)
+            #if i % 50000 == 0:
+            #    print(self.ready.value)
             try:
-                self._send(j, pickle.dumps(o), self.s_locks[j].counter)
-            except Exception as e:
-                self.logger.error(str(("problem objective when sending", o)))
-                traceback.print_exc()
+                gevent.sleep(0)
+                time.sleep(0)
+                j, o = self.send_queue.get_nowait()
+                #print('send1' + str((j, o)))
+                try:
+                    self._send(j, pickle.dumps(o))
+                except Exception as e:
+                    self.logger.error(str(("problem objective when sending", o)))
+                    traceback.print_exc()
+            except:
+                continue
+            i += 1
+            gevent.sleep(0)
+            time.sleep(0)
+        #print("sending loop quits ...")
 
-    # def send(self, j: int, o: object):
-    #     self.send_queue.put((j, o))
-    #     print("send msg to " + str(j))
-    #     gevent.sleep(0)
-    #     time.sleep(0)
+    def run(self):
+        pid = os.getpid()
 
-    # def send_loop(self):
-    #     selectors = [0] * len(self.addresses_list)
-    #     while True:
-    #         gevent.sleep(0)
-    #         time.sleep(0)
-    #         try:
-    #             (j, o) = self.send_queue.get_nowait()
-    #             selectors[j] = (selectors[j] + 1) % self.SOCK_NUM
-    #             try:
-    #                 self._send(j, pickle.dumps(o), selectors[j])
-    #             except Exception as e:
-    #                 self.logger.error(str(("problem objective when sending", o)))
-    #                 traceback.print_exc(e)
-    #         except:
-    #             continue
+        self.logger.info('node id %d is running on pid %d' % (self.id, pid))
+        with self.ready.get_lock():
+            self.ready.value = False
 
-    def _recv(self):
-        (i, o) = self.recv_queue.get()
-        #print("recv msg from " + str(i))
-        gevent.sleep(0)
-        time.sleep(0)
-        return (i, o)
-
-
-    def recv(self):
-        return self._recv()
+        send_thread = gevent.spawn(self._listen_and_recv_forever)
+        recv_thread = gevent.spawn(self._connect_and_send_forever)
+        gevent.joinall([send_thread, recv_thread])
 
     def stop_service(self):
-        self.stop = True
+        with self.stop.get_lock():
+            self.stop.value = True
 
     def _address_to_id(self, address: tuple):
-        # print(address)
-        # print(self.addresses_list)
-        # assert address in self.addresses_list
-        for i in range(len(self.addresses_list)):
+        for i in range(self.N):
             if address[0] != '127.0.0.1' and address[0] == self.addresses_list[i][0]:
                 return i
         return int((address[1] - 10000) / 200)
 
-
+    def _set_network_logger(self, id: int):
+        logger = logging.getLogger("node-" + str(id))
+        logger.setLevel(logging.DEBUG)
+        # logger.setLevel(logging.INFO)
+        formatter = logging.Formatter(
+            '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
+        if 'log' not in os.listdir(os.getcwd()):
+            os.mkdir(os.getcwd() + '/log')
+        full_path = os.path.realpath(os.getcwd()) + '/log/' + "node-" + str(id) + ".log"
+        file_handler = logging.FileHandler(full_path)
+        file_handler.setFormatter(formatter)  # 可以通过setFormatter指定输出格式
+        logger.addHandler(file_handler)
+        return logger
