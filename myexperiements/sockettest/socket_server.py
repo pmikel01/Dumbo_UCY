@@ -165,7 +165,7 @@ class NetworkServer (Process):
                 gevent.sleep(0)
                 time.sleep(0)
                 #j, o = self.send_queue.get_nowait()
-                o = self.send_queues[j].get(timeout=0.001)
+                o = self.send_queues[j].get_nowait()
                 #print('send1' + str((j, o)))
                 try:
                     self._send(j, pickle.dumps(o))

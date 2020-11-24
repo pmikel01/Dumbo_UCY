@@ -411,7 +411,7 @@ class Mule():
         # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
         try:
 
-            notarization = fast_thread.get()
+            notarization = fast_thread.get(block=False)
             #print(("Fast chain proof: ", notarization))
 
             notarized_block = None
