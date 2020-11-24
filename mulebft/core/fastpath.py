@@ -121,21 +121,24 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                     try:
                         assert hash_p == hash_prev
                     except AssertionError:
-                        if logger is not None: logger.info("False vote from node %d though within the same slot!" % sender)
+                        if logger is not None:
+                            logger.info("False vote from node %d though within the same slot!" % sender)
                         msg_noncritical_signal.set()
                         continue
 
                     try:
                         assert PK1.verify_share(sig_p, sender, PK1.hash_message(hash_p))
                     except AssertionError:
-                        if logger is not None: logger.info("Vote signature failed!")
+                        if logger is not None:
+                            logger.info("Vote signature failed!")
                         msg_noncritical_signal.set()
                         continue
 
                     try:
                         assert ecdsa_vrfy(PK2s[sender], tx_batch, tx_sig)
                     except AssertionError:
-                        if logger is not None: logger.info("Batch signature failed!")
+                        if logger is not None:
+                            logger.info("Batch signature failed!")
                         msg_noncritical_signal.set()
                         continue
 
@@ -205,7 +208,8 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
 
         #print('3')
 
-        #if logger is not None: logger.info("Entering slot %d" % slot_cur)
+        #if logger is not None:
+        #    logger.info("Entering slot %d" % slot_cur)
 
         sig_prev = SK1.sign(PK1.hash_message(hash_prev))
 
@@ -223,7 +227,8 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
             sig_tx = ecdsa_sign(SK2, tx_batch)
             send(leader, ('VOTE', slot_cur, hash_prev, serialize(sig_prev), tx_batch, sig_tx))
         except AttributeError as e:
-            if logger is not None: logger.info(traceback.print_exc())
+            if logger is not None:
+                logger.info(traceback.print_exc())
 
         #print('4')
 
@@ -238,6 +243,7 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
         msg_noncritical_signal.wait()
 
         if pending_block is not None:
+
             notraized_block = (pending_block[0], pending_block[1], pending_block[2], pending_block[4])
             put_output(notraized_block)
             txcnt[pending_block[1]] = str(notraized_block).count("Dummy TX")
@@ -271,12 +277,12 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
     gevent.sleep(0)
 
     while slot_cur <= SLOTS_NUM + 2:
+
         #print('0')
 
-        #logger.info("entering fastpath slot %d ..." % slot_cur)
+        #if logger is not None:
+        #    logger.info("entering fastpath slot %d ..." % slot_cur)
 
-        #print(msg_noncritical_signal.is_set())
-        #print(slot_noncritical_signal.is_set())
 
         #print('1')
 
@@ -300,6 +306,8 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                     gevent.killall([recv_thread])
                 except Timeout as e:
                     print("node " + str(pid) + " error: " + str(e))
+                    if logger is not None:
+                        logger.info("Fastpath Timeout!")
                     break
             finally:
                 timeout.cancel()

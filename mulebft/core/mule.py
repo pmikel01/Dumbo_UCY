@@ -7,7 +7,8 @@ import traceback
 import gevent
 import time
 import numpy as np
-from gevent import monkey
+from gevent import monkey, Greenlet
+from gevent.event import Event
 from gevent.queue import Queue
 from collections import namedtuple
 from enum import Enum
@@ -214,7 +215,8 @@ class Mule():
 
             send_e = make_epoch_send(e)
             recv_e = self._per_epoch_recv[e].get
-            new_tx = self._run_epoch(e, send_e, recv_e)
+
+            self._run_epoch(e, send_e, recv_e)
 
             # print('new block at %d:' % self.id, new_tx)
             #if self.logger != None:
@@ -386,43 +388,58 @@ class Mule():
         #if self.logger is not None:
         #    self.logger.info("epoch %d with fast path leader %d" % (e, leader))
 
-        # Block to wait the fast path returns
-        fast_thread.join()
-
-        # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
-        notarization = fast_thread.get()
-
-        print(("Fast chain proof: ", notarization))
-
-
-        # Setup VIEW CHANGE
+        # Setup handler of view change requests
         vc_thread = gevent.spawn(handle_viewchange_msg)
+
+        # Setup view change primitives
         coin_thread = _setup_coin()
         tcvba_thread = _setup_tcvba(coin_thread)
 
-        notarized_block = None
-        if notarization is not None:
+        # Wait either view_change handler done or fast_path done
+        ready = gevent.event.Event()
+        ready.clear()
 
-            notarized_block = latest_notarized_block
-            payload_digest = hash(notarized_block[3])
-            notarized_block_header = (notarized_block[0], notarized_block[1], notarized_block[2], payload_digest)
+        lst = [vc_thread, fast_thread]
+        for g in lst:
+            g.link(lambda *args: ready.set())
 
-            notarized_block_hash, notarized_block_raw_Sig, (epoch_txcnt, weighted_delay) = notarization
+        ready.wait()
 
-            self.txdelay = (self.txcnt * self.txdelay + epoch_txcnt * weighted_delay) / (self.txcnt + epoch_txcnt)
-            self.txcnt += epoch_txcnt
+        # Block to wait the fast path returns
+        #fast_thread.join()
 
-            assert hash(notarized_block_header) == notarized_block_hash
+        # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
+        try:
 
-            o = (notarized_block_header, notarized_block_raw_Sig)
-            for j in range(N):
-                send(j, ('VIEW_CHANGE', '', o))
+            notarization = fast_thread.get()
+            #print(("Fast chain proof: ", notarization))
 
-        else:
-            notarized_block_header = None
-            o = (notarized_block_header, None)
-            for j in range(N):
-                send(j, ('VIEW_CHANGE', '', o))
+            notarized_block = None
+            if notarization is not None:
+
+                notarized_block = latest_notarized_block
+                payload_digest = hash(notarized_block[3])
+                notarized_block_header = (notarized_block[0], notarized_block[1], notarized_block[2], payload_digest)
+
+                notarized_block_hash, notarized_block_raw_Sig, (epoch_txcnt, weighted_delay) = notarization
+
+                self.txdelay = (self.txcnt * self.txdelay + epoch_txcnt * weighted_delay) / (self.txcnt + epoch_txcnt)
+                self.txcnt += epoch_txcnt
+
+                assert hash(notarized_block_header) == notarized_block_hash
+
+                o = (notarized_block_header, notarized_block_raw_Sig)
+                for j in range(N):
+                    send(j, ('VIEW_CHANGE', '', o))
+
+            else:
+                notarized_block_header = None
+                o = (notarized_block_header, None)
+                for j in range(N):
+                    send(j, ('VIEW_CHANGE', '', o))
+
+        except:
+            pass
 
         #
         delivered_slots = tcvba_output.get()  # Block to receive the output
@@ -432,11 +449,10 @@ class Mule():
         #print(("fast blocks: ", fast_blocks))
 
         if delivered_slots > 0:
-
+            gevent.joinall(lst)
             #if self.logger != None:
             #    self.logger.info('Fast block tx at Node %d:' % self.id + str(fast_blocks))
-            recv_t.kill()
-            return notarized_block
+            #return delivered_slots
             #
 
         else:
@@ -553,5 +569,5 @@ class Mule():
             #if self.logger != None:
             #    self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
 
-            recv_t.kill()
-            return list(block)
+            #recv_t.kill()
+            #return list(block)

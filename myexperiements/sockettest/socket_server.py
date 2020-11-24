@@ -21,10 +21,10 @@ class NetworkServer (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, recv_q: mpQueue, send_q: mpQueue, ready: mpValue, stop: mpValue):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, recv_q: mpQueue, send_q: List[mpQueue], ready: mpValue, stop: mpValue):
 
         self.recv_queue = recv_q
-        self.send_queue = send_q
+        self.send_queues = send_q
         self.ready = ready
         self.stop = stop
 
@@ -67,6 +67,7 @@ class NetworkServer (Process):
                             assert j in range(self.N)
                             self.recv_queue.put_nowait((j, o))
                             #self.logger.info('recv' + str((j, o)))
+                            #print('recv' + str((j, o)))
                     else:
                         self.logger.error('syntax error messages')
                         raise ValueError
@@ -114,11 +115,9 @@ class NetworkServer (Process):
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
             gevent.sleep(0)
-        #send_thread = gevent.spawn(self._send_loop)
-        #send_thread.join()
-        self._send_loop()
-        #gevent.sleep(5)
-        #time.sleep(5)
+        send_threads = [gevent.spawn(self._send_loop, j) for j in range(self.N)]
+        gevent.joinall(send_threads)
+
 
     def _connect(self, j: int):
         sock = socket.socket()
@@ -153,18 +152,20 @@ class NetworkServer (Process):
                 self.sock_locks[j].release()
                 continue
 
+    ##
+    ##
+    def _send_loop(self, j: int):
 
-    def _send_loop(self):
-        i = 0
         while not self.stop.value:
+
             gevent.sleep(0)
             time.sleep(0)
-            #if i % 50000 == 0:
-            #    print(self.ready.value)
+
             try:
                 gevent.sleep(0)
                 time.sleep(0)
-                j, o = self.send_queue.get_nowait()
+                #j, o = self.send_queue.get_nowait()
+                o = self.send_queues[j].get(timeout=0.001)
                 #print('send1' + str((j, o)))
                 try:
                     self._send(j, pickle.dumps(o))
@@ -172,8 +173,8 @@ class NetworkServer (Process):
                     self.logger.error(str(("problem objective when sending", o)))
                     traceback.print_exc()
             except:
-                continue
-            i += 1
+                pass
+
             gevent.sleep(0)
             time.sleep(0)
         #print("sending loop quits ...")
@@ -198,7 +199,6 @@ class NetworkServer (Process):
             if address[0] != '127.0.0.1' and address[0] == self.addresses_list[i][0]:
                 return i
         return int((address[1] - 10000) / 200)
-
     def _set_network_logger(self, id: int):
         logger = logging.getLogger("node-" + str(id))
         logger.setLevel(logging.DEBUG)

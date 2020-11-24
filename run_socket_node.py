@@ -14,7 +14,7 @@ from myexperiements.sockettest.socket_server import NetworkServer
 from multiprocessing import Value as mpValue, Queue as mpQueue
 from ctypes import c_bool
 
-def instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q: mpQueue, send_q: mpQueue, ready: mpValue, stop: mpValue, protocol="mule", mute=False, factor=1):
+def instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q: mpQueue, send_q: List[mpQueue], ready: mpValue, stop: mpValue, protocol="mule", mute=False, factor=1):
     bft = None
     if protocol == 'dumbo':
         bft = DumboBFTNode(sid, i, B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
@@ -24,7 +24,7 @@ def instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q: mpQueue, send_q: mpQu
         print("Only support dumbo or mule")
     return bft
 
-def instantiate_network_server(port: int, my_ip: str, id: int, addresses_list: list, recv_q: mpQueue, send_q: mpQueue, ready: mpValue, stop: mpValue):
+def instantiate_network_server(port: int, my_ip: str, id: int, addresses_list: list, recv_q: mpQueue, send_q: List[mpQueue], ready: mpValue, stop: mpValue):
     return NetworkServer(port, my_ip, id, addresses_list, recv_q, send_q, ready, stop)
 
 if __name__ == '__main__':
@@ -92,37 +92,23 @@ if __name__ == '__main__':
         print("hosts.config is correctly read")
 
         recv_q = mpQueue()
-        send_q = mpQueue()
+        send_q = [mpQueue() for _ in range(N)]
         ready = mpValue(c_bool, False)
         stop = mpValue(c_bool, False)
         print(ready.value)
         print(stop.value)
 
-        #pool = Pool(processes=2)
-
         bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q, send_q, ready, stop, P, M, F)
         net = instantiate_network_server(my_address[1], my_address[0], i, addresses, recv_q, send_q, ready, stop)
 
-        #pool.apply_async(net.start)
-
         net.start()
-        bft.start()
-        #bft.join()
-
-        #bft_proc = Process(target=bft.run)
-        #net_proc = Process(target=net.run)
-
-        #bft_proc.start()
-        #net_proc.start()
-
+        bft.run()
         #while not stop.value:
-        #    time.sleep(2)
-        #    gevent.sleep(2)
-
-        bft.join()
-        print("bft finished")
-        print("network finished")
-        print(stop.value)
+        #    time.sleep(5)
+        #    print("parent is waiting...")
+        #bft.terminate()
+        net.terminate()
+        #bft.join()
         net.join()
 
     except FileNotFoundError or AssertionError as e:
