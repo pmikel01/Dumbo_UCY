@@ -139,18 +139,16 @@ class NetworkServer (Process):
 
     def _send(self, j: int, o: bytes):
         msg = b''.join([o, self.SEP.encode('utf-8')])
+        self.sock_locks[j].acquire()
         for _ in range(3):
-            self.sock_locks[j].acquire()
             try:
                 self.socks[j].sendall(msg)
-                #print('send2' + str((j, pickle.loads(o))))
-                self.sock_locks[j].release()
                 break
             except Exception as e1:
                 self.logger.error("fail to send msg")
                 self.logger.error(str((e1, traceback.print_exc())))
-                self.sock_locks[j].release()
                 continue
+        self.sock_locks[j].release()
 
     ##
     ##

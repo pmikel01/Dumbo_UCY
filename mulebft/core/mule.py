@@ -23,10 +23,8 @@ from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublic
 from honeybadgerbft.crypto.ecdsa.ecdsa import PrivateKey
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.exceptions import UnknownTagError
-from honeybadgerbft.core import binaryagreement
-monkey.patch_all(thread=False)
 
-#monkey.patch_all(thread=False, socket=False)
+monkey.patch_all(thread=False)
 
 def set_consensus_log(id: int):
     logger = logging.getLogger("consensus-node-"+str(id))

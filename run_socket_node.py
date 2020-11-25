@@ -9,6 +9,7 @@ from gevent import monkey
 monkey.patch_all(thread=False)
 
 from myexperiements.sockettest.dumbo_node import DumboBFTNode
+from myexperiements.sockettest.dumbox_node import DumboXBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
 from myexperiements.sockettest.socket_server import NetworkServer
 from multiprocessing import Value as mpValue, Queue as mpQueue
@@ -18,10 +19,12 @@ def instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q: mpQueue, send_q: List
     bft = None
     if protocol == 'dumbo':
         bft = DumboBFTNode(sid, i, B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
+    elif protocol == 'dumbox':
+        bft = DumboXBFTNode(sid, i, B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
     elif protocol == "mule":
         bft = MuleBFTNode(sid, i, S, T, int(factor*B/N), B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
     else:
-        print("Only support dumbo or mule")
+        print("Only support dumbo or dumbox or mule")
     return bft
 
 def instantiate_network_server(port: int, my_ip: str, id: int, addresses_list: list, recv_q: mpQueue, send_q: List[mpQueue], ready: mpValue, stop: mpValue):

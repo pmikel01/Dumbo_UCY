@@ -1,18 +1,17 @@
 import json
 import logging
 import os
-import traceback, time
+import time
+import traceback
 import gevent
-import numpy as np
 from collections import namedtuple
 from enum import Enum
+
+import numpy as np
 from gevent import monkey
 from gevent.queue import Queue
-from dumbobft.core.dumbocommonsubset import dumbocommonsubset
-from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
-from dumbobft.core.validatedcommonsubset import validatedcommonsubset
+from dumbomvba.core.mvbacommonsubset import mvbacommonsubset
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
-from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
 
@@ -31,15 +30,13 @@ def set_consensus_log(id: int):
     logger.addHandler(file_handler)
     return logger
 
-
 class BroadcastTag(Enum):
-    ACS_PRBC = 'ACS_PRBC'
     ACS_VACS = 'ACS_VACS'
     TPKE = 'TPKE'
 
 
 BroadcastReceiverQueues = namedtuple(
-    'BroadcastReceiverQueues', ('ACS_PRBC', 'ACS_VACS', 'TPKE'))
+    'BroadcastReceiverQueues', ('ACS_VACS', 'TPKE'))
 
 
 def broadcast_receiver(recv_func, recv_queues):
@@ -51,8 +48,8 @@ def broadcast_receiver(recv_func, recv_queues):
             tag, BroadcastTag.__members__.keys()))
     recv_queue = recv_queues._asdict()[tag]
 
-    if tag == BroadcastTag.ACS_PRBC.value:
-        recv_queue = recv_queue[j]
+    # if tag == BroadcastTag.ACS_VACS.value:
+        # recv_queue = recv_queue[j]
     try:
         recv_queue.put_nowait((sender, msg))
     except AttributeError as e:
@@ -65,8 +62,8 @@ def broadcast_receiver_loop(recv_func, recv_queues):
         broadcast_receiver(recv_func, recv_queues)
 
 
-class Dumbo():
-    """Dumbo object used to run the protocol.
+class mvba():
+    r"""Dumbo object used to run the protocol.
 
     :param str sid: The base name of the common coin that will be used to
         derive a nonce to uniquely identify the coin.
@@ -74,13 +71,13 @@ class Dumbo():
     :param int B: Batch size of transactions.
     :param int N: Number of nodes in the network.
     :param int f: Number of faulty nodes that can be tolerated.
-    :param TBLSPublicKey sPK: Public key of the (f, N) threshold signature
+    :param str sPK: Public key of the (f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
-    :param TBLSPrivateKey sSK: Signing key of the (f, N) threshold signature
+    :param str sSK: Signing key of the (f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
-    :param TBLSPublicKey sPK1: Public key of the (N-f, N) threshold signature
+    :param str sPK1: Public key of the (N-f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
-    :param TBLSPrivateKey sSK1: Signing key of the (N-f, N) threshold signature
+    :param str sSK1: Signing key of the (N-f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
     :param str ePK: Public key of the threshold encryption
         (:math:`\mathsf{TPKE}`) scheme.
@@ -115,17 +112,16 @@ class Dumbo():
         self.s_time = 0
         self.e_time = 0
         self.txcnt = 0
-
         self.mute = mute
 
     def submit_tx(self, tx):
         """Appends the given transaction to the transaction buffer.
+
         :param tx: Transaction to append to the buffer.
         """
         #print('backlog_tx', self.id, tx)
         #if self.logger != None:
         #    self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
-        # Insert transactions to the end of TX buffer
         self.transaction_buffer.put_nowait(tx)
 
     def run_bft(self):
@@ -160,8 +156,6 @@ class Dumbo():
                     self._per_round_recv[r].put_nowait((sender, msg))
                 except:
                     continue
-                gevent.sleep(0)
-                time.sleep(0)
 
         self._recv_thread = gevent.spawn(_recv)
 
@@ -182,6 +176,9 @@ class Dumbo():
             for _ in range(self.B):
                 tx_to_send.append(self.transaction_buffer.get_nowait())
 
+            # TODO: Wait a bit if transaction buffer is not full
+
+            # Run the round
             def _make_send(r):
                 def _send(j, o):
                     self._send(j, (r, o))
@@ -195,21 +192,17 @@ class Dumbo():
                 tx_cnt = str(new_tx).count("Dummy TX")
                 self.txcnt += tx_cnt
                 self.logger.info(
-                'Node %d Delivers ACS Block in Round %d with having %d TXs' % (self.id, r, tx_cnt))
+                    'Node %d Delivers ACS Block in Round %d with having %d TXs' % (self.id, r, tx_cnt))
 
             end = time.time()
 
             if self.logger != None:
                 self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
 
-            # Put undelivered but committed TXs back to the backlog buffer
-            #for _tx in tx_to_send:
-            #    if _tx not in new_tx:
-            #        self.transaction_buffer.put_nowait(_tx)
-
+            # Remove all of the new transactions from the buffer
+            #self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx not in new_tx]
             # print('buffer at %d:' % self.id, self.transaction_buffer)
-            #if self.logger != None:
-            #    self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
+            #if self.logger != None: self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))
 
             self.round += 1     # Increment the round
             if self.round >= self.K:
@@ -217,12 +210,13 @@ class Dumbo():
 
         if self.logger != None:
             self.e_time = time.time()
-            self.logger.info("node %d breaks in %f seconds with total delivered Txs %d" % (self.id, self.e_time-self.s_time, self.txcnt))
+            self.logger.info("node %d breaks in %f seconds with total delivered Txs %d" % (
+            self.id, self.e_time - self.s_time, self.txcnt))
         else:
             print("node %d breaks" % self.id)
 
 
-    #
+
     def _run_round(self, r, tx_to_send, send, recv):
         """Run one protocol round.
 
@@ -232,43 +226,21 @@ class Dumbo():
         :param recv:
         """
         # Unique sid for each round
+        #print(self.id, "now run the round ", r)
         sid = self.sid + ':' + str(r)
         pid = self.id
         N = self.N
         f = self.f
 
-        prbc_recvs = [Queue() for _ in range(N)]
         vacs_recv = Queue()
-        tpke_recv = Queue()
 
-        my_prbc_input = Queue(1)
         vacs_input = Queue(1)
 
-        prbc_outputs = [Queue(1) for _ in range(N)]
         vacs_output = Queue(1)
 
 
         #print(pid, r, 'tx_to_send:', tx_to_send)
         #if self.logger != None: self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
-
-        def _setup_prbc(j):
-            """Setup the sub protocols RBC, BA and common coin.
-
-            :param int j: Node index for which the setup is being done.
-            """
-
-            def prbc_send(k, o):
-                """Reliable send operation.
-                :param k: Node to send.
-                :param o: Value to send.
-                """
-                send(k, ('ACS_PRBC', j, o))
-
-            # Only leader gets input
-            prbc_input = my_prbc_input.get if j == pid else None
-            prbc = gevent.spawn(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK1, self.sSK1, j,
-                               prbc_input, prbc_recvs[j].get, prbc_send)
-            prbc_outputs[j] = prbc.get  # block for output from rbc
 
         def _setup_vacs():
 
@@ -285,19 +257,14 @@ class Dumbo():
                 except AssertionError:
                     print("Failed to verify proof for RBC")
                     return False
-
-            gevent.spawn(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
+            
+            mvbaacs = gevent.spawn(mvbacommonsubset, sid+'VACS'+str(r), pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
                          vacs_input.get, vacs_output.put_nowait,
-                         vacs_recv.get, vacs_send, vacs_predicate)
+                         vacs_recv.get, vacs_send)
 
-        # N instances of ABA, RBC
-        for j in range(N):
-            _setup_prbc(j)
-
-        # One instance of (validated) ACS
         _setup_vacs()
 
-        # One instance of TPKE
+                # One instance of TPKE
         def tpke_bcast(o):
             """Threshold encryption broadcast."""
             def broadcast(o):
@@ -307,18 +274,13 @@ class Dumbo():
                 """
                 for j in range(N):
                     send(j, o)
-            broadcast(('TPKE', '', o))
+            broadcast(('TPKE', 0, o))
 
-
-        # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
-        dumboacs = gevent.spawn(dumbocommonsubset, pid, N, f, prbc_outputs,
-                           vacs_input.put_nowait,
-                           vacs_output.get)
+        tpke_recv = Queue()
 
         recv_queues = BroadcastReceiverQueues(
-            ACS_PRBC=prbc_recvs,
             ACS_VACS=vacs_recv,
-            TPKE=tpke_recv,
+            TPKE=tpke_recv
         )
         gevent.spawn(broadcast_receiver_loop, recv, recv_queues)
 
@@ -327,14 +289,17 @@ class Dumbo():
 
         _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
                           _input.get,
-                          acs_in=my_prbc_input.put_nowait, acs_out=dumboacs.get,
+                          acs_in=vacs_input.put_nowait, acs_out=vacs_output.get,
                           tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
 
         block = set()
         for batch in _output:
             decoded_batch = json.loads(batch.decode())
+            #print("here is the batch:", decoded_batch, pid)
             for tx in decoded_batch:
                 block.add(tx)
+        
+        #print (list(block))
 
         return list(block)
 
