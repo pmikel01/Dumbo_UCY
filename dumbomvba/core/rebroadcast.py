@@ -1,7 +1,8 @@
+import time
 from collections import defaultdict
 from gevent import monkey
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
-from honeybadgerbft.core.reliablebroadcast import encode, decode
+from dumbobft.core.provablereliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 
 monkey.patch_all(thread=False)
@@ -41,10 +42,12 @@ def recastsubprotocol(pid, sid, N, f, PK1, SK1, receive, send, store, lock):
                 broadcast(('RCLOCK', sid, lock))
                 rclocksend = True
             if sum(x is not None for x in commit[roothash]) >= f + 1:
+                start = time.time()
                 v = decode(K, N, commit[roothash])
                 if merkleTree(encode(K, N, v))[1] == roothash:
-
                     # print("now print v:", v)
+                    end = time.time()
+                    print("decode time:" + str(end - start))
                     return v
                 else:
                     return 0

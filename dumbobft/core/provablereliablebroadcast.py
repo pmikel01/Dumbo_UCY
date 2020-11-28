@@ -1,14 +1,48 @@
 # coding=utf-8
 import time
 from collections import defaultdict
+from typing import List
 
 import gevent
 from gevent import monkey
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
-from honeybadgerbft.core.reliablebroadcast import encode, decode
+#from honeybadgerbft.core.reliablebroadcast import encode as encode1, decode as decode1
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
+from pyeclib.ec_iface import ECDriver
 
 monkey.patch_all(thread=False)
+
+
+def encode(K: int, N: int, m):
+    coder = ECDriver(k=K, m=N-K, ec_type='isa_l_rs_vand')
+    assert coder.k == K
+    assert coder.m == N - K
+    try:
+        m = m.encode()
+    except AttributeError:
+        pass
+    stripes = [_ for _ in coder.encode(m)]
+    #assert len(stripes[0]) == len(stripes[-1])
+    #print(str(len(stripes[0])))
+    return stripes
+
+def decode(K: int, N: int, stripes: List[bytes]):
+    coder = ECDriver(k=K, m=N-K, ec_type='isa_l_rs_vand')
+    #assert len(stripes) == N
+    #assert len(stripes) == coder.k + coder.m
+    blocks = []
+    for block in stripes:
+        if block is None:
+            continue
+        blocks.append(block)
+        if len(blocks) == K:
+            break
+    else:
+        raise ValueError("Too few to recover")
+    rec = coder.decode(blocks)
+    return rec
+
+
 
 
 def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
@@ -84,14 +118,15 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
         # (with Python 2 it used to be: assert type(m) is str)
         assert isinstance(m, (str, bytes))
         # print('Input received: %d bytes' % (len(m),))
-
+        start = time.time()
         stripes = encode(K, N, m)
         mt = merkleTree(stripes)  # full binary tree
         roothash = mt[1]
-
         for i in range(N):
             branch = getMerkleBranch(i, mt)
             send(i, ('VAL', roothash, branch, stripes[i]))
+        end = time.time()
+        #print("encoding time: " + str(end - start))
 
     # TODO: filter policy: if leader, discard all messages until sending VAL
 
@@ -106,12 +141,15 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
 
     def decode_output(roothash):
         # Rebuild the merkle tree to guarantee decoding is correct
+        start = time.time()
         m = decode(K, N, stripes[roothash])
         _stripes = encode(K, N, m)
         _mt = merkleTree(_stripes)
         _roothash = _mt[1]
         # TODO: Accountability: If this fails, incriminate leader
         assert _roothash == roothash
+        end = time.time()
+        #print("decoding time:" + str(end - start))
         return m
 
     while True:  # main receive loop

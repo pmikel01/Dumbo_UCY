@@ -1,7 +1,8 @@
+import time
 from collections import defaultdict
 
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
-from honeybadgerbft.core.reliablebroadcast import encode, decode
+from dumbobft.core.provablereliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 from gevent import monkey
 
@@ -61,12 +62,15 @@ def provabledispersalbroadcast(sid, pid, N, f, PK1, SK1, leader, input, output, 
     if pid == leader:
         m = input()
         assert isinstance(m, (str, bytes, list, tuple))
+        start = time.time()
         stripes = encode(K, N, m)
         mt = merkleTree(stripes)
         roothash = mt[1]
         for i in range(N):
             branch = getMerkleBranch(i, mt)
             send(i, ('STORE', sid, roothash, stripes[i], branch))
+        end = time.time()
+        print("encoding time: " + str(end - start))
 
     stop = 0
     recstorefromleader = 0

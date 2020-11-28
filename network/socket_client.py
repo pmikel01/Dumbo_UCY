@@ -17,15 +17,14 @@ monkey.patch_all(thread=False)
 
 
 # Network node class: deal with socket communications
-class NetworkServer (Process):
+class NetworkClient (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, recv_q: mpQueue, send_q: List[mpQueue], ready: mpValue, stop: mpValue):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, send_q: List[mpQueue], client_ready: mpValue, stop: mpValue):
 
-        self.recv_queue = recv_q
         self.send_queues = send_q
-        self.ready = ready
+        self.ready = client_ready
         self.stop = stop
 
         self.ip = my_ip
@@ -34,70 +33,15 @@ class NetworkServer (Process):
         self.addresses_list = addresses_list
         self.N = len(self.addresses_list)
 
-        self.logger = self._set_network_logger(self.id)
+        self.logger = self._set_client_logger(self.id)
 
         self.is_out_sock_connected = [False] * self.N
-        self.is_in_sock_connected = [False] * self.N
 
         self.socks = [None for _ in self.addresses_list]
         self.sock_locks = [lock.Semaphore() for _ in self.addresses_list]
 
         super().__init__()
 
-    def _handle_ingoing_msg(self, sock, address):
-
-        jid = self._address_to_id(address)
-        buf = b''
-        try:
-            while not self.stop.value:
-                gevent.sleep(0)
-                time.sleep(0)
-                buf += sock.recv(5000)
-                tmp = buf.split(self.SEP.encode('utf-8'), 1)
-                while len(tmp) == 2:
-                    buf = tmp[1]
-                    data = tmp[0]
-                    if data != '' and data:
-                        if data == 'ping'.encode('utf-8'):
-                            sock.sendall('pong'.encode('utf-8'))
-                            self.logger.info("node {} is pinging node {}...".format(jid, self.id))
-                            self.is_in_sock_connected[jid] = True
-                        else:
-                            (j, o) = (jid, pickle.loads(data))
-                            assert j in range(self.N)
-                            self.recv_queue.put_nowait((j, o))
-                            #self.logger.info('recv' + str((j, o)))
-                            #print('recv' + str((j, o)))
-                    else:
-                        self.logger.error('syntax error messages')
-                        raise ValueError
-                    tmp = buf.split(self.SEP.encode('utf-8'), 1)
-                gevent.sleep(0)
-                time.sleep(0)
-        except Exception as e:
-            self.logger.error(str((e, traceback.print_exc())))
-
-    def _listen_and_recv_forever(self):
-        pid = os.getpid()
-        self.logger.info('node %d\'s socket server starts to listen ingoing connections on process id %d' % (self.id, pid))
-        print("my IP is " + self.ip)
-        self.server_sock = socket.socket()
-        self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server_sock.bind((self.ip, self.port))
-        self.server_sock.listen(5)
-        handle_msg_threads = []
-        while not self.stop.value:
-            gevent.sleep(0)
-            time.sleep(0)
-            sock, address = self.server_sock.accept()
-            msg_t = gevent.spawn(self._handle_ingoing_msg, sock, address)
-            handle_msg_threads.append(msg_t)
-            self.logger.info('node id %d accepts a new socket from node %d' % (self.id, self._address_to_id(address)))
-            gevent.sleep(0)
-            time.sleep(0)
-        #gevent.joinall(handle_msg_threads)
-        #gevent.sleep(5)
-        #time.sleep(5)
 
     def _connect_and_send_forever(self):
         pid = os.getpid()
@@ -109,7 +53,7 @@ class NetworkServer (Process):
                 for j in range(self.N):
                     if not self.is_out_sock_connected[j]:
                         self.is_out_sock_connected[j] = self._connect(j)
-                if all(self.is_out_sock_connected) and all(self.is_in_sock_connected):
+                if all(self.is_out_sock_connected):
                     with self.ready.get_lock():
                         self.ready.value = True
                     break
@@ -185,20 +129,15 @@ class NetworkServer (Process):
         with self.ready.get_lock():
             self.ready.value = False
 
-        send_thread = gevent.spawn(self._listen_and_recv_forever)
-        recv_thread = gevent.spawn(self._connect_and_send_forever)
-        gevent.joinall([send_thread, recv_thread])
+        self._connect_and_send_forever()
+
 
     def stop_service(self):
         with self.stop.get_lock():
             self.stop.value = True
 
-    def _address_to_id(self, address: tuple):
-        for i in range(self.N):
-            if address[0] != '127.0.0.1' and address[0] == self.addresses_list[i][0]:
-                return i
-        return int((address[1] - 10000) / 200)
-    def _set_network_logger(self, id: int):
+
+    def _set_client_logger(self, id: int):
         logger = logging.getLogger("node-" + str(id))
         logger.setLevel(logging.DEBUG)
         # logger.setLevel(logging.INFO)
