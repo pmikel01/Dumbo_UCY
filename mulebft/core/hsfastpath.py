@@ -178,7 +178,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                         (sender, sig_p) = item
                         assert ecdsa_vrfy(PK2s[sender], hash_p, sig_p)
                 except AssertionError:
-                    if logger is not None: logger.info("Notarization signature failed!")
+                    if logger is not None: logger.info("ecdsa signature failed!")
                     msg_noncritical_signal.set()
                     continue
 
