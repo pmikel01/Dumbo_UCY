@@ -88,10 +88,7 @@ class MuleBFTNode (Mule, Process):
 
         while not self.ready.value:
             time.sleep(1)
-            pass
-
-        time.sleep(4)
-        print(self.ready.value)
+            gevent.sleep(1)
 
         self.run_bft()
         self.stop.value = True

@@ -6,7 +6,7 @@ from typing import List
 import gevent
 from gevent import monkey
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
-#from honeybadgerbft.core.reliablebroadcast import encode as encode1, decode as decode1
+#from honeybadgerbft.core.reliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 from pyeclib.ec_iface import ECDriver
 

@@ -156,7 +156,7 @@ def dumbo_mvba(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, p
         msg = pd_leader_outputs[leader]()
         if msg == 1:
             is_pd_delivered[leader] = 1
-            if sum(is_pd_delivered) >= N - f:
+            if sum(is_pd_delivered) >= N :
                 wait_pd_signal.set()
             # print("Leader %d finishes CBC for node %d" % (leader, pid))
             # print(is_cbc_delivered)

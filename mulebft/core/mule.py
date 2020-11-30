@@ -13,6 +13,7 @@ from gevent.queue import Queue
 from collections import namedtuple
 from enum import Enum
 from mulebft.core.fastpath import fastpath
+from mulebft.core.hsfastpath import hsfastpath
 from mulebft.core.twovalueagreement import twovalueagreement
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
@@ -23,6 +24,7 @@ from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublic
 from honeybadgerbft.crypto.ecdsa.ecdsa import PrivateKey
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.exceptions import UnknownTagError
+from honeybadgerbft.crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
 
 monkey.patch_all(thread=False)
 
@@ -314,7 +316,7 @@ class Mule():
                 latest_notarized_block = o
                 fast_blocks.put(o)
 
-            fast_thread = gevent.spawn(fastpath, epoch_id, pid, N, f, leader,
+            fast_thread = gevent.spawn(hsfastpath, epoch_id, pid, N, f, leader,
                                    self.transaction_buffer.get_nowait, fastpath_output,
                                    self.SLOTS_NUM, self.FAST_BATCH_SIZE, self.TIMEOUT,
                                    hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
@@ -355,14 +357,16 @@ class Mule():
                 gevent.sleep(0)
                 time.sleep(0)
 
-                j, (notarized_block_header_j, notarized_block_raw_Sig_j) = viewchange_recv.get()
-                if notarized_block_raw_Sig_j is not None:
+                j, (notarized_block_header_j, notarized_block_Sig_j) = viewchange_recv.get()
+                if notarized_block_Sig_j is not None:
                     (_, slot_num, Sig_p, _) = notarized_block_header_j
                     notarized_block_hash_j = hash(notarized_block_header_j)
                     try:
-                        notarized_Sig_j = deserialize1(notarized_block_raw_Sig_j)
-                        notarized_hash = self.sPK1.hash_message(notarized_block_hash_j)
-                        assert self.sPK1.verify_signature(notarized_Sig_j, notarized_hash)
+                        assert len(notarized_block_Sig_j) >= N-f
+                        for item in notarized_block_Sig_j:
+                            # print(Sigma_p)
+                            (sender, sig_p) = item
+                            assert ecdsa_vrfy(self.sPK2s[sender], notarized_block_hash_j, sig_p)
                     except AssertionError:
                         if self.logger is not None: self.logger.info("False view change with invalid notarization")
                         continue  # go to next iteration without counting ViewChange Counter

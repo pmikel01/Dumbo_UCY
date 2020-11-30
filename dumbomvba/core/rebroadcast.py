@@ -47,7 +47,7 @@ def recastsubprotocol(pid, sid, N, f, PK1, SK1, receive, send, store, lock):
                 if merkleTree(encode(K, N, v))[1] == roothash:
                     # print("now print v:", v)
                     end = time.time()
-                    print("decode time:" + str(end - start))
+                    #print("decode time:" + str(end - start))
                     return v
                 else:
                     return 0

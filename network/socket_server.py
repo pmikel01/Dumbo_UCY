@@ -60,6 +60,9 @@ class NetworkServer (Process):
                             sock.sendall('pong'.encode('utf-8'))
                             self.logger.info("node {} is pinging node {}...".format(jid, self.id))
                             self.is_in_sock_connected[jid] = True
+                            if all(self.is_in_sock_connected):
+                                with self.ready.get_lock():
+                                    self.ready.value = True
                         else:
                             (j, o) = (jid, pickle.loads(data))
                             assert j in range(self.N)
@@ -106,11 +109,8 @@ class NetworkServer (Process):
         with self.ready.get_lock():
             self.ready.value = False
 
-        self._listen_and_recv_forever()
+        gevent.spawn(self._listen_and_recv_forever).join()
 
-    def stop_service(self):
-        with self.stop.get_lock():
-            self.stop.value = True
 
     def _address_to_id(self, address: tuple):
         for i in range(self.N):
@@ -126,7 +126,7 @@ class NetworkServer (Process):
             '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
         if 'log' not in os.listdir(os.getcwd()):
             os.mkdir(os.getcwd() + '/log')
-        full_path = os.path.realpath(os.getcwd()) + '/log/' + "node-" + str(id) + ".log"
+        full_path = os.path.realpath(os.getcwd()) + '/log/' + "node-net-server-" + str(id) + ".log"
         file_handler = logging.FileHandler(full_path)
         file_handler.setFormatter(formatter)  # 可以通过setFormatter指定输出格式
         logger.addHandler(file_handler)

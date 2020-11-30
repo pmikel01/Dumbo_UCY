@@ -10,6 +10,7 @@ from gevent.queue import Queue
 from honeybadgerbft.crypto.threshsig.boldyreva import dealer
 from honeybadgerbft.crypto.ecdsa.ecdsa import pki
 from mulebft.core.fastpath import fastpath
+from mulebft.core.hsfastpath import hsfastpath
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 
 
@@ -52,7 +53,7 @@ def _test_fast(N=4, f=1, leader=None, seed=None):
 
     BATCH_SIZE = 2
     SLOTS_NUM = 10
-    TIMEOUT = 2.5
+    TIMEOUT = 3
     GENESIS = hash('GENESIS')
 
     # Note thld siganture for CBC has a threshold different from common coin's
@@ -64,7 +65,7 @@ def _test_fast(N=4, f=1, leader=None, seed=None):
 
     for i in range(N):
         for j in range(BATCH_SIZE * SLOTS_NUM):
-            inputs[i].put("<TX " + str(j) + " from node " + str(i) + ">")
+            inputs[i].put("<Dummy TX " + str(j) + " from node " + str(i) + ">")
 
     sends, recvs = simple_router(N, seed=seed)
 
@@ -72,15 +73,15 @@ def _test_fast(N=4, f=1, leader=None, seed=None):
 
     for i in range(N):
 
-        t = Greenlet(fastpath, sid, i, N, f, leader,
-                     inputs[i].get, outputs[i].append, SLOTS_NUM, BATCH_SIZE, TIMEOUT, GENESIS,
+        t = Greenlet(hsfastpath, sid, i, N, f, leader,
+                     inputs[i].get_nowait, outputs[i].append, SLOTS_NUM, BATCH_SIZE, TIMEOUT, GENESIS,
                      PK1, SK1s[i], PK2s, SK2s[i], recvs[i], sends[i])
 
         t.start()
         threads.append(t)
 
     gevent.joinall(threads)
-    (h, raw_Sigma) = threads[0].get()
+    (h, raw_Sigma, _) = threads[0].get()
 
     notarized_block = outputs[0].pop()
     print(notarized_block)

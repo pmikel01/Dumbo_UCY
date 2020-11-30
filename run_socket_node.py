@@ -11,7 +11,8 @@ monkey.patch_all(thread=False)
 from myexperiements.sockettest.dumbo_node import DumboBFTNode
 from myexperiements.sockettest.dumbox_node import DumboXBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
-from myexperiements.sockettest.socket_server import NetworkServer
+from network.socket_server import NetworkServer
+from network.socket_client import NetworkClient
 from multiprocessing import Value as mpValue, Queue as mpQueue
 from ctypes import c_bool
 
@@ -22,13 +23,12 @@ def instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q: mpQueue, send_q: List
     elif protocol == 'dumbox':
         bft = DumboXBFTNode(sid, i, B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
     elif protocol == "mule":
-        bft = MuleBFTNode(sid, i, S, T, int(factor*B/N), B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
+        bft = MuleBFTNode(sid, i, S, T, int(factor*B), B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
     else:
         print("Only support dumbo or dumbox or mule")
     return bft
 
-def instantiate_network_server(port: int, my_ip: str, id: int, addresses_list: list, recv_q: mpQueue, send_q: List[mpQueue], ready: mpValue, stop: mpValue):
-    return NetworkServer(port, my_ip, id, addresses_list, recv_q, send_q, ready, stop)
+
 
 if __name__ == '__main__':
 
@@ -96,23 +96,38 @@ if __name__ == '__main__':
 
         recv_q = mpQueue()
         send_q = [mpQueue() for _ in range(N)]
-        ready = mpValue(c_bool, False)
+
+        client_ready = mpValue(c_bool, False)
+        server_ready = mpValue(c_bool, False)
+        net_ready = mpValue(c_bool, False)
+
         stop = mpValue(c_bool, False)
-        print(ready.value)
-        print(stop.value)
 
-        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q, send_q, ready, stop, P, M, F)
-        net = instantiate_network_server(my_address[1], my_address[0], i, addresses, recv_q, send_q, ready, stop)
+        net_server = NetworkServer(my_address[1], my_address[0], i, addresses, recv_q, server_ready, stop)
+        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, send_q, client_ready, stop)
+        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q, send_q, net_ready, stop, P, M, F)
 
-        net.start()
+        net_server.start()
+        net_client.start()
+
+        while not client_ready.value and not server_ready.value:
+            time.sleep(1)
+            print("waiting for network ready...")
+
+        with net_ready.get_lock():
+            net_ready.value = True
+
         bft.run()
-        #while not stop.value:
-        #    time.sleep(5)
-        #    print("parent is waiting...")
-        #bft.terminate()
-        net.terminate()
-        #bft.join()
-        net.join()
+
+        with net_ready.get_lock():
+            stop.value = True
+
+        net_client.terminate()
+        net_client.join()
+        time.sleep(1)
+        net_server.terminate()
+        net_server.join()
+
 
     except FileNotFoundError or AssertionError as e:
         traceback.print_exc()
