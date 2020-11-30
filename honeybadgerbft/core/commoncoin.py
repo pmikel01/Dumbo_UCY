@@ -63,7 +63,8 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
                 PK.verify_share(sig, i, h)
             except AssertionError:
                 print("Signature share failed!", (sid, pid, i, r))
-                continue
+                #continue
+                pass
 
             received[r][i] = sig
 
