@@ -109,6 +109,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
         h = PK.hash_message(str((sid, round)))
         print('debug', SK.sign(h), h)
         print('debug', type(SK.sign(h)), type(h))
+        print('debug', SK.SK)
         logger.debug(f"broadcast {('COIN', round, SK.sign(h))}",
                      extra={'nodeid': pid, 'epoch': round})
         sig = SK.sign(h)
