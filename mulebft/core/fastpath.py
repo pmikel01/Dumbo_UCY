@@ -228,6 +228,10 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
             sig_tx = ecdsa_sign(SK2, tx_batch)
             send(leader, ('VOTE', slot_cur, hash_prev, serialize(sig_prev), tx_batch, sig_tx))
             logger.info(str((leader, ('VOTE', slot_cur, PK1.hash_message(hash_prev), sig_prev))))
+            try:
+                assert PK1.verify_share(sig_prev, pid, PK1.hash_message(hash_prev))
+            except:
+                logger.info("disaster")
         except AttributeError as e:
             if logger is not None:
                 logger.info(traceback.print_exc())
