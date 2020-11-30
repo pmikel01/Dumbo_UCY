@@ -20,6 +20,8 @@ except Exception as err:
 # group = PairingGroup('MNT159')
 group = PairingGroup('MNT224')
 
+def ismember(g):
+    return group.ismember(g)
 
 def g12serialize(g):
     return group.serialize(g, compression=True)

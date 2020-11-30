@@ -1,6 +1,6 @@
 import logging
 
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1, g12deserialize, g12serialize
+from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1, g12deserialize, g12serialize, ismember
 
 
 from collections import defaultdict
@@ -108,9 +108,10 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
         # I have to do mapping to 1..l
         h = PK.hash_message(str((sid, round)))
         print('debug', SK.sign(h), h)
-        print('debug', type(SK.sign(h)), type(h))
         print('debug-SK', SK.SK)
         print('debug-PK', PK.VKs[pid])
+        print('debug', type(SK.sign(h)), type(h), type(SK.SK), type(PK.VKs[pid]))
+        print('debug', ismember(SK.sign(h)), ismember(h), ismember(SK.SK), ismember(PK.VKs[pid]))
         logger.debug(f"broadcast {('COIN', round, SK.sign(h))}",
                      extra={'nodeid': pid, 'epoch': round})
         sig = SK.sign(h)
