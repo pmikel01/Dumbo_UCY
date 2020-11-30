@@ -33,8 +33,6 @@ class NetworkServer (Process):
         self.addresses_list = addresses_list
         self.N = len(self.addresses_list)
 
-        self.logger = self._set_server_logger(self.id)
-
         self.is_in_sock_connected = [False] * self.N
 
         self.socks = [None for _ in self.addresses_list]
@@ -104,6 +102,7 @@ class NetworkServer (Process):
 
     def run(self):
         pid = os.getpid()
+        self.logger = self._set_server_logger(self.id)
 
         self.logger.info('node id %d is running on pid %d' % (self.id, pid))
         with self.ready.get_lock():

@@ -33,7 +33,6 @@ class NetworkClient (Process):
         self.addresses_list = addresses_list
         self.N = len(self.addresses_list)
 
-        self.logger = self._set_client_logger(self.id)
 
         self.is_out_sock_connected = [False] * self.N
 
@@ -123,8 +122,9 @@ class NetworkClient (Process):
         #print("sending loop quits ...")
 
     def run(self):
-        pid = os.getpid()
+        self.logger = self._set_client_logger(self.id)
 
+        pid = os.getpid()
         self.logger.info('node id %d is running on pid %d' % (self.id, pid))
         with self.ready.get_lock():
             self.ready.value = False
