@@ -18,30 +18,30 @@ monkey.patch_all(thread=False)
 
 def load_key(id, N):
 
-    with open(os.getcwd() + '/keys/' + 'sPK.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sPK.key', 'rb') as fp:
         sPK = pickle.load(fp)
 
-    with open(os.getcwd() + '/keys/' + 'sPK1.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sPK1.key', 'rb') as fp:
         sPK1 = pickle.load(fp)
 
     sPK2s = []
     for i in range(N):
-        with open(os.getcwd() + '/keys/' + 'sPK2-' + str(i) + '.key', 'rb') as fp:
+        with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sPK2-' + str(i) + '.key', 'rb') as fp:
             sPK2s.append(PublicKey(pickle.load(fp)))
 
-    with open(os.getcwd() + '/keys/' + 'ePK.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'ePK.key', 'rb') as fp:
         ePK = pickle.load(fp)
 
-    with open(os.getcwd() + '/keys/' + 'sSK-' + str(id) + '.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sSK-' + str(id) + '.key', 'rb') as fp:
         sSK = pickle.load(fp)
 
-    with open(os.getcwd() + '/keys/' + 'sSK1-' + str(id) + '.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sSK1-' + str(id) + '.key', 'rb') as fp:
         sSK1 = pickle.load(fp)
 
-    with open(os.getcwd() + '/keys/' + 'sSK2-' + str(id) + '.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sSK2-' + str(id) + '.key', 'rb') as fp:
         sSK2 = PrivateKey(pickle.load(fp))
 
-    with open(os.getcwd() + '/keys/' + 'eSK-' + str(id) + '.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'eSK-' + str(id) + '.key', 'rb') as fp:
         eSK = pickle.load(fp)
 
     return sPK, sPK1, sPK2s, ePK, sSK, sSK1, sSK2, eSK
@@ -56,7 +56,7 @@ class MuleBFTNode (Mule, Process):
         self.ready = ready
         self.stop = stop
         self.mode = mode
-        Mule.__init__(self, sid, id, S, T, max(int(Bfast/N), 1), max(int(Bacs/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
+        Mule.__init__(self, sid, id, S, T, max(int(Bfast), 1), max(int(Bacs/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
         Process.__init__(self)
 
     def prepare_bootstrap(self):

@@ -13,22 +13,22 @@ from multiprocessing import Value as mpValue, Queue as mpQueue, Process
 
 def load_key(id):
 
-    with open(os.getcwd() + '/keys/' + 'sPK.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sPK.key', 'rb') as fp:
         sPK = pickle.load(fp)
 
-    with open(os.getcwd() + '/keys/' + 'sPK1.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sPK1.key', 'rb') as fp:
         sPK1 = pickle.load(fp)
 
-    with open(os.getcwd() + '/keys/' + 'ePK.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'ePK.key', 'rb') as fp:
         ePK = pickle.load(fp)
 
-    with open(os.getcwd() + '/keys/' + 'sSK-' + str(id) + '.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sSK-' + str(id) + '.key', 'rb') as fp:
         sSK = pickle.load(fp)
 
-    with open(os.getcwd() + '/keys/' + 'sSK1-' + str(id) + '.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sSK1-' + str(id) + '.key', 'rb') as fp:
         sSK1 = pickle.load(fp)
 
-    with open(os.getcwd() + '/keys/' + 'eSK-' + str(id) + '.key', 'rb') as fp:
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'eSK-' + str(id) + '.key', 'rb') as fp:
         eSK = pickle.load(fp)
 
     return sPK, sPK1, ePK, sSK, sSK1, eSK

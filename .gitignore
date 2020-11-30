@@ -21,7 +21,6 @@ htmlcov/
 # Sphinx documentation
 docs/_build/
 
-*.key
 
 *.log
 
