@@ -109,6 +109,10 @@ class TBLSPublicKey(object):
 
     def hash_message(self, m):
         """ """
+        try:
+            m = m.encode()
+        except:
+            pass
         return group.hash(m, G1)
 
     def verify_share(self, sig, i, h):
