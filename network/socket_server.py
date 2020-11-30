@@ -65,8 +65,8 @@ class NetworkServer (Process):
                             (j, o) = (jid, pickle.loads(data))
                             assert j in range(self.N)
                             self.recv_queue.put_nowait((j, o))
-                            #self.logger.info('recv' + str((j, o)))
-                            #print('recv' + str((j, o)))
+                            self.logger.info('recv' + str((j, o)))
+                            print('recv' + str((j, o)))
                     else:
                         self.logger.error('syntax error messages')
                         raise ValueError
