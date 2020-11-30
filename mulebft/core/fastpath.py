@@ -131,7 +131,7 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                     except AssertionError:
                         if logger is not None:
                             logger.info("Vote signature failed!")
-                            logger.info(sig_p, sender, PK1.hash_message(hash_p))
+                            logger.info(str((sig_p, sender, PK1.hash_message(hash_p))))
                         msg_noncritical_signal.set()
                         continue
 
@@ -227,7 +227,7 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
         try:
             sig_tx = ecdsa_sign(SK2, tx_batch)
             send(leader, ('VOTE', slot_cur, hash_prev, serialize(sig_prev), tx_batch, sig_tx))
-            logger.info(leader, ('VOTE', slot_cur, hash_prev, serialize(sig_prev), tx_batch, sig_tx))
+            logger.info(str((leader, ('VOTE', slot_cur, hash_prev, serialize(sig_prev), tx_batch, sig_tx))))
         except AttributeError as e:
             if logger is not None:
                 logger.info(traceback.print_exc())
