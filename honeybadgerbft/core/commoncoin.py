@@ -62,9 +62,9 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
             try:
                 PK.verify_share(sig, i, h)
             except AssertionError:
-                print("Signature share failed!", (sid, pid, i, r))
-                #continue
-                pass
+                print("Signature share failed!", (sid, pid, i, r, sig, h))
+                continue
+                #pass
 
             received[r][i] = sig
 
@@ -105,8 +105,8 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
         """
         # I have to do mapping to 1..l
         h = PK.hash_message(str((sid, round)))
-        # print('debug', SK.sign(h))
-        # print('debug', type(SK.sign(h)))
+        print('debug', SK.sign(h), h)
+        print('debug', type(SK.sign(h)))
         logger.debug(f"broadcast {('COIN', round, SK.sign(h))}",
                      extra={'nodeid': pid, 'epoch': round})
         #sig = SK.sign(h)
