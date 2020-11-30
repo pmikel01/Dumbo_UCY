@@ -64,7 +64,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
             except AssertionError:
                 print("Signature share failed!", (sid, pid, i, r, sig, h))
                 print('debug', sig, h)
-                print('debug', type(SK.sign(h)), type(h))
+                print('debug', type(sig), type(h))
                 continue
                 #pass
 
