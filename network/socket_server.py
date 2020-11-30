@@ -94,10 +94,6 @@ class NetworkServer (Process):
             self.logger.info('node id %d accepts a new socket from node %d' % (self.id, self._address_to_id(address)))
             gevent.sleep(0)
             time.sleep(0)
-        #gevent.joinall(handle_msg_threads)
-        #gevent.sleep(5)
-        #time.sleep(5)
-
 
 
     def run(self):
@@ -108,7 +104,7 @@ class NetworkServer (Process):
         with self.ready.get_lock():
             self.ready.value = False
 
-        gevent.spawn(self._listen_and_recv_forever).join()
+        self._listen_and_recv_forever()
 
 
     def _address_to_id(self, address: tuple):

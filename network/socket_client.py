@@ -11,7 +11,6 @@ from gevent import socket, monkey, lock
 import logging
 import traceback
 
-#monkey.patch_all(thread=False, socket=False)
 monkey.patch_all(thread=False)
 
 
@@ -129,7 +128,7 @@ class NetworkClient (Process):
         with self.ready.get_lock():
             self.ready.value = False
 
-        gevent.spawn(self._connect_and_send_forever).join()
+        self._connect_and_send_forever()
 
 
     def stop_service(self):
