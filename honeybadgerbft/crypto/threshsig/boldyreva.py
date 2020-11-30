@@ -20,6 +20,11 @@ except Exception as err:
 # group = PairingGroup('MNT159')
 group = PairingGroup('MNT224')
 
+def g12serialize(g):
+    return group.serialize(g, compression=True)
+
+def g12deserialize(g):
+    return group.deserialize(g, compression=True)
 
 def serialize(g):
     """ """

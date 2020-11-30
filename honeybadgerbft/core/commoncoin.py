@@ -1,6 +1,6 @@
 import logging
 
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
+from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1, g12deserialize, g12serialize
 
 
 from collections import defaultdict
@@ -46,7 +46,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
                          extra={'nodeid': pid, 'epoch': '?'})
             # New shares for some round r, from sender i
             (i, (_, r, raw_sig)) = receive()
-            sig = deserialize1(raw_sig)
+            sig = g12deserialize(raw_sig)
             logger.debug(f'received i, _, r, sig: {i, _, r, sig}',
                          extra={'nodeid': pid, 'epoch': r})
             assert i in range(N)
@@ -82,7 +82,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
                 assert PK.verify_signature(sig, h)
 
                 # Compute the bit from the least bit of the hash
-                coin = hash(serialize(sig))[0]
+                coin = hash(g12serialize(sig))[0]
                 if single_bit:
                     bit = coin % 2
                     logger.debug(f'put coin {bit} in output queue',
@@ -106,11 +106,11 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
         # I have to do mapping to 1..l
         h = PK.hash_message(str((sid, round)))
         print('debug', SK.sign(h), h)
-        print('debug', type(SK.sign(h)))
+        print('debug', type(SK.sign(h)), type(h))
         logger.debug(f"broadcast {('COIN', round, SK.sign(h))}",
                      extra={'nodeid': pid, 'epoch': round})
         #sig = SK.sign(h)
-        broadcast(('COIN', round, serialize(SK.sign(h))))
+        broadcast(('COIN', round, g12serialize(SK.sign(h))))
         coin = outputQueue[round].get()
         #print('debug', 'node %d gets a coin %d for round %d in %s' % (pid, coin, round, sid))
         return coin
