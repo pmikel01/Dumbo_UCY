@@ -63,7 +63,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
                 PK.verify_share(sig, i, h)
             except AssertionError:
                 print("Signature share failed!", (sid, pid, i, r, sig, h))
-                print('debug', SK.sign(h), h)
+                print('debug', sig, h)
                 print('debug', type(SK.sign(h)), type(h))
                 continue
                 #pass
@@ -111,8 +111,9 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
         print('debug', type(SK.sign(h)), type(h))
         logger.debug(f"broadcast {('COIN', round, SK.sign(h))}",
                      extra={'nodeid': pid, 'epoch': round})
-        #sig = SK.sign(h)
-        broadcast(('COIN', round, g12serialize(SK.sign(h))))
+        sig = SK.sign(h)
+        broadcast(('COIN', round, g12serialize(sig)))
+        PK.verify_share(sig, pid, h)
         coin = outputQueue[round].get()
         #print('debug', 'node %d gets a coin %d for round %d in %s' % (pid, coin, round, sid))
         return coin
