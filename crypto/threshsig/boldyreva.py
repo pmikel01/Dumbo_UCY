@@ -55,11 +55,17 @@ def deserialize2(g):
     return group.deserialize(b'2:'+encodestring(g))
 
 
-g1 = group.hash('geng1', G1)
+raw_g1 = b'1:Hw8fQ59CfkFyNR2rGK5BLWSfwfxAlFMA89IkTAE='
+raw_g2 = b'2:Plp1Jb6RDCvLNI6RGCQAuZghgJcwml/93322Nh0sZdVnwIFKYsOxxgFtg416U2vl/RIUfPT0ShEVekx6xXYIMhoV+CTwlViWtd7hQE//azdpwtOFAQ=='
+g1 = group.deserialize(raw_g1)
 g1.initPP()
-# g2 = g1
-g2 = group.hash('geng2', G2)
+g2 = group.deserialize(raw_g2)
 g2.initPP()
+#g1 = group.hash('geng1', G1)
+#g1.initPP()
+# g2 = g1
+#g2 = group.hash('geng2', G2)
+#g2.initPP()
 ZERO = group.random(ZR, seed=59)*0
 ONE = group.random(ZR, seed=60)*0+1
 
