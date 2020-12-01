@@ -108,11 +108,11 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
         # I have to do mapping to 1..l
         h = PK.hash_message(str((sid, round)))
         h.initPP()
-        print('debug', pid, SK.sign(h), h)
-        print('debug-SK', pid, SK.SK, SK.l, SK.k, SK.i)
-        print('debug-PK', pid, PK.VKs[pid], PK.l, PK.k, PK.VK)
-        print('debug', pid, type(SK.sign(h)), type(h), type(SK.SK), type(PK.VKs[pid]))
-        print('debug', pid, ismember(SK.sign(h)), ismember(h), ismember(SK.SK), ismember(PK.VKs[pid]))
+        # print('debug', pid, SK.sign(h), h)
+        # print('debug-SK', pid, SK.SK, SK.l, SK.k, SK.i)
+        # print('debug-PK', pid, PK.VKs[pid], PK.l, PK.k, PK.VK)
+        # print('debug', pid, type(SK.sign(h)), type(h), type(SK.SK), type(PK.VKs[pid]))
+        # print('debug', pid, ismember(SK.sign(h)), ismember(h), ismember(SK.SK), ismember(PK.VKs[pid]))
         logger.debug(f"broadcast {('COIN', round, SK.sign(h))}",
                      extra={'nodeid': pid, 'epoch': round})
         sig = SK.sign(h)
