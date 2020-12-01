@@ -4,13 +4,13 @@ from base64 import encodestring
 
 from pytest import mark
 
-from crypto.threshsig import dealer
+from crypto.threshsig.boldyreva import dealer
 
 
 class TestTBLSPublicKey:
 
     def test_init(self, vk, vks):
-        from crypto.threshsig import TBLSPublicKey
+        from crypto.threshsig.boldyreva import TBLSPublicKey
         players = 10    # TODO bind to fixtures
         count = 5   # TODO bind to fixtures
         public_key = TBLSPublicKey(players, count, vk, vks)
@@ -30,7 +30,7 @@ class TestTBLSPublicKey:
         assert tbls_public_key.__dict__ == original_dict
 
     def test_setstate(self, tbls_public_key, serialized_tbls_public_key_dict):
-        from crypto.threshsig import TBLSPublicKey
+        from crypto.threshsig.boldyreva import TBLSPublicKey
         unset_public_key = TBLSPublicKey(None, None, None, None)
         unset_public_key.__setstate__(serialized_tbls_public_key_dict)
         assert len(unset_public_key.__dict__) == len(tbls_public_key.__dict__)

@@ -8,8 +8,8 @@ from pytest import raises
 
 
 def test_worker(tbls_public_key, tbls_private_keys):
-    from crypto.threshsig import _worker
-    from crypto.threshsig import serialize, deserialize1
+    from crypto.threshsig.boldyreva_gipc import _worker
+    from crypto.threshsig.boldyreva import serialize, deserialize1
     r_pipe, w_pipe = gipc.pipe(duplex=True)
     h = tbls_public_key.hash_message('hi')
     h.initPP()
@@ -44,9 +44,9 @@ def test_worker_loop(mocker, tbls_public_key):
 
 
 def test_pool():
-    from crypto.threshsig import dealer
+    from crypto.threshsig.boldyreva import dealer
     from crypto.threshsig import boldyreva_gipc
-    from crypto.threshsig import (
+    from crypto.threshsig.boldyreva_gipc import (
             initialize, combine_and_verify)
     global PK, SKs
     PK, SKs = dealer(players=64, k=17)

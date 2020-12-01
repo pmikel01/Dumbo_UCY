@@ -86,6 +86,8 @@ class TBLSPublicKey(object):
     def __getstate__(self):
         """ """
         d = dict(self.__dict__)
+        d['l'] = self.l
+        d['k'] = self.k
         d['VK'] = serialize(self.VK)
         d['VKs'] = list(map(serialize, self.VKs))
         return d
@@ -161,6 +163,9 @@ class TBLSPrivateKey(TBLSPublicKey):
     def __getstate__(self):
         """ """
         d = dict(self.__dict__)
+        d['l'] = self.l
+        d['k'] = self.k
+        d['i'] = self.i
         d['SK'] = serialize(self.SK)
         d['VK'] = serialize(self.VK)
         d['VKs'] = list(map(serialize, self.VKs))

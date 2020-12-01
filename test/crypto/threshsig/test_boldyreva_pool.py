@@ -2,19 +2,19 @@ from multiprocessing.pool import Pool
 
 
 def test_initialize(tbls_public_key):
-    from crypto.threshsig import (
+    from crypto.threshsig.boldyreva_pool import (
                                                 initialize, _pool, _pool_PK)
     assert _pool is None
     assert _pool_PK is None
     initialize(tbls_public_key)
-    from crypto.threshsig import _pool, _pool_PK
+    from crypto.threshsig.boldyreva_pool import _pool, _pool_PK
     assert isinstance(_pool, Pool)
     assert _pool_PK == tbls_public_key
     _pool.terminate()
 
 
 def test_combine_and_verify(tbls_public_key, tbls_private_keys):
-    from crypto.threshsig import (
+    from crypto.threshsig.boldyreva_gipc import (
                                             initialize, combine_and_verify)
     h = tbls_public_key.hash_message('hi')
     h.initPP()
@@ -24,14 +24,14 @@ def test_combine_and_verify(tbls_public_key, tbls_private_keys):
         if k in list(signature_shares.keys())[:tbls_public_key.k]
     }
     initialize(tbls_public_key)
-    from crypto.threshsig import _pool
+    from crypto.threshsig.boldyreva_pool import _pool
     combine_and_verify(h, signature_shares)
     _pool.terminate()
 
 
 def test__combine_and_verify(tbls_public_key, tbls_private_keys):
-    from crypto.threshsig import serialize
-    from crypto.threshsig import _combine_and_verify
+    from crypto.threshsig.boldyreva import serialize
+    from crypto.threshsig.boldyreva_pool import _combine_and_verify
     h = tbls_public_key.hash_message('hi')
     h.initPP()
     serialized_h = serialize(h)
@@ -45,5 +45,8 @@ def test__combine_and_verify(tbls_public_key, tbls_private_keys):
 
 
 def test_pool():
-    from crypto.threshsig import pool_test
+    from crypto.threshsig.boldyreva_pool import pool_test
     pool_test()
+
+
+test_pool()

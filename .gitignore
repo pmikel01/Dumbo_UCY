@@ -28,7 +28,7 @@ docs/_build/
 
 syntactictests/
 
-crypto/cryptoprimitivetests/crypto_primitive_tests.py
+honeybadgerbft/crypto/cryptoprimitivetests/crypto_primitive_tests.py
 
 *.config
 
