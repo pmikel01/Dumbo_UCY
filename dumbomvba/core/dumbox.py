@@ -11,7 +11,7 @@ import numpy as np
 from gevent import monkey
 from gevent.queue import Queue
 from dumbomvba.core.mvbacommonsubset import mvbacommonsubset
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
+from crypto.threshsig.boldyreva import deserialize1
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
 

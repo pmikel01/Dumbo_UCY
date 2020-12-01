@@ -4,7 +4,7 @@ from gevent import Greenlet
 from gevent.queue import Queue
 from gevent import monkey
 from dumbobft.core.validatedagreement import validatedagreement
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 
 monkey.patch_all()
 

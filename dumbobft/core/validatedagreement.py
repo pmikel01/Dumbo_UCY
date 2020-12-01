@@ -14,7 +14,7 @@ from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.core.binaryagreement import binaryagreement
 from dumbobft.core.consistentbroadcast import consistentbroadcast
 from honeybadgerbft.exceptions import UnknownTagError
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
+from crypto.threshsig.boldyreva import serialize, deserialize1
 
 monkey.patch_all(thread=False)
 

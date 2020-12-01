@@ -1,6 +1,6 @@
 from collections import defaultdict
 from gevent import monkey
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
+from crypto.threshsig.boldyreva import serialize, deserialize1
 
 monkey.patch_all(thread=False)
 

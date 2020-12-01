@@ -1,11 +1,10 @@
 # coding=utf-8
 import time
 from collections import defaultdict
-from typing import List
 
 import gevent
 from gevent import monkey
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
+from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.reliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 #from pyeclib.ec_iface import ECDriver

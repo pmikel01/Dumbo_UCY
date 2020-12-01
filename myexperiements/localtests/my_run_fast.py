@@ -7,11 +7,10 @@ import gevent
 from gevent import Greenlet
 from gevent.queue import Queue
 
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 from honeybadgerbft.crypto.ecdsa.ecdsa import pki
-from mulebft.core.fastpath import fastpath
 from mulebft.core.hsfastpath import hsfastpath
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
+from crypto.threshsig import deserialize1
 
 
 def hash(x):

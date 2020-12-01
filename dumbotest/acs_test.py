@@ -5,7 +5,7 @@ from gevent import Greenlet
 from gevent.queue import Queue
 
 from dumbomvba.core.mvbacommonsubset import mvbacommonsubset
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 
 from gevent.monkey import patch_all
 patch_all()

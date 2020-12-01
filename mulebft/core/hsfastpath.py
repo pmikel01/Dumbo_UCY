@@ -4,9 +4,9 @@ from collections import defaultdict
 from gevent.event import Event
 from gevent.queue import Queue
 from gevent import Timeout, monkey
-from honeybadgerbft.crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
-from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
+from crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
+from crypto.threshsig.boldyreva import serialize, deserialize1
+from crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
 import os
 import json
 import gevent

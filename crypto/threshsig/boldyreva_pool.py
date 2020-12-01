@@ -1,4 +1,4 @@
-from .boldyreva import dealer, serialize, deserialize1
+from crypto.threshsig.boldyreva import dealer, serialize, deserialize1
 
 
 _pool_PK = None

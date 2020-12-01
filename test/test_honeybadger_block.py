@@ -10,7 +10,7 @@ from honeybadgerbft.core.commonsubset import commonsubset
 import honeybadgerbft.core.honeybadger_block
 #reload(honeybadgerbft.core.honeybadger_block)
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 from honeybadgerbft.crypto.threshenc import tpke
 from collections import defaultdict
 

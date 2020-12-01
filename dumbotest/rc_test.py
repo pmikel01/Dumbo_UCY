@@ -6,7 +6,7 @@ from gevent.queue import Queue
 
 from dumbomvba.core.provabledispersal import provabledispersalbroadcast
 from dumbomvba.core.rebroadcast import recastsubprotocol
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 
 
 # CBC

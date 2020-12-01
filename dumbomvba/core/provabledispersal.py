@@ -1,8 +1,7 @@
 import time
 from collections import defaultdict
 
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
+from crypto.threshsig.boldyreva import serialize, deserialize1
 from dumbobft.core.provablereliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 from gevent import monkey

@@ -11,8 +11,7 @@ from gevent.queue import Queue
 from dumbobft.core.dumbocommonsubset import dumbocommonsubset
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
-from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
+from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
 

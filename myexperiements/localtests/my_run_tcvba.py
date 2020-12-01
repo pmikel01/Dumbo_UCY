@@ -7,7 +7,7 @@ from gevent import monkey
 from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
 from mulebft.core.twovalueagreement import twovalueagreement
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 
 
 monkey.patch_all()

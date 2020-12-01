@@ -2,16 +2,15 @@ import pickle
 import random
 from base64 import encodestring
 
-from charm.core.math.pairing import pc_element
 from pytest import mark
 
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 
 
 class TestTBLSPublicKey:
 
     def test_init(self, vk, vks):
-        from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPublicKey
+        from crypto.threshsig import TBLSPublicKey
         players = 10    # TODO bind to fixtures
         count = 5   # TODO bind to fixtures
         public_key = TBLSPublicKey(players, count, vk, vks)
@@ -31,7 +30,7 @@ class TestTBLSPublicKey:
         assert tbls_public_key.__dict__ == original_dict
 
     def test_setstate(self, tbls_public_key, serialized_tbls_public_key_dict):
-        from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPublicKey
+        from crypto.threshsig import TBLSPublicKey
         unset_public_key = TBLSPublicKey(None, None, None, None)
         unset_public_key.__setstate__(serialized_tbls_public_key_dict)
         assert len(unset_public_key.__dict__) == len(tbls_public_key.__dict__)
@@ -57,6 +56,7 @@ def test_boldyreva():
 
     for SK in SKs:
         sigs[SK.i] = SK.sign(h)
+        print(PK.verify_share(sigs[SK.i], SK.i, h))
 
     SS = list(range(PK.l))
     for i in range(10):
@@ -68,10 +68,12 @@ def test_boldyreva():
 
 @mark.parametrize('n', (0, 1, 2))
 def test_deserialize_arg(n, g, mocker):
-    from honeybadgerbft.crypto.threshsig import boldyreva
+    from crypto.threshsig import boldyreva
     mocked_deserialize = mocker.patch.object(
         boldyreva.group, 'deserialize', autospec=True)
     deserialize_func = getattr(boldyreva, 'deserialize{}'.format(n))
     base64_encoded_data = '{}:{}'.format(n, encodestring(g).decode())
     deserialize_func(g)
     mocked_deserialize.assert_called_once_with(base64_encoded_data.encode())
+
+test_boldyreva()

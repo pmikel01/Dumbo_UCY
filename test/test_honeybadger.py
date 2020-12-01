@@ -9,7 +9,7 @@ from pytest import fixture, mark, raises
 import honeybadgerbft.core.honeybadger
 #reload(honeybadgerbft.core.honeybadger)
 from honeybadgerbft.core.honeybadger import HoneyBadgerBFT
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 from honeybadgerbft.crypto.threshenc import tpke
 from honeybadgerbft.core.honeybadger import BroadcastTag
 

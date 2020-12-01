@@ -7,7 +7,7 @@ from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.core.binaryagreement import binaryagreement
 from honeybadgerbft.core.reliablebroadcast import reliablebroadcast
 from honeybadgerbft.core.commonsubset import commonsubset
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 from collections import defaultdict
 
 from pytest import mark

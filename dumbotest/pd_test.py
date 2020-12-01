@@ -4,7 +4,7 @@ from gevent import Greenlet
 from gevent.queue import Queue
 
 from dumbomvba.core.provabledispersal import provabledispersalbroadcast
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 
 
 # CBC

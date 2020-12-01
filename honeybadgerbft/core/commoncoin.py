@@ -1,6 +1,6 @@
 import logging
 
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1, g12deserialize, g12serialize, ismember
+from crypto.threshsig.boldyreva import serialize, deserialize1, g12deserialize, g12serialize, ismember
 
 
 from collections import defaultdict

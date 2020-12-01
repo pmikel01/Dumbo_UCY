@@ -40,7 +40,7 @@ def polynomial_coefficients(request, pairing_group_MNT224):
 
 @fixture(params=(10,))
 def sks(request, polynomial_coefficients):
-    from honeybadgerbft.crypto.threshsig.boldyreva import polynom_eval
+    from crypto.threshsig import polynom_eval
     players = request.param
     return [polynom_eval(i, polynomial_coefficients)
             for i in range(1, players+1)]
@@ -58,7 +58,7 @@ def vks(g2_mnt224, sks):
 
 @fixture
 def tbls_public_key(vk, vks):
-    from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPublicKey
+    from crypto.threshsig import TBLSPublicKey
     players = 10    # TODO bind to fixtures
     count = 5   # TODO bind to fixtures
     return TBLSPublicKey(players, count, vk, vks)
@@ -66,7 +66,7 @@ def tbls_public_key(vk, vks):
 
 @fixture
 def tbls_private_keys(vk, vks, sks):
-    from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey
+    from crypto.threshsig import TBLSPrivateKey
     players = 10    # TODO bind to fixtures
     count = 5   # TODO bind to fixtures
     return [TBLSPrivateKey(players, count, vk, vks, sk, i)
@@ -75,7 +75,7 @@ def tbls_private_keys(vk, vks, sks):
 
 @fixture
 def serialized_tbls_public_key_dict(tbls_public_key):
-    from honeybadgerbft.crypto.threshsig.boldyreva import serialize
+    from crypto.threshsig import serialize
     return {
         'l': tbls_public_key.l,
         'k': tbls_public_key.k,

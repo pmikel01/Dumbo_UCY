@@ -11,7 +11,7 @@ from myexperiements.sockettest.make_random_tx import tx_generator
 from multiprocessing import Value as mpValue, Queue as mpQueue, Process
 
 
-def load_key(id):
+def load_key(id, N):
 
     with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sPK.key', 'rb') as fp:
         sPK = pickle.load(fp)
@@ -37,7 +37,7 @@ def load_key(id):
 class DumboBFTNode (Dumbo, Process):
 
     def __init__(self, sid, id, B, N, f, recv_q: mpQueue, send_q: List[mpQueue], ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
-        self.sPK, self.sPK1, self.ePK, self.sSK, self.sSK1, self.eSK = load_key(id)
+        self.sPK, self.sPK1, self.ePK, self.sSK, self.sSK1, self.eSK = load_key(id, N)
         self.recv_queue = recv_q
         self.send_queues = send_q
         self.ready = ready

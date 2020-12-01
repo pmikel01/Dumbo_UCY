@@ -1,5 +1,4 @@
 # for n pd instances
-import copy
 import traceback
 import logging
 import gevent
@@ -13,10 +12,10 @@ from collections import defaultdict
 from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.core.binaryagreement import binaryagreement
-from dumbomvba.core.provabledispersal import provabledispersalbroadcast, abandon
+from dumbomvba.core.provabledispersal import provabledispersalbroadcast
 from dumbomvba.core.rebroadcast import recastsubprotocol
 from honeybadgerbft.exceptions import UnknownTagError
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
+from crypto.threshsig.boldyreva import serialize, deserialize1
 
 monkey.patch_all(thread=False)
 

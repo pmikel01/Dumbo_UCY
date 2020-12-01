@@ -1,6 +1,6 @@
-from honeybadgerbft.crypto.threshsig import boldyreva
-from honeybadgerbft.crypto.threshenc import tpke
-from honeybadgerbft.crypto.ecdsa import ecdsa
+from crypto.threshsig import boldyreva
+from crypto.threshenc import tpke
+from crypto.ecdsa import ecdsa
 import pickle
 import os
 

@@ -1,4 +1,4 @@
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 from honeybadgerbft.crypto.threshenc import tpke
 import pickle
 import os

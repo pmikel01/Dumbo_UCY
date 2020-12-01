@@ -3,7 +3,7 @@ import gevent
 import random
 from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 
 def simple_router(N, maxdelay=0.01, seed=None):
     """Builds a set of connected channels, with random delay
