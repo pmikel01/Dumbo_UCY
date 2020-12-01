@@ -56,9 +56,13 @@ def xor(x, y):
     return b''.join(bytes([x_ ^ y_]) for x_, y_ in zip(x, y))
 
 
-g1 = group.hash('geng1', G1)
+#g1 = group.hash('geng1', G1)
+g1 = group.deserialize(b'1:UWpnzA782qVUoxRcd4m+d0JcTpZFO0tyJYWo1BRhmjE6eubBplj1WvxdNWH4zqxn6quNGe1AddkgjquGN/QvXQA=')
 g1.initPP()
 g2 = g1
+
+
+
 # g2 = group.hash('geng2', G2)
 # g2.initPP()
 ZERO = group.random(ZR)*0

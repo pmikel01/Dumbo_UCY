@@ -54,12 +54,9 @@ def deserialize2(g):
     # Only work in G1 here
     return group.deserialize(b'2:'+encodestring(g))
 
-
-raw_g1 = b'1:Hw8fQ59CfkFyNR2rGK5BLWSfwfxAlFMA89IkTAE='
-raw_g2 = b'2:Plp1Jb6RDCvLNI6RGCQAuZghgJcwml/93322Nh0sZdVnwIFKYsOxxgFtg416U2vl/RIUfPT0ShEVekx6xXYIMhoV+CTwlViWtd7hQE//azdpwtOFAQ=='
-g1 = group.deserialize(raw_g1)
+g1 = group.deserialize(b'1:Hw8fQ59CfkFyNR2rGK5BLWSfwfxAlFMA89IkTAE=')
 g1.initPP()
-g2 = group.deserialize(raw_g2)
+g2 = group.deserialize(b'2:Plp1Jb6RDCvLNI6RGCQAuZghgJcwml/93322Nh0sZdVnwIFKYsOxxgFtg416U2vl/RIUfPT0ShEVekx6xXYIMhoV+CTwlViWtd7hQE//azdpwtOFAQ==')
 g2.initPP()
 #g1 = group.hash('geng1', G1)
 #g1.initPP()
