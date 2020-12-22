@@ -77,8 +77,6 @@ class DumboBFTNode (Dumbo, Process):
             time.sleep(1)
             #gevent.sleep(1)
 
-
-
         self.run_bft()
         self.stop.value = True
 

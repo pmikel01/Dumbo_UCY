@@ -60,29 +60,24 @@ BroadcastReceiverQueues = namedtuple(
     'BroadcastReceiverQueues', ('TCVBA', 'ABA', 'ABA_COIN', 'FAST', 'VIEW_CHANGE', 'VIEW_COIN', 'ACS_PRBC', 'ACS_VACS', 'TPKE'))
 
 
-def broadcast_receiver(recv_func, recv_queues):
-    sender, (tag, j, msg) = recv_func()
-    if tag not in BroadcastTag.__members__:
-        # TODO Post python 3 port: Add exception chaining.
-        # See https://www.python.org/dev/peps/pep-3134/
-        raise UnknownTagError('Unknown tag: {}! Must be one of {}.'.format(
-            tag, BroadcastTag.__members__.keys()))
-    recv_queue = recv_queues._asdict()[tag]
-
-    if tag == BroadcastTag.ACS_PRBC.value:
-        recv_queue = recv_queue[j]
-    try:
-        recv_queue.put_nowait((sender, msg))
-    except AttributeError as e:
-        print("error", sender, (tag, j, msg))
-        traceback.print_exc()
-
-
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
         gevent.sleep(0)
-        time.sleep(0)
-        broadcast_receiver(recv_func, recv_queues)
+        sender, (tag, j, msg) = recv_func()
+        if tag not in BroadcastTag.__members__:
+            # TODO Post python 3 port: Add exception chaining.
+            # See https://www.python.org/dev/peps/pep-3134/
+            raise UnknownTagError('Unknown tag: {}! Must be one of {}.'.format(
+                tag, BroadcastTag.__members__.keys()))
+        recv_queue = recv_queues._asdict()[tag]
+
+        if tag == BroadcastTag.ACS_PRBC.value:
+            recv_queue = recv_queue[j]
+        try:
+            recv_queue.put_nowait((sender, msg))
+        except AttributeError as e:
+            print("error", sender, (tag, j, msg))
+            traceback.print_exc()
 
 
 class Mule():
@@ -173,11 +168,10 @@ class Mule():
                 self._send = send_blackhole
                 self._recv = recv_blackhole
 
-        def _recv():
+        def _recv_loop():
             """Receive messages."""
             while True:
                 gevent.sleep(0)
-                time.sleep(0)
                 try:
                     (sender, (r, msg)) = self._recv()
                     # Maintain an *unbounded* recv queue for each epoch
@@ -187,19 +181,16 @@ class Mule():
                     self._per_epoch_recv[r].put_nowait((sender, msg))
                 except:
                     continue
-                gevent.sleep(0)
-                time.sleep(0)
 
-        self._recv_thread = gevent.spawn(_recv)
+        #self._recv_thread = gevent.spawn(_recv_loop)
+        self._recv_thread = Greenlet(_recv_loop)
+        self._recv_thread.start()
 
         self.s_time = time.time()
         if self.logger != None:
             self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
         while True:
-
-            gevent.sleep(0)
-            time.sleep(0)
 
             # For each epoch
             e = self.epoch
@@ -533,17 +524,14 @@ class Mule():
                 broadcast(('TPKE', '', o))
 
             # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
-            dumboacs = gevent.spawn(dumbocommonsubset, pid, N, f, prbc_outputs,
+            dumboacs_thread = gevent.spawn(dumbocommonsubset, pid, N, f, prbc_outputs,
                                vacs_input.put_nowait,
                                vacs_output.get)
 
-            _input = Queue(1)
-            _input.put(json.dumps(tx_to_send))
-
             _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
-                              _input.get,
-                              acs_in=my_prbc_input.put_nowait, acs_out=dumboacs.get,
-                              tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
+                                        propose=json.dumps(tx_to_send),
+                                        acs_put_in=my_prbc_input.put_nowait, acs_get_out=dumboacs_thread.get,
+                                        tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
 
             block = set()
             for batch in _output:
