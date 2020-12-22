@@ -5,7 +5,6 @@ from crypto.threshsig.boldyreva import serialize, deserialize1
 from dumbobft.core.provablereliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 
-monkey.patch_all(thread=False)
 
 def recastsubprotocol(pid, sid, N, f, PK1, SK1, receive, send, store, lock):
 

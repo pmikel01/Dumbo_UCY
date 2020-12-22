@@ -6,7 +6,6 @@ from dumbobft.core.provablereliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 from gevent import monkey
 
-monkey.patch_all(thread=False)
 
 stop = 0
 

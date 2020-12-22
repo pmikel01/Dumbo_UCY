@@ -6,12 +6,10 @@ from typing import List
 import gevent
 from gevent import monkey
 from crypto.threshsig.boldyreva import serialize, deserialize1
-#from honeybadgerbft.core.reliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 from pyeclib.ec_iface import ECDriver
 
-monkey.patch_all(thread=False)
-
+monkey.patch_all()
 
 def encode(K: int, N: int, m):
     coder = ECDriver(k=K, m=N-K, ec_type='isa_l_rs_vand')
@@ -45,7 +43,7 @@ def decode(K: int, N: int, stripes: List[bytes]):
 
 
 
-def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
+def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send, logger=None):
     """Reliable broadcast
 
     :param int pid: ``0 <= pid < N``
@@ -89,10 +87,13 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
         the leader.
 
     """
-    assert N >= 3*f + 1
-    assert f >= 0
-    assert 0 <= leader < N
-    assert 0 <= pid < N
+
+    #assert N >= 3*f + 1
+    #assert f >= 0
+    #assert 0 <= leader < N
+    #assert 0 <= pid < N
+
+    #print("RBC starts...")
 
     K               = N - 2 * f  # Need this many to reconstruct. (# noqa: E221)
     EchoThreshold   = N - f      # Wait for this many ECHO to send READY. (# noqa: E221)
@@ -112,7 +113,9 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
 
     if pid == leader:
         # The leader erasure encodes the input, sending one strip to each participant
+        #print("block to wait for RBC input")
         m = input()  # block until an input is received
+        #print("RBC input received: ", m)
         # XXX Python 3 related issue, for now let's tolerate both bytes and
         # strings
         # (with Python 2 it used to be: assert type(m) is str)
@@ -153,12 +156,9 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
         return m
 
     while True:  # main receive loop
-
         gevent.sleep(0)
-        time.sleep(0)
 
         sender, msg = receive()
-
         if msg[0] == 'VAL' and fromLeader is None:
             # Validation
             (_, roothash, branch, stripe) = msg
@@ -233,4 +233,5 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
                 Sigma = PK1.combine_shares(sigmas)
                 value = decode_output(roothash)
                 proof = (sid, roothash, serialize(Sigma))
+                #print("RBC finished for leader", leader)
                 return value, proof

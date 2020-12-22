@@ -1,7 +1,7 @@
 import gevent
 from gevent import monkey
 
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 
 def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out):
@@ -20,6 +20,8 @@ def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out):
         string
     """
 
+    #print("Starts to run dumbo ACS...")
+
     #assert len(prbc_out) == N
     #assert len(vacs_in) == 1
     #assert len(vacs_out) == 1
@@ -28,7 +30,7 @@ def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out):
     prbc_proofs = [None] * N
     is_prbc_delivered = [0] * N
 
-    def wait_for_prbc_to_continue(leader):
+    def wait_for_prbc_to_continue(leader):#
         # Receive output from reliable broadcast
         msg, (prbc_sid, roothash, Sigma) = prbc_out[leader]()
         prbc_values[leader] = msg

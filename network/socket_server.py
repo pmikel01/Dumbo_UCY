@@ -10,9 +10,10 @@ from gevent import socket, monkey, lock
 
 import logging
 import traceback
+from multiprocessing.connection import Connection
 
 #monkey.patch_all(thread=False, socket=False)
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 
 
@@ -21,9 +22,9 @@ class NetworkServer (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, recv_q: mpQueue, server_ready: mpValue, stop: mpValue):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, server_to_bft: Connection, server_ready: mpValue, stop: mpValue):
 
-        self.recv_queue = recv_q
+        self.server_to_bft = server_to_bft
         self.ready = server_ready
         self.stop = stop
 
@@ -46,8 +47,7 @@ class NetworkServer (Process):
         buf = b''
         try:
             while not self.stop.value:
-                gevent.sleep(0)
-                time.sleep(0)
+
                 buf += sock.recv(5000)
                 tmp = buf.split(self.SEP.encode('utf-8'), 1)
                 while len(tmp) == 2:
@@ -64,15 +64,14 @@ class NetworkServer (Process):
                         else:
                             (j, o) = (jid, pickle.loads(data))
                             assert j in range(self.N)
-                            self.recv_queue.put_nowait((j, o))
+                            self.server_to_bft.send((j, o))
                             #self.logger.info('recv' + str((j, o)))
                             #print('recv' + str((j, o)))
                     else:
                         self.logger.error('syntax error messages')
                         raise ValueError
                     tmp = buf.split(self.SEP.encode('utf-8'), 1)
-                gevent.sleep(0)
-                time.sleep(0)
+
         except Exception as e:
             self.logger.error(str((e, traceback.print_exc())))
 
@@ -86,14 +85,10 @@ class NetworkServer (Process):
         self.server_sock.listen(5)
         handle_msg_threads = []
         while not self.stop.value:
-            gevent.sleep(0)
-            time.sleep(0)
             sock, address = self.server_sock.accept()
             msg_t = gevent.spawn(self._handle_ingoing_msg, sock, address)
             handle_msg_threads.append(msg_t)
             self.logger.info('node id %d accepts a new socket from node %d' % (self.id, self._address_to_id(address)))
-            gevent.sleep(0)
-            time.sleep(0)
 
 
     def run(self):

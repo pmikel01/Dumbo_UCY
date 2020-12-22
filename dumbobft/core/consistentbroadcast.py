@@ -1,9 +1,11 @@
+import gevent
 from collections import defaultdict
+
 from gevent import monkey
+
 from crypto.threshsig.boldyreva import serialize, deserialize1
 
-monkey.patch_all(thread=False)
-
+monkey.patch_all()
 
 def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
     """Consistent broadcast
@@ -48,18 +50,16 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
 
     EchoThreshold = N - f      # Wait for this many CBC_ECHO to send CBC_FINAL
     digestFromLeader = None
+    finalSent = False
     cbc_echo_sshares = defaultdict(lambda: None)
 
-    #print("CBC initiated (Node: %d, Leader: %d)" % (pid, leader))
+    #print("CBC starts...")
 
     if pid == leader:
         # The leader sends the input to each participant
-        # print("block to wait for CBC input")
+        #print("block to wait for CBC input")
         m = input() # block until an input is received
-        # print("CBC input received: " + m)
-        # XXX Python 3 related issue, for now let's tolerate both bytes and
-        # strings
-        # (with Python 2 it used to be: assert type(m) is str)
+        #print("CBC input received: ", m)
         assert isinstance(m, (str, bytes, list, tuple))
         digestFromLeader = PK1.hash_message(str((sid, leader, m)))
         # print("leader", pid, "has digest:", digestFromLeader)
@@ -67,11 +67,14 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
         for i in range(N):
             if i != pid:
                 send(i, ('CBC_SEND', m))
-        # print("Leader %d broadcasts CBC SEND messages" % leader)
+        #print("Leader %d broadcasts CBC SEND messages" % leader)
 
     # Handle all consensus messages
     while True:
+        gevent.sleep(0)
         (j, msg) = receive()
+        #print("recv3", (j, msg))
+
         if msg[0] == 'CBC_SEND' and digestFromLeader is None:
             # CBC_SEND message
             (_, m) = msg
@@ -79,10 +82,12 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
                 print("Node %d receives a CBC_SEND message from node %d other than leader %d" % (pid, j, leader), msg)
                 continue
             digestFromLeader = PK1.hash_message(str((sid, leader, m)))
-            # print("Node", pid, "has digest:", digestFromLeader, "for leader", leader, "session id", sid, "message", m)
+            #print("Node", pid, "has digest:", digestFromLeader, "for leader", leader, "session id", sid, "message", m)
             send(leader, ('CBC_ECHO', m, serialize(SK1.sign(digestFromLeader))))
+
         elif msg[0] == 'CBC_ECHO':
             # CBC_READY message
+            #print("I receive CBC_ECHO from node %d" % j)
             if pid != leader:
                 print("I reject CBC_ECHO from %d as I am not CBC leader:", j)
                 continue
@@ -94,21 +99,31 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
             except AssertionError:
                 print("Signature share failed in CBC!", (sid, pid, j, msg))
                 continue
+            #print("I accept CBC_ECHO from node %d" % j)
             cbc_echo_sshares[j] = sigma
-            if len(cbc_echo_sshares) >= EchoThreshold:
+            if len(cbc_echo_sshares) >= EchoThreshold and not finalSent:
                 sigmas = dict(list(cbc_echo_sshares.items())[:N - f])
                 Sigma = PK1.combine_shares(sigmas)
                 # assert PK.verify_signature(Sigma, digestFromLeader)
                 for i in range(N):
+                    finalSent = True
                     send(i, ('CBC_FINAL', m, serialize(Sigma)))
+                #print("Leader %d broadcasts CBC FINAL messages" % leader)
+
         elif msg[0] == 'CBC_FINAL':
             # CBC_FINAL message
+            #print("I receive CBC_FINAL from node %d" % j)
+            if j != leader:
+                print("Node %d receives a CBC_FINAL message from node %d other than leader %d" % (pid, j, leader), msg)
+                continue
             (_, m, raw_Sigma) = msg
             Sigma = deserialize1(raw_Sigma)
             try:
                 digest = PK1.hash_message(str((sid, leader, m)))
                 assert PK1.verify_signature(Sigma, digest)
+                #print("Valid CBC Final received...")
             except AssertionError:
                 print("Signature failed!", (sid, pid, j, msg))
                 continue
+            #print("CBC finished for leader", leader)
             return m, raw_Sigma

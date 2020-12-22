@@ -9,6 +9,7 @@ from gevent import time
 from dumbobft.core.dumbo import Dumbo
 from myexperiements.sockettest.make_random_tx import tx_generator
 from multiprocessing import Value as mpValue, Queue as mpQueue, Process
+from multiprocessing.connection import Connection
 
 
 def load_key(id, N):
@@ -36,10 +37,10 @@ def load_key(id, N):
 
 class DumboBFTNode (Dumbo, Process):
 
-    def __init__(self, sid, id, B, N, f, recv_q: mpQueue, send_q: List[mpQueue], ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
+    def __init__(self, sid, id, B, N, f, bft_from_server: Connection, bft_to_client: Connection, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.ePK, self.sSK, self.sSK1, self.eSK = load_key(id, N)
-        self.recv_queue = recv_q
-        self.send_queues = send_q
+        self.bft_from_server = bft_from_server
+        self.bft_to_client = bft_to_client
         self.ready = ready
         self.stop = stop
         self.mode = mode
@@ -67,14 +68,16 @@ class DumboBFTNode (Dumbo, Process):
         pid = os.getpid()
         self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
 
-        self._send = lambda j, o: self.send_queues[j].put_nowait(o)
-        self._recv = lambda: self.recv_queue.get_nowait()
+        self._send = lambda j, o: self.bft_to_client.send((j, o))
+        self._recv = lambda: self.bft_from_server.recv()
 
         self.prepare_bootstrap()
 
         while not self.ready.value:
             time.sleep(1)
-            gevent.sleep(1)
+            #gevent.sleep(1)
+
+
 
         self.run_bft()
         self.stop.value = True

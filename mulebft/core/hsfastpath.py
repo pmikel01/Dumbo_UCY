@@ -12,8 +12,6 @@ import json
 import gevent
 import hashlib, pickle
 
-monkey.patch_all(thread=False)
-
 
 def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()

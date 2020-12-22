@@ -7,7 +7,7 @@ from dumbobft.core.validatedagreement import validatedagreement
 from gevent.queue import Queue
 from honeybadgerbft.exceptions import UnknownTagError
 
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 
 class MessageTag(Enum):
@@ -19,25 +19,22 @@ MessageReceiverQueues = namedtuple(
     'MessageReceiverQueues', ('VACS_VAL', 'VACS_VABA'))
 
 
-def handle_vacs_messages(recv_func, recv_queues):
-    sender, (tag, msg) = recv_func()
-    # print(sender, (tag, msg))
-    if tag not in MessageTag.__members__:
-        # TODO Post python 3 port: Add exception chaining.
-        # See https://www.python.org/dev/peps/pep-3134/
-        raise UnknownTagError('Unknown tag: {}! Must be one of {}.'.format(
-            tag, MessageTag.__members__.keys()))
-    recv_queue = recv_queues._asdict()[tag]
-    try:
-        recv_queue.put_nowait((sender, msg))
-    except AttributeError as e:
-        # print((sender, msg))
-        traceback.print_exc(e)
-
-
 def vacs_msg_receiving_loop(recv_func, recv_queues):
     while True:
-        handle_vacs_messages(recv_func, recv_queues)
+
+        sender, (tag, msg) = recv_func()
+        # print(sender, (tag, msg))
+        if tag not in MessageTag.__members__:
+            # TODO Post python 3 port: Add exception chaining.
+            # See https://www.python.org/dev/peps/pep-3134/
+            raise UnknownTagError('Unknown tag: {}! Must be one of {}.'.format(
+                tag, MessageTag.__members__.keys()))
+        recv_queue = recv_queues._asdict()[tag]
+        try:
+            recv_queue.put_nowait((sender, msg))
+        except AttributeError as e:
+            # print((sender, msg))
+            traceback.print_exc(e)
 
 
 def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, predicate=lambda i, v: True):
@@ -59,6 +56,8 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
     :param send: send channel
     :param predicate: ``predicate(i, v)`` represents the externally validated condition where i represent proposer's pid
     """
+
+    #print("Starts to run validated common subset...")
 
     assert PK.k == f + 1
     assert PK.l == N
@@ -128,6 +127,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
     values = [None] * N
     while True:
+
         j, vj = value_recv.get()
         if predicate(j, vj):
             valueSenders.add(j)
@@ -135,6 +135,6 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
             if len(valueSenders) >= N - f:
                 break
 
-    vaba_input.put(tuple(values))
+    vaba_input.put_nowait(tuple(values))
     decide(list(vaba_output.get()))
     vaba.kill()

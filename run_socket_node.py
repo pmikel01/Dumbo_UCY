@@ -6,24 +6,25 @@ import gevent
 from typing import List
 
 from gevent import monkey
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 from myexperiements.sockettest.dumbo_node import DumboBFTNode
 from myexperiements.sockettest.dumbox_node import DumboXBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
 from network.socket_server import NetworkServer
 from network.socket_client import NetworkClient
-from multiprocessing import Value as mpValue, Queue as mpQueue
+from multiprocessing import Value as mpValue, Queue as mpQueue, Pipe as mpPipe
+from multiprocessing.connection import Connection
 from ctypes import c_bool
 
-def instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q: mpQueue, send_q: List[mpQueue], ready: mpValue, stop: mpValue, protocol="mule", mute=False, factor=1):
+def instantiate_bft_node(sid, i, B, N, f, K, S, T,  bft_from_server: Connection, bft_to_client: Connection, ready: mpValue, stop: mpValue, protocol="mule", mute=False, factor=1):
     bft = None
     if protocol == 'dumbo':
-        bft = DumboBFTNode(sid, i, B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
-    elif protocol == 'dumbox':
-        bft = DumboXBFTNode(sid, i, B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
+        bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
+    #elif protocol == 'dumbox':
+    #    bft = DumboXBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client,  ready, stop, K, mute=mute)
     elif protocol == "mule":
-        bft = MuleBFTNode(sid, i, S, T, int(factor*B), B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
+        bft = MuleBFTNode(sid, i, S, T, int(factor*B), B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
     else:
         print("Only support dumbo or dumbox or mule")
     return bft
@@ -94,8 +95,8 @@ if __name__ == '__main__':
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
 
-        recv_q = mpQueue()
-        send_q = [mpQueue() for _ in range(N)]
+        bft_from_server, server_to_bft = mpPipe(duplex=True)
+        client_from_bft, bft_to_client = mpPipe(duplex=True)
 
         client_ready = mpValue(c_bool, False)
         server_ready = mpValue(c_bool, False)
@@ -103,9 +104,9 @@ if __name__ == '__main__':
 
         stop = mpValue(c_bool, False)
 
-        net_server = NetworkServer(my_address[1], my_address[0], i, addresses, recv_q, server_ready, stop)
-        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, send_q, client_ready, stop)
-        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q, send_q, net_ready, stop, P, M, F)
+        net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
+        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop)
+        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F)
 
         net_server.start()
         net_client.start()

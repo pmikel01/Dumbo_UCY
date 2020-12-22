@@ -7,11 +7,12 @@ import os
 
 from multiprocessing import Value as mpValue, Queue as mpQueue, Process, Semaphore as mpSemaphore
 from gevent import socket, monkey, lock
+from multiprocessing.connection import Connection
 
 import logging
 import traceback
 
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 
 
@@ -20,9 +21,9 @@ class NetworkClient (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, send_q: List[mpQueue], client_ready: mpValue, stop: mpValue):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Connection, client_ready: mpValue, stop: mpValue):
 
-        self.send_queues = send_q
+        self.client_from_bft = client_from_bft
         self.ready = client_ready
         self.stop = stop
 
@@ -45,8 +46,7 @@ class NetworkClient (Process):
         pid = os.getpid()
         self.logger.info('node %d\'s socket client starts to make outgoing connections on process id %d' % (self.id, pid))
         while not self.stop.value:
-            gevent.sleep(0)
-            time.sleep(0)
+
             try:
                 for j in range(self.N):
                     if not self.is_out_sock_connected[j]:
@@ -57,10 +57,10 @@ class NetworkClient (Process):
                     break
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
-            gevent.sleep(0)
-        send_threads = [gevent.spawn(self._send_loop, j) for j in range(self.N)]
-        gevent.joinall(send_threads)
 
+        #send_thread = [gevent.spawn(self._send_loop, j) for j in range(self.N)]
+        #gevent.joinall(send_threads)
+        self._send_loop()
 
     def _connect(self, j: int):
         sock = socket.socket()
@@ -95,20 +95,14 @@ class NetworkClient (Process):
 
     ##
     ##
-    def _send_loop(self, j: int):
+    def _send_loop(self):
 
         while not self.stop.value:
-
-            gevent.sleep(0)
-            time.sleep(0)
-
             try:
-                gevent.sleep(0)
-                time.sleep(0)
-                #j, o = self.send_queue.get_nowait()
-                o = self.send_queues[j].get_nowait()
-                #print('send1' + str((j, o)))
-                #self.logger.info('send1' + str((j, o)))
+                j, o = self.client_from_bft.recv()
+                #o = self.send_queue[j].get_nowait()
+                #print('send' + str((j, o)))
+                #self.logger.info('send' + str((j, o)))
                 try:
                     self._send(j, pickle.dumps(o))
                 except Exception as e:
@@ -117,8 +111,6 @@ class NetworkClient (Process):
             except:
                 pass
 
-            gevent.sleep(0)
-            time.sleep(0)
         #print("sending loop quits ...")
 
     def run(self):

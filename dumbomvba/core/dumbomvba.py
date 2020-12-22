@@ -17,8 +17,6 @@ from dumbomvba.core.rebroadcast import recastsubprotocol
 from honeybadgerbft.exceptions import UnknownTagError
 from crypto.threshsig.boldyreva import serialize, deserialize1
 
-monkey.patch_all(thread=False)
-
 
 
 

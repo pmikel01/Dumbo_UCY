@@ -3,9 +3,9 @@ import traceback
 import logging
 import gevent
 import numpy as np
-
 from collections import namedtuple
-from gevent import monkey
+
+from gevent import monkey, Greenlet
 from gevent.event import Event
 from enum import Enum
 from collections import defaultdict
@@ -16,7 +16,7 @@ from dumbobft.core.consistentbroadcast import consistentbroadcast
 from honeybadgerbft.exceptions import UnknownTagError
 from crypto.threshsig.boldyreva import serialize, deserialize1
 
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 
 class MessageTag(Enum):
@@ -32,30 +32,24 @@ MessageReceiverQueues = namedtuple(
     'MessageReceiverQueues', ('VABA_COIN', 'VABA_COMMIT', 'VABA_VOTE', 'VABA_ABA_COIN', 'VABA_CBC', 'VABA_ABA'))
 
 
-def handle_vaba_messages(recv_func, recv_queues):
-    x = recv_func()
-    # print(x)
-    sender, (tag, j, msg) = x
-    # sender, (tag, j, msg) = recv_func()
-    if tag not in MessageTag.__members__:
-        # TODO Post python 3 port: Add exception chaining.
-        # See https://www.python.org/dev/peps/pep-3134/
-        raise UnknownTagError('Unknown tag: {}! Must be one of {}.'.format(
-            tag, MessageTag.__members__.keys()))
-    recv_queue = recv_queues._asdict()[tag]
-
-    if tag not in {MessageTag.VABA_COIN.value}:
-        recv_queue = recv_queue[j]
-    try:
-        recv_queue.put_nowait((sender, msg))
-    except AttributeError as e:
-        # print((sender, msg))
-        traceback.print_exc(e)
-
-
-def vaba_msg_receiving_loop(recv_func, recv_queues):
+def recv_loop(recv_func, recv_queues):
     while True:
-        handle_vaba_messages(recv_func, recv_queues)
+        gevent.sleep(0)
+        sender, (tag, j, msg) = recv_func()
+        #print("recv2", (sender, (tag, j, msg)))
+
+        if tag not in MessageTag.__members__:
+            raise UnknownTagError('Unknown tag: {}! Must be one of {}.'.format(
+                tag, MessageTag.__members__.keys()))
+        recv_queue = recv_queues._asdict()[tag]
+
+        if tag not in {MessageTag.VABA_COIN.value}:
+            recv_queue = recv_queue[j]
+        try:
+            recv_queue.put_nowait((sender, msg))
+        except AttributeError as e:
+            # print((sender, msg))
+            traceback.print_exc(e)
 
 
 logger = logging.getLogger(__name__)
@@ -79,6 +73,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     :param send: send channel
     :param predicate: ``predicate()`` represents the externally validated condition
     """
+
+    #print("Starts to run validated agreement...")
 
     assert PK.k == f+1
     assert PK.l == N
@@ -120,7 +116,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         VABA_CBC=cbc_recvs,
         VABA_ABA=aba_recvs,
     )
-    gevent.spawn(vaba_msg_receiving_loop, receive, recv_queues)
+    recv_loop_thred = Greenlet(recv_loop, receive, recv_queues)
+    recv_loop_thred.start()
 
     """ 
     Setup the sub protocols Input Broadcast CBCs"""
@@ -209,15 +206,15 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
             is_cbc_delivered[leader] = 1
             if sum(is_cbc_delivered) >= N - f:
                 wait_cbc_signal.set()
-            # print("Leader %d finishes CBC for node %d" % (leader, pid) )
-            # print(is_cbc_delivered)
+            #print("Node %d finishes CBC for Leader %d" % (pid, leader) )
+            #print(is_cbc_delivered)
 
     cbc_out_threads = [gevent.spawn(wait_for_cbc_to_continue, node) for node in range(N)]
 
     wait_cbc_signal.wait()
-
-    # print(is_cbc_delivered)
-    # print(cbc_values)
+    #print("Node %d finishes n-f CBC" % pid)
+    #print(is_cbc_delivered)
+    #print(cbc_values)
 
     """
     Run n CBC instance to commit finished CBC IDs
@@ -225,11 +222,12 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
     commit_values = [None] * N
 
-    assert len(is_cbc_delivered) == N
-    assert sum(is_cbc_delivered) >= N - f
-    assert all(item == 0 or 1 for item in is_cbc_delivered)
+    #assert len(is_cbc_delivered) == N
+    #assert sum(is_cbc_delivered) >= N - f
+    #assert all(item == 0 or 1 for item in is_cbc_delivered)
 
     my_commit_input.put_nowait(copy.deepcopy(is_cbc_delivered))  # Deepcopy prevents input changing while executing
+    #print("Provide input to commit CBC")
 
     wait_commit_signal = Event()
     wait_commit_signal.clear()
@@ -242,14 +240,15 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
             is_commit_delivered[leader] = 1
             if sum(is_commit_delivered) >= N - f:
                 wait_commit_signal.set()
-            # print("Leader %d finishes COMMIT_CBC for node %d" % (leader, pid) )
+            #print("Leader %d finishes COMMIT_CBC for node %d" % (leader, pid) )
+            #print(is_commit_delivered)
 
     commit_out_threads = [gevent.spawn(wait_for_commit_to_continue, node) for node in range(N)]
 
     wait_commit_signal.wait()
-
-    # print(is_commit_delivered)
-    # print(commit_values)
+    #print("Node %d finishes n-f Commit CBC" % pid)
+    #print(is_commit_delivered)
+    #print(commit_values)
 
     """
     Run a Coin instance to permute the nodes' IDs to sequentially elect the leaders
@@ -282,6 +281,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
         ballot_counter = 0
         while True:
+
             sender, msg = vote_recvs[r].get()
             a, ballot_bit, o = msg
             if (pi[r] == a) and (ballot_bit == 0 or ballot_bit == 1):

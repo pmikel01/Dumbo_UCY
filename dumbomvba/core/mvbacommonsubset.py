@@ -9,7 +9,6 @@ from gevent.queue import Queue
 from honeybadgerbft.exceptions import UnknownTagError
 from crypto.threshsig.boldyreva import serialize, deserialize1
 
-monkey.patch_all(thread=False)
 
 
 class MessageTag(Enum):

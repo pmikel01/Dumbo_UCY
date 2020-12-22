@@ -12,7 +12,6 @@ import logging
 import traceback
 
 #monkey.patch_all(thread=False, socket=False)
-monkey.patch_all(thread=False)
 
 
 

@@ -1,13 +1,12 @@
 import logging
 
-from crypto.threshsig.boldyreva import serialize, deserialize1, g12deserialize, g12serialize, ismember
-
-
+from crypto.threshsig.boldyreva import g12deserialize, g12serialize
 from collections import defaultdict
 from gevent import Greenlet, monkey
 from gevent.queue import Queue
 import hashlib
-monkey.patch_all(thread=False)
+
+monkey.patch_all()
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +41,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
 
     def _recv():
         while True:     # main receive loop
+
             logger.debug(f'entering loop',
                          extra={'nodeid': pid, 'epoch': '?'})
             # New shares for some round r, from sender i
@@ -95,7 +95,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
                              extra={'nodeid': pid, 'epoch': r})
                     outputQueue[r].put_nowait(coin)
 
-    # greenletPacker(Greenlet(_recv), 'shared_coin', (pid, N, f, broadcast, receive)).start()
+    #greenletPacker(Greenlet(_recv), 'shared_coin', (pid, N, f, broadcast, receive)).start()
     Greenlet(_recv).start()
 
     def getCoin(round):

@@ -6,7 +6,7 @@ import gevent
 import numpy as np
 from collections import namedtuple
 from enum import Enum
-from gevent import monkey
+from gevent import monkey, Greenlet
 from gevent.queue import Queue
 from dumbobft.core.dumbocommonsubset import dumbocommonsubset
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
@@ -15,7 +15,7 @@ from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
 
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 def set_consensus_log(id: int):
     logger = logging.getLogger("consensus-node-"+str(id))
@@ -41,27 +41,24 @@ BroadcastReceiverQueues = namedtuple(
     'BroadcastReceiverQueues', ('ACS_PRBC', 'ACS_VACS', 'TPKE'))
 
 
-def broadcast_receiver(recv_func, recv_queues):
-    sender, (tag, j, msg) = recv_func()
-    if tag not in BroadcastTag.__members__:
-        # TODO Post python 3 port: Add exception chaining.
-        # See https://www.python.org/dev/peps/pep-3134/
-        raise UnknownTagError('Unknown tag: {}! Must be one of {}.'.format(
-            tag, BroadcastTag.__members__.keys()))
-    recv_queue = recv_queues._asdict()[tag]
-
-    if tag == BroadcastTag.ACS_PRBC.value:
-        recv_queue = recv_queue[j]
-    try:
-        recv_queue.put_nowait((sender, msg))
-    except AttributeError as e:
-        print("error", sender, (tag, j, msg))
-        traceback.print_exc(e)
-
-
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
-        broadcast_receiver(recv_func, recv_queues)
+        gevent.sleep(0)
+        sender, (tag, j, msg) = recv_func()
+        if tag not in BroadcastTag.__members__:
+            # TODO Post python 3 port: Add exception chaining.
+            # See https://www.python.org/dev/peps/pep-3134/
+            raise UnknownTagError('Unknown tag: {}! Must be one of {}.'.format(
+                tag, BroadcastTag.__members__.keys()))
+        recv_queue = recv_queues._asdict()[tag]
+
+        if tag == BroadcastTag.ACS_PRBC.value:
+            recv_queue = recv_queue[j]
+        try:
+            recv_queue.put_nowait((sender, msg))
+        except AttributeError as e:
+            print("error", sender, (tag, j, msg))
+            traceback.print_exc(e)
 
 
 class Dumbo():
@@ -145,31 +142,34 @@ class Dumbo():
                 self._send = send_blackhole
                 self._recv = recv_blackhole
 
-        def _recv():
+        def _recv_loop():
             """Receive messages."""
+            #print("start recv loop...")
             while True:
+                gevent.sleep(0)
                 try:
-                    (sender, (r, msg)) = self._recv()
-
+                    (sender, o) = self._recv()
+                    #self.logger.info('recv1' + str((sender, o)))
+                    #print('recv1' + str((sender, o)))
+                    (r, msg) = o
                     # Maintain an *unbounded* recv queue for each epoch
                     if r not in self._per_round_recv:
                         self._per_round_recv[r] = Queue()
-
                     # Buffer this message
                     self._per_round_recv[r].put_nowait((sender, msg))
                 except:
                     continue
-                gevent.sleep(0)
-                time.sleep(0)
 
-        self._recv_thread = gevent.spawn(_recv)
+        #self._recv_thread = gevent.spawn(_recv_loop)
+        self._recv_thread = Greenlet(_recv_loop)
+        self._recv_thread.start()
 
         self.s_time = time.time()
-        if self.logger != None: self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
+        if self.logger != None:
+            self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
         while True:
             # For each round...
-
             start = time.time()
 
             r = self.round
@@ -193,8 +193,7 @@ class Dumbo():
             if self.logger != None:
                 tx_cnt = str(new_tx).count("Dummy TX")
                 self.txcnt += tx_cnt
-                self.logger.info(
-                'Node %d Delivers ACS Block in Round %d with having %d TXs' % (self.id, r, tx_cnt))
+                self.logger.info('Node %d Delivers ACS Block in Round %d with having %d TXs' % (self.id, r, tx_cnt))
 
             end = time.time()
 
@@ -220,16 +219,17 @@ class Dumbo():
         else:
             print("node %d breaks" % self.id)
 
+        self._recv_thread.join(timeout=2)
 
     #
     def _run_round(self, r, tx_to_send, send, recv):
         """Run one protocol round.
-
         :param int r: round id
         :param tx_to_send: Transaction(s) to process.
         :param send:
         :param recv:
         """
+
         # Unique sid for each round
         sid = self.sid + ':' + str(r)
         pid = self.id
@@ -246,13 +246,12 @@ class Dumbo():
         prbc_outputs = [Queue(1) for _ in range(N)]
         vacs_output = Queue(1)
 
-
         #print(pid, r, 'tx_to_send:', tx_to_send)
-        #if self.logger != None: self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
+        #if self.logger != None:
+        #    self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
 
         def _setup_prbc(j):
             """Setup the sub protocols RBC, BA and common coin.
-
             :param int j: Node index for which the setup is being done.
             """
 
@@ -265,9 +264,10 @@ class Dumbo():
 
             # Only leader gets input
             prbc_input = my_prbc_input.get if j == pid else None
-            prbc = gevent.spawn(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK1, self.sSK1, j,
+            prbc_thread = Greenlet(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK1, self.sSK1, j,
                                prbc_input, prbc_recvs[j].get, prbc_send)
-            prbc_outputs[j] = prbc.get  # block for output from rbc
+            prbc_thread.start()
+            prbc_outputs[j] = prbc_thread.get  # block for output from rbc
 
         def _setup_vacs():
 
@@ -285,15 +285,18 @@ class Dumbo():
                     print("Failed to verify proof for RBC")
                     return False
 
-            gevent.spawn(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
+            vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
                          vacs_input.get, vacs_output.put_nowait,
                          vacs_recv.get, vacs_send, vacs_predicate)
+            vacs_thread.start()
 
-        # N instances of ABA, RBC
+        # N instances of PRBC
         for j in range(N):
+            #print("start to set up RBC %d" % j)
             _setup_prbc(j)
 
         # One instance of (validated) ACS
+        #print("start to set up VACS")
         _setup_vacs()
 
         # One instance of TPKE
@@ -310,23 +313,22 @@ class Dumbo():
 
 
         # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
-        dumboacs = gevent.spawn(dumbocommonsubset, pid, N, f, prbc_outputs,
+        dumboacs_thread = Greenlet(dumbocommonsubset, pid, N, f, prbc_outputs,
                            vacs_input.put_nowait,
                            vacs_output.get)
+        dumboacs_thread.start()
 
         recv_queues = BroadcastReceiverQueues(
             ACS_PRBC=prbc_recvs,
             ACS_VACS=vacs_recv,
             TPKE=tpke_recv,
         )
-        gevent.spawn(broadcast_receiver_loop, recv, recv_queues)
-
-        _input = Queue(1)
-        _input.put(json.dumps(tx_to_send))
+        bc_recv_loop_thread = Greenlet(broadcast_receiver_loop, recv, recv_queues)
+        bc_recv_loop_thread.start()
 
         _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
-                          _input.get,
-                          acs_in=my_prbc_input.put_nowait, acs_out=dumboacs.get,
+                          propose=json.dumps(tx_to_send),
+                          acs_put_in=my_prbc_input.put_nowait, acs_get_out=dumboacs_thread.get,
                           tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
 
         block = set()
@@ -334,6 +336,8 @@ class Dumbo():
             decoded_batch = json.loads(batch.decode())
             for tx in decoded_batch:
                 block.add(tx)
+
+        bc_recv_loop_thread.join(timeout=0)
 
         return list(block)
 

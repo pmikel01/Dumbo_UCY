@@ -1,11 +1,7 @@
 import time
-
 import gevent
-from gevent import monkey
-
 from crypto.threshenc import tpke
 import os, logging
-monkey.patch_all(thread=False)
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +41,7 @@ def deserialize_UVW(U, V, W):
     return U, V, W
 
 
-def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast, tpke_recv):
+def honeybadger_block(pid, N, f, PK, SK, propose, acs_put_in, acs_get_out, tpke_bcast, tpke_recv):
     """The HoneyBadgerBFT algorithm for a single block
 
     :param pid: my identifier
@@ -53,9 +49,9 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
     :param f: fault tolerance
     :param PK: threshold encryption public key
     :param SK: threshold encryption secret key
-    :param propose_in: a function returning a sequence of transactions
-    :param acs_in: a function to provide input to acs routine
-    :param acs_out: a blocking function that returns an array of ciphertexts
+    :param propose: a string representing a sequence of transactions
+    :param acs_put_in: a function to provide input to acs routine
+    :param acs_get_out: a blocking function that returns an array of ciphertexts
     :param tpke_bcast:
     :param tpke_recv:
     :return:
@@ -66,29 +62,27 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
 
     # Threshold encrypt
     # TODO: check that propose_in is the correct length, not too large
-    prop = propose_in()
     key = os.urandom(32)    # random 256-bit key
-    ciphertext = tpke.encrypt(key, prop)
+    ciphertext = tpke.encrypt(key, propose)
     tkey = PK.encrypt(key)
+
+
+    #print("node %d starts to make block" % pid)
 
     import pickle
     to_acs = pickle.dumps((serialize_UVW(*tkey), ciphertext))
-    acs_in(to_acs)
+    acs_put_in(to_acs)
 
+    #print("node %d provides input %s to rbc" % (pid, to_acs))
 
     # Wait for the corresponding ACS to finish
-    vall = acs_out()
-
-    logger.debug("node %d is making block" % pid)
-
+    vall = acs_get_out()
 
     assert len(vall) == N
     assert len([_ for _ in vall if _ is not None]) >= N - f  # This many must succeed
 
-    logger.debug("node %d is making block" % pid)
+    #print("node %d is making block ..." % pid)
 
-
-    # print pid, 'Received from acs:', vall
 
     # Broadcast all our decryption shares
     my_shares = []
@@ -107,8 +101,7 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
     # Receive everyone's shares
     shares_received = {}
     while len(shares_received) < f+1:
-        gevent.sleep(0)
-        time.sleep(0)
+
         (j, raw_shares) = tpke_recv()
         shares = [tpke_deserialize(share) for share in raw_shares]
         if j in shares_received:
