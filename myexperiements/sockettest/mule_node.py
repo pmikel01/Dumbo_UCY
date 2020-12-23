@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import List
+from typing import List, Callable
 
 import gevent
 import os
@@ -47,7 +47,7 @@ def load_key(id, N):
 
 class MuleBFTNode (Mule, Process):
 
-    def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, bft_from_server: Connection, bft_to_client: Connection, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
+    def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
         #self.recv_queue = recv_q
         #self.send_queue = send_q
@@ -81,8 +81,8 @@ class MuleBFTNode (Mule, Process):
         pid = os.getpid()
         self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
 
-        self._send = lambda j, o: self.bft_to_client.send((j, o))
-        self._recv = lambda: self.bft_from_server.recv()
+        self._send = lambda j, o: self.bft_to_client((j, o))
+        self._recv = lambda: self.bft_from_server()
 
         self.prepare_bootstrap()
 

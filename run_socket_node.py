@@ -3,7 +3,7 @@ import random
 import traceback
 import gevent
 
-from typing import List
+from typing import List, Callable
 
 from gevent import monkey
 monkey.patch_all()
@@ -17,7 +17,7 @@ from multiprocessing import Value as mpValue, Queue as mpQueue, Pipe as mpPipe
 from multiprocessing.connection import Connection
 from ctypes import c_bool
 
-def instantiate_bft_node(sid, i, B, N, f, K, S, T,  bft_from_server: Connection, bft_to_client: Connection, ready: mpValue, stop: mpValue, protocol="mule", mute=False, factor=1):
+def instantiate_bft_node(sid, i, B, N, f, K, S, T,  bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, protocol="mule", mute=False, factor=1):
     bft = None
     if protocol == 'dumbo':
         bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
@@ -95,8 +95,16 @@ if __name__ == '__main__':
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
 
-        bft_from_server, server_to_bft = mpPipe(duplex=True)
-        client_from_bft, bft_to_client = mpPipe(duplex=True)
+        #bft_from_server, server_to_bft = mpPipe(duplex=True)
+        #client_from_bft, bft_to_client = mpPipe(duplex=True)
+
+        send_q = mpQueue()
+        client_from_bft = lambda: send_q.get(timeout=1)
+        bft_to_client = send_q.put_nowait
+
+        recv_q = mpQueue()
+        bft_from_server = lambda: recv_q.get(timeout=1)
+        server_to_bft = recv_q.put_nowait
 
         client_ready = mpValue(c_bool, False)
         server_ready = mpValue(c_bool, False)

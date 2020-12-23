@@ -1,11 +1,11 @@
 import time
 import pickle
-from typing import List
+from typing import List, Callable
 
 import gevent
 import os
 
-from multiprocessing import Value as mpValue, Queue as mpQueue, Process, Semaphore as mpSemaphore
+from multiprocessing import Value as mpValue, SimpleQueue as mpQueue, Process, Semaphore as mpSemaphore
 from gevent import socket, monkey, lock
 from multiprocessing.connection import Connection
 
@@ -21,7 +21,7 @@ class NetworkClient (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Connection, client_ready: mpValue, stop: mpValue):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue):
 
         self.client_from_bft = client_from_bft
         self.ready = client_ready
@@ -99,7 +99,7 @@ class NetworkClient (Process):
 
         while not self.stop.value:
             try:
-                j, o = self.client_from_bft.recv()
+                j, o = self.client_from_bft()
                 #o = self.send_queue[j].get_nowait()
                 #print('send' + str((j, o)))
                 #self.logger.info('send' + str((j, o)))

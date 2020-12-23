@@ -1,6 +1,6 @@
 import time
 import pickle
-from typing import List
+from typing import List, Callable
 
 import gevent
 import os
@@ -22,7 +22,7 @@ class NetworkServer (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, server_to_bft: Connection, server_ready: mpValue, stop: mpValue):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, server_to_bft: Callable, server_ready: mpValue, stop: mpValue):
 
         self.server_to_bft = server_to_bft
         self.ready = server_ready
@@ -64,7 +64,7 @@ class NetworkServer (Process):
                         else:
                             (j, o) = (jid, pickle.loads(data))
                             assert j in range(self.N)
-                            self.server_to_bft.send((j, o))
+                            self.server_to_bft((j, o))
                             #self.logger.info('recv' + str((j, o)))
                             #print('recv' + str((j, o)))
                     else:
