@@ -1,39 +1,42 @@
 import time
 import random
 import traceback
-import gevent
-
 from typing import List, Callable
-
-from gevent import monkey
-monkey.patch_all()
-
+from gevent import monkey, Greenlet
 from myexperiements.sockettest.dumbo_node import DumboBFTNode
 from myexperiements.sockettest.dumbox_node import DumboXBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
+from myexperiements.sockettest.hotstuff_node import HotstuffBFTNode
 from network.socket_server import NetworkServer
 from network.socket_client import NetworkClient
-from multiprocessing import Value as mpValue, Queue as mpQueue, Pipe as mpPipe
-from multiprocessing.connection import Connection
+from multiprocessing import Value as mpValue, Queue as mpQueue
 from ctypes import c_bool
 
-def instantiate_bft_node(sid, i, B, N, f, K, S, T,  bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, protocol="mule", mute=False, factor=1):
+monkey.patch_all(subprocess=False)
+
+
+def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
+                         stop: mpValue, protocol="mule", mute=False, factor=1):
     bft = None
     if protocol == 'dumbo':
         bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
-    #elif protocol == 'dumbox':
+    # elif protocol == 'dumbox':
     #    bft = DumboXBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client,  ready, stop, K, mute=mute)
     elif protocol == "mule":
-        bft = MuleBFTNode(sid, i, S, T, int(factor*B), B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
+        bft = MuleBFTNode(sid, i, S, T, int(factor * B), B, N, f, bft_from_server, bft_to_client, ready, stop, K,
+                          mute=mute)
+    elif protocol == 'hotstuff':
+        bft = HotstuffBFTNode(sid, i, S, T, int(factor * B), B, N, f, bft_from_server, bft_to_client, ready, stop, 1,
+                              mute=mute)
     else:
-        print("Only support dumbo or dumbox or mule")
+        print("Only support dumbo or dumbox or mule or hotstuff")
     return bft
-
 
 
 if __name__ == '__main__':
 
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--sid', metavar='sid', required=True,
                         help='identifier of node', type=str)
@@ -95,21 +98,20 @@ if __name__ == '__main__':
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
 
-        #bft_from_server, server_to_bft = mpPipe(duplex=True)
-        #client_from_bft, bft_to_client = mpPipe(duplex=True)
+        # bft_from_server, server_to_bft = mpPipe(duplex=True)
+        # client_from_bft, bft_to_client = mpPipe(duplex=True)
 
-        send_q = mpQueue()
-        client_from_bft = lambda: send_q.get(timeout=1)
-        bft_to_client = send_q.put_nowait
+        client_bft_mpq = mpQueue()
+        client_from_bft = client_bft_mpq.get
+        bft_to_client = client_bft_mpq.put_nowait
 
-        recv_q = mpQueue()
-        bft_from_server = lambda: recv_q.get(timeout=1)
-        server_to_bft = recv_q.put_nowait
+        server_bft_mpq = mpQueue()
+        bft_from_server = server_bft_mpq.get_nowait
+        server_to_bft = server_bft_mpq.put_nowait
 
         client_ready = mpValue(c_bool, False)
         server_ready = mpValue(c_bool, False)
         net_ready = mpValue(c_bool, False)
-
         stop = mpValue(c_bool, False)
 
         net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
@@ -126,9 +128,11 @@ if __name__ == '__main__':
         with net_ready.get_lock():
             net_ready.value = True
 
-        bft.run()
+        bft_thread = Greenlet(bft.run)
+        bft_thread.start()
+        bft_thread.join()
 
-        with net_ready.get_lock():
+        with stop.get_lock():
             stop.value = True
 
         net_client.terminate()
@@ -140,4 +144,3 @@ if __name__ == '__main__':
 
     except FileNotFoundError or AssertionError as e:
         traceback.print_exc()
-

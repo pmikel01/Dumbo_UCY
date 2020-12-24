@@ -8,7 +8,8 @@ from crypto.threshsig import dealer
 from honeybadgerbft.crypto.threshenc import tpke
 from honeybadgerbft.crypto.ecdsa.ecdsa import pki
 
-monkey.patch_all()
+monkey.patch_all(subprocess=False)
+
 
 
 def simple_router(N, maxdelay=0.01, seed=None):

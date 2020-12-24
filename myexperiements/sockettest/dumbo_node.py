@@ -1,15 +1,11 @@
 import random
-from typing import List, Callable
-
-import gevent
+from typing import  Callable
 import os
 import pickle
-
 from gevent import time
 from dumbobft.core.dumbo import Dumbo
 from myexperiements.sockettest.make_random_tx import tx_generator
-from multiprocessing import Value as mpValue, Queue as mpQueue, Process
-from multiprocessing.connection import Connection
+from multiprocessing import Value as mpValue
 
 
 def load_key(id, N):
@@ -35,17 +31,18 @@ def load_key(id, N):
     return sPK, sPK1, ePK, sSK, sSK1, eSK
 
 
-class DumboBFTNode (Dumbo, Process):
+class DumboBFTNode (Dumbo):
 
     def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.ePK, self.sSK, self.sSK1, self.eSK = load_key(id, N)
         self.bft_from_server = bft_from_server
         self.bft_to_client = bft_to_client
+        self.send = lambda j, o: self.bft_to_client((j, o))
+        self.recv = lambda: self.bft_from_server()
         self.ready = ready
         self.stop = stop
         self.mode = mode
-        Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
-        Process.__init__(self)
+        Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute)
 
     def prepare_bootstrap(self):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
@@ -68,8 +65,6 @@ class DumboBFTNode (Dumbo, Process):
         pid = os.getpid()
         self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
 
-        self._send = lambda j, o: self.bft_to_client((j, o))
-        self._recv = lambda: self.bft_from_server()
 
         self.prepare_bootstrap()
 

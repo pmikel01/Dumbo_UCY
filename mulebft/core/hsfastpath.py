@@ -225,7 +225,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
         if pending_block is not None:
 
             notraized_block = (pending_block[0], pending_block[1], pending_block[2], pending_block[4])
-            put_output(notraized_block)
+            if put_output is not None: put_output(notraized_block)
             txcnt[pending_block[1]] = str(notraized_block).count("Dummy TX")
 
             if pending_block[1] >= 2:

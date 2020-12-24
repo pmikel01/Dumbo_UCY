@@ -6,7 +6,8 @@ from gevent import monkey
 from dumbomvba.core.dumbomvba import dumbo_mvba
 from crypto.threshsig import dealer
 
-monkey.patch_all()
+monkey.patch_all(subprocess=False)
+
 
 # CBC
 def simple_router(N, maxdelay=0.00001, seed=None):

@@ -1,13 +1,11 @@
-import random
-from typing import Callable
+from stablehotstuff.stablehotstuff import Hotstuff
+from typing import List, Callable
 import os
 import pickle
-from gevent import time
-from mulebft.core.mule import Mule
+from gevent import time, monkey
 from myexperiements.sockettest.make_random_tx import tx_generator
 from coincurve import PrivateKey, PublicKey
-from multiprocessing import Value as mpValue
-
+from multiprocessing import Value as mpValue, Queue as mpQueue, Process
 
 def load_key(id, N):
 
@@ -40,7 +38,7 @@ def load_key(id, N):
     return sPK, sPK1, sPK2s, ePK, sSK, sSK1, sSK2, eSK
 
 
-class MuleBFTNode (Mule):
+class HotstuffBFTNode (Hotstuff):
 
     def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
@@ -51,7 +49,7 @@ class MuleBFTNode (Mule):
         self.ready = ready
         self.stop = stop
         self.mode = mode
-        Mule.__init__(self, sid, id, S, T, max(int(Bfast), 1), max(int(Bacs/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
+        Hotstuff.__init__(self, sid, id, S, max(int(Bfast), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
 
     def prepare_bootstrap(self):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
@@ -59,9 +57,9 @@ class MuleBFTNode (Mule):
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
             k = 0
             for _ in range(self.K + 1):
-                for r in range(max(self.FAST_BATCH_SIZE * self.SLOTS_NUM, self.FALLBACK_BATCH_SIZE)):
+                for r in range(max(self.FAST_BATCH_SIZE * self.SLOTS_NUM, 1)):
                     suffix = hex(self.id) + hex(r) + ">"
-                    Mule.submit_tx(self, tx[:-len(suffix)] + suffix)
+                    Hotstuff.submit_tx(self, tx[:-len(suffix)] + suffix)
                     k += 1
                     if r % 50000 == 0:
                         self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
@@ -82,53 +80,7 @@ class MuleBFTNode (Mule):
 
         while not self.ready.value:
             time.sleep(1)
+            #gevent.sleep(1)
 
         self.run_bft()
         self.stop.value = True
-
-
-def main(sid, i, S, T, B, N, f, addresses, K):
-    mule = MuleBFTNode(sid, i, S, T, B, N, f, addresses, K)
-    mule.run_bft()
-
-
-if __name__ == '__main__':
-
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--sid', metavar='sid', required=True,
-                        help='identifier of node', type=str)
-    parser.add_argument('--id', metavar='id', required=True,
-                        help='identifier of node', type=int)
-    parser.add_argument('--N', metavar='N', required=True,
-                        help='number of parties', type=int)
-    parser.add_argument('--f', metavar='f', required=True,
-                        help='number of faulties', type=int)
-    parser.add_argument('--B', metavar='B', required=True,
-                        help='size of batch', type=int)
-    parser.add_argument('--K', metavar='K', required=True,
-                        help='rounds to execute', type=int)
-    args = parser.parse_args()
-
-    # Some parameters
-    sid = args.sid
-    i = args.id
-    N = args.N
-    f = args.f
-    B = args.B
-    K = args.K
-
-    # Epoch Setup
-    S = 50
-    T = 0.05  # Timeout
-
-    # Random generator
-    rnd = random.Random(sid)
-
-    # Nodes list
-    host = "127.0.0.1"
-    port_base = int(rnd.random() * 5 + 1) * 10000
-    addresses = [(host, port_base + 200 * i) for i in range(N)]
-    print(addresses)
-
-    main(sid, i, S, T, B, N, f, addresses, K)

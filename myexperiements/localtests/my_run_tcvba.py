@@ -10,7 +10,8 @@ from mulebft.core.twovalueagreement import twovalueagreement
 from crypto.threshsig import dealer
 
 
-monkey.patch_all()
+monkey.patch_all(subprocess=False)
+
 
 logger = logging.getLogger(__name__)
 

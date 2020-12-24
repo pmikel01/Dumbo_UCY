@@ -5,21 +5,20 @@ from typing import List, Callable
 import gevent
 import os
 
-from multiprocessing import Value as mpValue, SimpleQueue as mpQueue, Process, Semaphore as mpSemaphore
+from multiprocessing import Value as mpValue, Process
 from gevent import socket, monkey, lock
-from multiprocessing.connection import Connection
 
 import logging
 import traceback
 
-monkey.patch_all()
+monkey.patch_all(subprocess=False)
 
 
 
 # Network node class: deal with socket communications
 class NetworkClient (Process):
 
-    SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'
+    SEP = '\rSEP\n'.encode('utf-8')
 
     def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue):
 
@@ -57,9 +56,6 @@ class NetworkClient (Process):
                     break
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
-
-        #send_thread = [gevent.spawn(self._send_loop, j) for j in range(self.N)]
-        #gevent.joinall(send_threads)
         self._send_loop()
 
     def _connect(self, j: int):
@@ -68,7 +64,7 @@ class NetworkClient (Process):
             sock.bind((self.ip, self.port + j + 1))
         try:
             sock.connect(self.addresses_list[j])
-            sock.sendall(('ping' + self.SEP).encode('utf-8'))
+            sock.sendall(('ping').encode('utf-8') + self.SEP)
             pong = sock.recv(5000)
         except Exception as e1:
             return False
@@ -81,17 +77,16 @@ class NetworkClient (Process):
         return True
 
     def _send(self, j: int, o: bytes):
-        msg = b''.join([o, self.SEP.encode('utf-8')])
-        self.sock_locks[j].acquire()
+        #self.sock_locks[j].acquire()
         for _ in range(3):
             try:
-                self.socks[j].sendall(msg)
+                self.socks[j].sendall(o + self.SEP)
                 break
             except Exception as e1:
                 self.logger.error("fail to send msg")
                 self.logger.error(str((e1, traceback.print_exc())))
                 continue
-        self.sock_locks[j].release()
+        #self.sock_locks[j].release()
 
     ##
     ##
