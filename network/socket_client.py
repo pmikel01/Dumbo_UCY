@@ -12,7 +12,7 @@ from gevent.queue import Queue
 import logging
 import traceback
 
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 
 

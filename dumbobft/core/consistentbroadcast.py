@@ -4,7 +4,7 @@ from collections import defaultdict
 from gevent import monkey
 
 from crypto.threshsig.boldyreva import serialize, deserialize1
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
     """Consistent broadcast

@@ -1,30 +1,17 @@
 import hashlib
-import json
 import logging
 import os
 import pickle
-import traceback
 import gevent
 import time
 import numpy as np
 from gevent import monkey, Greenlet
-from gevent.event import Event
 from gevent.queue import Queue
-from collections import namedtuple
-from enum import Enum
 from mulebft.core.hsfastpath import hsfastpath
-from mulebft.core.twovalueagreement import twovalueagreement
-from dumbobft.core.validatedcommonsubset import validatedcommonsubset
-from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
-from dumbobft.core.dumbocommonsubset import dumbocommonsubset
-from honeybadgerbft.core.honeybadger_block import honeybadger_block
-from crypto.threshsig.boldyreva import serialize, deserialize1
 from crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
 from crypto.ecdsa.ecdsa import PrivateKey
-from honeybadgerbft.core.commoncoin import shared_coin
-from honeybadgerbft.exceptions import UnknownTagError
-from crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
-monkey.patch_all(thread=False)
+
+monkey.patch_all()
 
 
 def set_consensus_log(id: int):

@@ -7,7 +7,7 @@ import logging
 import traceback
 from multiprocessing import Value as mpValue, Process
 
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 
 # Network node class: deal with socket communications

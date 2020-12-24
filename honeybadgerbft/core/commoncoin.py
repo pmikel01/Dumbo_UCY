@@ -6,7 +6,7 @@ from gevent import Greenlet, monkey
 from gevent.queue import Queue
 import hashlib
 
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 logger = logging.getLogger(__name__)
 

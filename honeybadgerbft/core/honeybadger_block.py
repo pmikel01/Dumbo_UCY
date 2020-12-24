@@ -1,7 +1,10 @@
 import time
 import gevent
+from gevent import monkey
 from crypto.threshenc import tpke
 import os, logging
+
+monkey.patch_all()
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ from collections import defaultdict
 import logging
 
 from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 
 logger = logging.getLogger(__name__)

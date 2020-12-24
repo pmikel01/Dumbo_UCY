@@ -14,7 +14,7 @@ from dumbobft.core.validatedcommonsubset import validatedcommonsubset
 from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 
 def set_consensus_log(id: int):
