@@ -43,27 +43,6 @@ def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
 
 
-class BroadcastTag(Enum):
-    FAST = 'FAST'
-
-BroadcastReceiverQueues = namedtuple(
-    'BroadcastReceiverQueues', ('FAST',))
-
-
-def broadcast_receiver_loop(recv_func, recv_queues):
-    while True:
-        gevent.sleep(0)
-        sender, (tag, j, msg) = recv_func()
-        if tag not in BroadcastTag.__members__:
-            raise UnknownTagError('Unknown tag: {}! Must be one of {}.'.format(
-                tag, BroadcastTag.__members__.keys()))
-        recv_queue = recv_queues._asdict()[tag]
-        try:
-            recv_queue.put_nowait((sender, msg))
-        except AttributeError as e:
-            print("error", sender, (tag, j, msg))
-            traceback.print_exc()
-
 
 class Hotstuff():
     """Mule object used to run the protocol
@@ -110,7 +89,7 @@ class Hotstuff():
         self._recv = recv
         self.logger = set_consensus_log(pid)
         self.transaction_buffer = Queue()
-        self._per_epoch_recv = {}  # Buffer of incoming messages
+        self.fast_recv = Queue()
 
         self.K = K
 
@@ -153,12 +132,8 @@ class Hotstuff():
             while True:
                 gevent.sleep(0)
                 try:
-                    (sender, (r, msg)) = self._recv()
-                    # Maintain an *unbounded* recv queue for each epoch
-                    if r not in self._per_epoch_recv:
-                        self._per_epoch_recv[r] = Queue()
-                    # Buffer this message
-                    self._per_epoch_recv[r].put_nowait((sender, msg))
+                    (sender, msg) = self._recv()
+                    self.fast_recv.put_nowait((sender, msg))
                 except:
                     continue
 
@@ -171,20 +146,11 @@ class Hotstuff():
 
 
         # For each epoch
-        e = 0
 
-        if e not in self._per_epoch_recv:
-            self._per_epoch_recv[e] = Queue()
+        send_e = self._send
+        recv_e = self.fast_recv.get
 
-        def make_epoch_send(e):
-            def _send(j, o):
-                self._send(j, (e, o))
-            return _send
-
-        send_e = make_epoch_send(e)
-        recv_e = self._per_epoch_recv[e].get
-
-        self._run_epoch(e, send_e, recv_e)
+        self._run(send_e, recv_e)
 
         self.e_time = time.time()
 
@@ -197,7 +163,7 @@ class Hotstuff():
                   )
 
     #
-    def _run_epoch(self, e, send, recv):
+    def _run(self, send, recv):
         """Run one protocol epoch.
 
         :param int e: epoch id
@@ -210,34 +176,17 @@ class Hotstuff():
         N = self.N
         f = self.f
 
-        epoch_id = sid + 'FAST' + str(e)
+        epoch_id = sid + 'FAST'
         hash_genesis = hash(epoch_id)
 
-        fast_recv = Queue()  # The thread-safe queue to receive the messages sent to fast_path of this epoch
-
-        recv_queues = BroadcastReceiverQueues(
-            FAST=fast_recv,
-        )
-        recv_t = gevent.spawn(broadcast_receiver_loop, recv, recv_queues)
-
-        def _setup_fastpath(leader):
-
-            def fastpath_send(k, o):
-                send(k, ('FAST', '', o))
-
-            fast_thread = gevent.spawn(hsfastpath, epoch_id, pid, N, f, leader,
-                                   self.transaction_buffer.get_nowait, None,
-                                   self.SLOTS_NUM, self.FAST_BATCH_SIZE, self.TIMEOUT,
-                                   hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
-                                   fast_recv.get, fastpath_send, self.logger)
-
-            return fast_thread
-
         # Start the fast path
-        leader = e % N
-        fast_thread = _setup_fastpath(leader)
+        leader = 0
 
-        # Block to wait the fast path returns
+        fast_thread = gevent.spawn(hsfastpath, epoch_id, pid, N, f, leader,
+                            self.transaction_buffer.get_nowait, None,
+                            self.SLOTS_NUM, self.FAST_BATCH_SIZE, self.TIMEOUT,
+                            hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
+                            recv, send, self.logger)
         fast_thread.join()
 
         # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
