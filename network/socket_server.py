@@ -1,6 +1,5 @@
-from gevent import lock, monkey
-from gevent.server import StreamServer
-
+import gevent
+from gevent import lock, monkey, socket
 import pickle
 from typing import Callable
 import os
@@ -8,13 +7,13 @@ import logging
 import traceback
 from multiprocessing import Value as mpValue, Process
 
-monkey.patch_all(subprocess=False)
+monkey.patch_all(thread=False)
 
 
 # Network node class: deal with socket communications
 class NetworkServer (Process):
 
-    SEP = '\rSEP\n'.encode('utf-8')
+    SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
     def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, server_to_bft: Callable, server_ready: mpValue, stop: mpValue):
 
@@ -35,40 +34,45 @@ class NetworkServer (Process):
         pid = os.getpid()
         self.logger.info('node %d\'s socket server starts to listen ingoing connections on process id %d' % (self.id, pid))
         print("my IP is " + self.ip)
+        self.server_sock = socket.socket()
+        self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server_sock.bind((self.ip, self.port))
+        self.server_sock.listen(5)
+        handle_msg_threads = []
 
         def _handle(sock, address):
             jid = self._address_to_id(address)
             buf = b''
             try:
                 while not self.stop.value:
-                    buf += sock.recv(4096)
+                    gevent.sleep(0)
+                    buf += sock.recv(9000)
                     tmp = buf.split(self.SEP, 1)
                     while len(tmp) == 2:
                         buf = tmp[1]
                         data = tmp[0]
                         if data != '' and data:
-                            if data == 'ping'.encode('utf-8'):
-                                sock.sendall('pong'.encode('utf-8'))
-                                self.logger.info("node {} is pinging node {}...".format(jid, self.id))
-                                self.is_in_sock_connected[jid] = True
-                                if all(self.is_in_sock_connected):
-                                    with self.ready.get_lock():
-                                        self.ready.value = True
-                            else:
-                                (j, o) = (jid, pickle.loads(data))
-                                assert j in range(self.N)
-                                self.server_to_bft((j, o))
-                                # self.logger.info('recv' + str((j, o)))
-                                # print('recv' + str((j, o)))
+                            (j, o) = (jid, pickle.loads(data))
+                            assert j in range(self.N)
+                            self.server_to_bft((j, o))
+                            # self.logger.info('recv' + str((j, o)))
+                            # print('recv' + str((j, o)))
                         else:
                             self.logger.error('syntax error messages')
                             raise ValueError
                         tmp = buf.split(self.SEP, 1)
+                    gevent.sleep(0)
             except Exception as e:
                 self.logger.error(str((e, traceback.print_exc())))
+            gevent.sleep(0)
 
-        self.streamServer = StreamServer((self.ip, self.port), _handle)
-        self.streamServer.serve_forever()
+        while not self.stop.value:
+            gevent.sleep(0)
+            sock, address = self.server_sock.accept()
+            msg_t = gevent.spawn(_handle, sock, address)
+            handle_msg_threads.append(msg_t)
+            self.logger.info('node id %d accepts a new socket from node %d' % (self.id, self._address_to_id(address)))
+            gevent.sleep(0)
 
     def run(self):
         pid = os.getpid()

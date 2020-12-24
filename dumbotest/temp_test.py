@@ -4,9 +4,9 @@ from gevent import Greenlet
 from gevent.queue import Queue
 from gevent import monkey
 from dumbomvba.core.dumbomvba import dumbo_mvba
-from crypto.threshsig import dealer
+from crypto.threshsig.generate_keys import dealer
 
-monkey.patch_all(subprocess=False)
+monkey.patch_all(thread=False)
 
 
 # CBC

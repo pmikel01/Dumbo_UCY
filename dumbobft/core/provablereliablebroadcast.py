@@ -8,6 +8,7 @@ from gevent import monkey
 from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 from pyeclib.ec_iface import ECDriver
+monkey.patch_all(thread=False)
 
 
 def encode(K: int, N: int, m):

@@ -7,6 +7,7 @@ from collections import defaultdict
 import logging
 
 from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
+monkey.patch_all(thread=False)
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,6 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
         while True:  # not finished[pid]:
 
             gevent.sleep(0)
-            time.sleep(0)
 
             (sender, msg) = receive()
             logger.debug(f'receive {msg} from node {sender}',
@@ -157,7 +157,6 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
         # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
 
         gevent.sleep(0)
-        time.sleep(0)
 
         logger.info(f'Starting with est = {est}',
                     extra={'nodeid': pid, 'epoch': r})
@@ -171,7 +170,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
         while len(int_values[r]) == 0:
             # Block until a value is output
             gevent.sleep(0)
-            time.sleep(0)
+
             bv_signal.clear()
             bv_signal.wait()
 
@@ -189,7 +188,6 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
         while True:
 
             gevent.sleep(0)
-            time.sleep(0)
 
             logger.debug(f'int_values[{r}]: {int_values[r]}',
                          extra={'nodeid': pid, 'epoch': r})
@@ -223,7 +221,6 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
             conf_sent[r][tuple(values)] = True
         while True:
             gevent.sleep(0)
-            time.sleep(0)
             logger.debug(
                 f'looping ... conf_values[epoch] is: {conf_values[r]}',
                 extra={'nodeid': pid, 'epoch': r},

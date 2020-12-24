@@ -12,7 +12,7 @@ from network.socket_client import NetworkClient
 from multiprocessing import Value as mpValue, Queue as mpQueue
 from ctypes import c_bool
 
-monkey.patch_all(subprocess=False)
+monkey.patch_all(thread=False)
 
 
 def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
@@ -102,7 +102,8 @@ if __name__ == '__main__':
         # client_from_bft, bft_to_client = mpPipe(duplex=True)
 
         client_bft_mpq = mpQueue()
-        client_from_bft = client_bft_mpq.get
+        #client_from_bft = client_bft_mpq.get
+        client_from_bft = client_bft_mpq.get_nowait
         bft_to_client = client_bft_mpq.put_nowait
 
         server_bft_mpq = mpQueue()

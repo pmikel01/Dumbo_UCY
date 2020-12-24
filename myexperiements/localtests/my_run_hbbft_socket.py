@@ -6,7 +6,7 @@ from myexperiements.sockettest.socket_server import HoneyBadgerBFTNode
 from myexperiements.sockettest.make_key_files import *
 
 
-monkey.patch_all()
+monkey.patch_all(thread=False)
 
 
 def _test_honeybadger_2(N=4, f=1, seed=None):

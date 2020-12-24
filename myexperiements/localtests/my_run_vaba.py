@@ -6,7 +6,7 @@ from gevent import monkey
 from dumbobft.core.validatedagreement import validatedagreement
 from crypto.threshsig import dealer
 
-monkey.patch_all(subprocess=False)
+monkey.patch_all(thread=False)
 
 # CBC
 def simple_router(N, maxdelay=0.001, seed=None):

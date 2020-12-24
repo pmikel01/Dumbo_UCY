@@ -6,6 +6,7 @@ from gevent import Greenlet, monkey
 from gevent.queue import Queue
 import hashlib
 
+monkey.patch_all(thread=False)
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +62,10 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
             try:
                 PK.verify_share(sig, i, h)
             except AssertionError:
-                print("Signature share failed!", (sid, pid, i, r, sig, h))
-                print('debug', sig, h)
-                print('debug', type(sig), type(h))
+                print("Signature share failed!")
+                #print("Signature share failed!", (sid, pid, i, r, sig, h))
+                #print('debug', sig, h)
+                #print('debug', type(sig), type(h))
                 continue
                 #pass
 

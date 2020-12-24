@@ -3,10 +3,10 @@ import gevent
 from gevent import Greenlet
 from gevent.queue import Queue
 from gevent import monkey
-from dumbomvba.core.mvba import dumbo_mvba
-from crypto.threshsig import dealer
+from dumbomvba.core.dumbomvba import dumbo_mvba
+from crypto.threshsig.generate_keys import dealer
 
-monkey.patch_all(subprocess=False)
+monkey.patch_all(thread=False)
 
 # CBC
 def simple_router(N, maxdelay=0.00001, seed=None):

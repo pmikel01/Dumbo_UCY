@@ -16,6 +16,7 @@ from dumbobft.core.consistentbroadcast import consistentbroadcast
 from honeybadgerbft.exceptions import UnknownTagError
 from crypto.threshsig.boldyreva import serialize, deserialize1
 
+monkey.patch_all(thread=False)
 
 
 class MessageTag(Enum):
@@ -268,6 +269,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     votes = defaultdict(set)
 
     while True:
+        gevent.sleep(0)
 
         a = pi[r]
         if is_cbc_delivered[a] == 1:
@@ -279,7 +281,9 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
             send(j, ('VABA_VOTE', r, vote))
 
         ballot_counter = 0
+
         while True:
+            gevent.sleep(0)
 
             sender, msg = vote_recvs[r].get()
             a, ballot_bit, o = msg

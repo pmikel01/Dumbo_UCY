@@ -10,7 +10,7 @@ from honeybadgerbft.core.binaryagreement import binaryagreement
 from crypto.threshsig import dealer
 
 
-monkey.patch_all()
+monkey.patch_all(thread=False)
 
 logger = logging.getLogger(__name__)
 

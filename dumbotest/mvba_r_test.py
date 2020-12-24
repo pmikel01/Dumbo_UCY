@@ -4,11 +4,11 @@ import gevent
 from gevent import monkey
 from gevent.queue import Queue
 from dumbomvba.core.dumbox import mvba
-from crypto.threshsig import dealer
-from honeybadgerbft.crypto.threshenc import tpke
+from crypto.threshsig.generate_keys import dealer
+from crypto.threshenc import tpke
 import pickle
 
-monkey.patch_all(subprocess=False)
+monkey.patch_all(thread=False)
 
 
 def simple_router(N, maxdelay=0.01, seed=None):

@@ -14,6 +14,7 @@ from dumbobft.core.validatedcommonsubset import validatedcommonsubset
 from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
+monkey.patch_all(thread=False)
 
 
 def set_consensus_log(id: int):
@@ -133,6 +134,7 @@ class Dumbo():
 
             def recv_blackhole(*args):
                 while True:
+                    gevent.sleep(1)
                     time.sleep(1)
                     pass
 
@@ -167,7 +169,10 @@ class Dumbo():
             self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
         while True:
+
             # For each round...
+            gevent.sleep(0)
+
             start = time.time()
 
             r = self.round

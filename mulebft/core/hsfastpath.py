@@ -11,6 +11,7 @@ import os
 import json
 import gevent
 import hashlib, pickle
+monkey.patch_all(thread=False)
 
 
 def hash(x):
@@ -84,7 +85,6 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
         while True:
 
             gevent.sleep(0)
-            time.sleep(0)
 
             (sender, msg) = recv()
             #logger.info("receving a fast path msg " + str((sender, msg)))

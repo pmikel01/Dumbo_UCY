@@ -4,7 +4,7 @@ import gevent
 import time
 from gevent import monkey
 from gevent.queue import Queue
-monkey.patch_all(subprocess=False)
+monkey.patch_all(thread=False)
 
 rc_ballot = [0 for n in range(10)]
 

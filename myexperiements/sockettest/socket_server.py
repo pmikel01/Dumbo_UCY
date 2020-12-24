@@ -11,7 +11,7 @@ from gevent import socket, monkey, lock
 import logging
 import traceback
 
-monkey.patch_all(subprocess=False)
+monkey.patch_all(thread=False)
 
 
 

@@ -7,10 +7,10 @@ from gevent import monkey
 from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
 from mulebft.core.twovalueagreement import twovalueagreement
-from crypto.threshsig import dealer
+from crypto.threshsig.generate_keys import dealer
 
 
-monkey.patch_all(subprocess=False)
+monkey.patch_all(thread=False)
 
 
 logger = logging.getLogger(__name__)
