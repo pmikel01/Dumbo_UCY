@@ -1,4 +1,5 @@
 import gevent
+from gevent.server import StreamServer
 from gevent import lock, monkey, socket
 import pickle
 from typing import Callable
@@ -34,11 +35,6 @@ class NetworkServer (Process):
         pid = os.getpid()
         self.logger.info('node %d\'s socket server starts to listen ingoing connections on process id %d' % (self.id, pid))
         print("my IP is " + self.ip)
-        self.server_sock = socket.socket()
-        self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server_sock.bind((self.ip, self.port))
-        self.server_sock.listen(5)
-        handle_msg_threads = []
 
         def _handle(sock, address):
             jid = self._address_to_id(address)
@@ -66,13 +62,8 @@ class NetworkServer (Process):
                 self.logger.error(str((e, traceback.print_exc())))
             gevent.sleep(0)
 
-        while not self.stop.value:
-            gevent.sleep(0)
-            sock, address = self.server_sock.accept()
-            msg_t = gevent.spawn(_handle, sock, address)
-            handle_msg_threads.append(msg_t)
-            self.logger.info('node id %d accepts a new socket from node %d' % (self.id, self._address_to_id(address)))
-            gevent.sleep(0)
+        self.streamServer = StreamServer((self.ip, self.port), _handle)
+        self.streamServer.serve_forever()
 
     def run(self):
         pid = os.getpid()
