@@ -37,6 +37,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
     :param hash_genesis: the hash of genesis block
     :param recv: function to receive incoming messages
     :param send: function to send outgoing messages
+    :param bcast: function to broadcast a message
     :return tuple: False to represent timeout, and True to represent success
     """
 
@@ -78,6 +79,9 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
         for i in range(N):
             if i != pid:
                 send(i, m)
+
+    def bcast(o):
+        send(-1, o)
 
     def handle_messages():
         nonlocal leader, hash_prev, pending_block, notraized_block, voters, votes, slot_cur
@@ -147,7 +151,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                             except Exception as e:
                                 tx_batch = json.dumps(['Dummy' for _ in range(BATCH_SIZE)])
 
-                        bcast_to_all_but_not_me(('DECIDE', slot_cur, hash_prev, Sigma, tx_batch))
+                        bcast(('DECIDE', slot_cur, hash_prev, Sigma, tx_batch))
                         #if logger is not None: logger.info("Decide made and sent")
                         decide_sent[slot_cur] = True
                         decides[slot_cur].put_nowait((hash_p, Sigma, tx_batch))

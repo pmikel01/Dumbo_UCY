@@ -170,8 +170,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         """Common coin multicast operation.
         :param o: Value to multicast.
         """
-        for k in range(N):
-            send(k, ('VABA_COIN', 'leader_election', o))
+        send(-1, ('VABA_COIN', 'leader_election', o))
 
     permutation_coin = shared_coin(sid + 'COIN', pid, N, f,
                                PK, SK, coin_bcast, coin_recv.get, False)
@@ -311,18 +310,15 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
                 aba_r_input = 1
                 cbc_values[a] = cbc_value
 
-        def make_coin_bcast():
-            def coin_bcast(o):
-                """Common coin multicast operation.
-                :param o: Value to multicast.
-                """
-                for k in range(N):
-                    send(k, ('VABA_ABA_COIN', r, o))
-            return coin_bcast
+        def aba_coin_bcast(o):
+            """Common coin multicast operation.
+            :param o: Value to multicast.
+            """
+            send(-1, ('VABA_ABA_COIN', r, o))
 
         coin = shared_coin(sid + 'COIN' + str(r), pid, N, f,
                            PK, SK,
-                           make_coin_bcast(), aba_coin_recvs[r].get)
+                           aba_coin_bcast, aba_coin_recvs[r].get)
 
         def make_aba_send(rnd): # this make will automatically deep copy the enclosed send func
             def aba_send(k, o):

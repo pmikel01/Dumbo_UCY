@@ -96,7 +96,11 @@ class NetworkClient (Process):
                 #self.logger.info('send' + str((j, o)))
                 try:
                     #self._send(j, pickle.dumps(o))
-                    self.sock_queues[j].put_nowait(o)
+                    if j == -1: # -1 means broadcast
+                        for i in range(self.N):
+                            self.sock_queues[i].put_nowait(o)
+                    else:
+                        self.sock_queues[j].put_nowait(o)
                 except Exception as e:
                     self.logger.error(str(("problem objective when sending", o)))
                     traceback.print_exc()

@@ -305,15 +305,7 @@ class Dumbo():
         # One instance of TPKE
         def tpke_bcast(o):
             """Threshold encryption broadcast."""
-            def broadcast(o):
-                """Multicast the given input ``o``.
-
-                :param o: Input to multicast.
-                """
-                for j in range(N):
-                    send(j, o)
-            broadcast(('TPKE', '', o))
-
+            send(-1, ('TPKE', '', o))
 
         # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
         dumboacs_thread = Greenlet(dumbocommonsubset, pid, N, f, prbc_outputs,

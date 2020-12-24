@@ -135,10 +135,10 @@ class Hotstuff():
 
         # For each epoch
 
-        send_e = self._send
-        recv_e = self.fast_recv.get
+        send = self._send
+        recv = self.fast_recv.get
 
-        self._run(send_e, recv_e)
+        self._run(send, recv)
 
         self.e_time = time.time()
 

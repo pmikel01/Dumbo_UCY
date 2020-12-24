@@ -40,6 +40,9 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
                 where Sigma is computed over {sigma_i} in these ``CBC_ECHO`` messages
     """
 
+    def bcast(o):
+        send(-1, o)
+
     assert N >= 3*f + 1
     assert f >= 0
     assert 0 <= leader < N
@@ -63,9 +66,7 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
         digestFromLeader = PK1.hash_message(str((sid, leader, m)))
         # print("leader", pid, "has digest:", digestFromLeader)
         cbc_echo_sshares[pid] = SK1.sign(digestFromLeader)
-        for i in range(N):
-            if i != pid:
-                send(i, ('CBC_SEND', m))
+        bcast(('CBC_SEND', m))
         #print("Leader %d broadcasts CBC SEND messages" % leader)
 
     # Handle all consensus messages
@@ -104,9 +105,8 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
                 sigmas = dict(list(cbc_echo_sshares.items())[:N - f])
                 Sigma = PK1.combine_shares(sigmas)
                 # assert PK.verify_signature(Sigma, digestFromLeader)
-                for i in range(N):
-                    finalSent = True
-                    send(i, ('CBC_FINAL', m, serialize(Sigma)))
+                finalSent = True
+                bcast(('CBC_FINAL', m, serialize(Sigma)))
                 #print("Leader %d broadcasts CBC FINAL messages" % leader)
 
         elif msg[0] == 'CBC_FINAL':

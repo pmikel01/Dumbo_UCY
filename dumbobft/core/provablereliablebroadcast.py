@@ -108,8 +108,7 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
     #   K = EchoThreshold - f
 
     def broadcast(o):
-        for i in range(N):
-            send(i, o)
+        send(-1, o)
 
     if pid == leader:
         # The leader erasure encodes the input, sending one strip to each participant
