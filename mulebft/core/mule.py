@@ -396,39 +396,28 @@ class Mule():
 
         ready.wait()
 
-        # Block to wait the fast path returns
-        #fast_thread.join()
+        start_vc = time.time()
 
         # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
         try:
-
             notarization = fast_thread.get(block=False)
-            #print(("Fast chain proof: ", notarization))
-
             notarized_block = None
             if notarization is not None:
-
                 notarized_block = latest_notarized_block
                 payload_digest = hash(notarized_block[3])
                 notarized_block_header = (notarized_block[0], notarized_block[1], notarized_block[2], payload_digest)
-
                 notarized_block_hash, notarized_block_raw_Sig, (epoch_txcnt, weighted_delay) = notarization
-
                 self.txdelay = (self.txcnt * self.txdelay + epoch_txcnt * weighted_delay) / (self.txcnt + epoch_txcnt)
                 self.txcnt += epoch_txcnt
-
                 assert hash(notarized_block_header) == notarized_block_hash
-
                 o = (notarized_block_header, notarized_block_raw_Sig)
                 for j in range(N):
                     send(j, ('VIEW_CHANGE', '', o))
-
             else:
                 notarized_block_header = None
                 o = (notarized_block_header, None)
                 for j in range(N):
                     send(j, ('VIEW_CHANGE', '', o))
-
         except:
             pass
 
@@ -437,6 +426,10 @@ class Mule():
         delivered_slots = max(delivered_slots - 1, 0)
         #
 
+        end_vc = time.time()
+        if self.logger != None:
+           self.logger.info('VIEW CHANGE costs time: %f' % (end_vc - start_vc) )
+
         #print(("fast blocks: ", fast_blocks))
 
         if delivered_slots > 0:
@@ -444,10 +437,8 @@ class Mule():
             #if self.logger != None:
             #    self.logger.info('Fast block tx at Node %d:' % self.id + str(fast_blocks))
             #return delivered_slots
-            #
 
         else:
-
             # Select B transactions (TODO: actual random selection)
             tx_to_send = []
 
