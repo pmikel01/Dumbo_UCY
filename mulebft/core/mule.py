@@ -137,6 +137,7 @@ class Mule():
 
         self.txcnt = 0
         self.txdelay = 0
+        self.vcdelay = []
 
         self.mute = mute
 
@@ -218,7 +219,7 @@ class Mule():
 
             self.e_time = time.time()
             if self.logger != None:
-                self.logger.info("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
+                self.logger.info("node %d breaks in %f seconds with total delivered Txs %d and average delay %f and average VC delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay, sum(self.vcdelay)/len(self.vcdelay)) )
             else:
                 print("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
 
@@ -430,6 +431,7 @@ class Mule():
         end_vc = time.time()
         if self.logger != None:
            self.logger.info('VIEW CHANGE costs time: %f' % (end_vc - start_vc) )
+        self.vcdelay.append(end_vc - start_vc)
 
         #print(("fast blocks: ", fast_blocks))
 
