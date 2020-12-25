@@ -317,7 +317,11 @@ class Mule():
 
         def _setup_coin():
             def coin_bcast(o):
-                send(-1, ('VIEW_COIN', '', o))
+                """Common coin multicast operation.
+                :param o: Value to multicast.
+                """
+                for k in range(N):
+                    send(k, ('VIEW_COIN', '', o))
 
             coin = shared_coin(epoch_id, pid, N, f,
                                self.sPK, self.sSK,
@@ -409,11 +413,13 @@ class Mule():
                 self.txcnt += epoch_txcnt
                 assert hash(notarized_block_header) == notarized_block_hash
                 o = (notarized_block_header, notarized_block_raw_Sig)
-                send(-1, ('VIEW_CHANGE', '', o)) # -1 means broadcast
+                for j in range(N):
+                    send(j, ('VIEW_CHANGE', '', o))
             else:
                 notarized_block_header = None
                 o = (notarized_block_header, None)
-                send(-1, ('VIEW_CHANGE', '', o)) # -1 means broadcast
+                for j in range(N):
+                    send(j, ('VIEW_CHANGE', '', o))
         except:
             pass
 
@@ -429,12 +435,12 @@ class Mule():
 
         #print(("fast blocks: ", fast_blocks))
 
-        if delivered_slots >= self.SLOTS_NUM:
-            #gevent.joinall(lst)
+        if delivered_slots > 0:
+            gevent.joinall(lst)
             #if self.logger != None:
             #    self.logger.info('Fast block tx at Node %d:' % self.id + str(fast_blocks))
             #return delivered_slots
-            pass
+
         else:
             # Select B transactions (TODO: actual random selection)
             tx_to_send = []
@@ -502,7 +508,14 @@ class Mule():
             # One instance of TPKE
             def tpke_bcast(o):
                 """Threshold encryption broadcast."""
-                send(-1, ('TPKE', '', o))
+                def broadcast(o):
+                    """Multicast the given input ``o``.
+
+                    :param o: Input to multicast.
+                    """
+                    for j in range(N):
+                        send(j, o)
+                broadcast(('TPKE', '', o))
 
             # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
             dumboacs_thread = gevent.spawn(dumbocommonsubset, pid, N, f, prbc_outputs,

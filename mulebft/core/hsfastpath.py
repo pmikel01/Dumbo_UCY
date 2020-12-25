@@ -75,6 +75,11 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
     epoch_txcnt = 0
     weighted_delay = 0
 
+    def bcast_to_all_but_not_me(m):
+        for i in range(N):
+            if i != pid:
+                send(i, m)
+
     def bcast(o):
         send(-1, o)
 
@@ -130,6 +135,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                             logger.info("Vote signature failed!")
                         msg_noncritical_signal.set()
                         continue
+
 
                     voters[slot_cur].add(sender)
                     votes[slot_cur][sender] = sig_p
@@ -276,7 +282,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
 
             try:
                 one_slot()
-                #gevent.sleep(0)
+                gevent.sleep(0)
             except Timeout:
                 try:
                     msg_noncritical_signal.wait()
