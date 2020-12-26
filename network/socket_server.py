@@ -28,7 +28,6 @@ class NetworkServer (Process):
         self.N = len(self.addresses_list)
         self.is_in_sock_connected = [False] * self.N
         self.socks = [None for _ in self.addresses_list]
-        self.sock_locks = [lock.Semaphore() for _ in self.addresses_list]
         super().__init__()
 
     def _listen_and_recv_forever(self):
@@ -41,7 +40,6 @@ class NetworkServer (Process):
             buf = b''
             try:
                 while not self.stop.value:
-                    gevent.sleep(0)
                     buf += sock.recv(9000)
                     tmp = buf.split(self.SEP, 1)
                     while len(tmp) == 2:
@@ -49,7 +47,7 @@ class NetworkServer (Process):
                         data = tmp[0]
                         if data != '' and data:
                             (j, o) = (jid, pickle.loads(data))
-                            assert j in range(self.N)
+                            # assert j in range(self.N)
                             self.server_to_bft((j, o))
                             # self.logger.info('recv' + str((j, o)))
                             # print('recv' + str((j, o)))
@@ -60,7 +58,6 @@ class NetworkServer (Process):
                     gevent.sleep(0)
             except Exception as e:
                 self.logger.error(str((e, traceback.print_exc())))
-            gevent.sleep(0)
 
         self.streamServer = StreamServer((self.ip, self.port), _handle)
         self.streamServer.serve_forever()
