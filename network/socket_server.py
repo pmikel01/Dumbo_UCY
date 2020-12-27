@@ -35,7 +35,7 @@ class NetworkServer (Process):
         self.logger.info('node %d\'s socket server starts to listen ingoing connections on process id %d' % (self.id, pid))
         print("my IP is " + self.ip)
 
-        def _handle(sock, address):
+        def _handler(sock, address):
             jid = self._address_to_id(address)
             buf = b''
             try:
@@ -59,7 +59,7 @@ class NetworkServer (Process):
             except Exception as e:
                 self.logger.error(str((e, traceback.print_exc())))
 
-        self.streamServer = StreamServer((self.ip, self.port), _handle)
+        self.streamServer = StreamServer((self.ip, self.port), _handler)
         self.streamServer.serve_forever()
 
     def run(self):

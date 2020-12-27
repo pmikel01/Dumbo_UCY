@@ -16,17 +16,17 @@ from ctypes import c_bool
 monkey.patch_all()
 
 def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
-                         stop: mpValue, protocol="mule", mute=False, factor=1):
+                         stop: mpValue, protocol="mule", mute=False, F=100000):
     bft = None
     if protocol == 'dumbo':
         bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
     # elif protocol == 'dumbox':
     #    bft = DumboXBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client,  ready, stop, K, mute=mute)
     elif protocol == "mule":
-        bft = MuleBFTNode(sid, i, S, T, int(factor * B), B, N, f, bft_from_server, bft_to_client, ready, stop, K,
+        bft = MuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K,
                           mute=mute)
     elif protocol == 'hotstuff':
-        bft = HotstuffBFTNode(sid, i, S, T, int(factor * B), B, N, f, bft_from_server, bft_to_client, ready, stop, 1,
+        bft = HotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, 1,
                               mute=mute)
     else:
         print("Only support dumbo or dumbox or mule or hotstuff")
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     parser.add_argument('--M', metavar='M', required=False,
                         help='whether to mute a third of nodes', type=bool, default=False)
     parser.add_argument('--F', metavar='F', required=False,
-                        help='the parameter to time (B/N) to get the fast path batch size', type=float, default=1)
+                        help='batch size of fallback path', type=int, default=100000)
 
     args = parser.parse_args()
 
