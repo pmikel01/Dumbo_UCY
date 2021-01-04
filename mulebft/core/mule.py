@@ -154,22 +154,6 @@ class Mule():
     def run_bft(self):
         """Run the Mule protocol."""
 
-        if self.mute:
-
-            def send_blackhole(*args):
-                pass
-
-            def recv_blackhole(*args):
-                while True:
-                    gevent.sleep(1)
-                    time.sleep(1)
-                    pass
-
-            seed = int.from_bytes(self.sid.encode('utf-8'), 'little')
-            if self.id in np.random.RandomState(seed).permutation(self.N)[:int((self.N - 1) / 3)]:
-                self._send = send_blackhole
-                self._recv = recv_blackhole
-
         def _recv_loop():
             """Receive messages."""
             while True:
@@ -247,6 +231,13 @@ class Mule():
         pid = self.id
         N = self.N
         f = self.f
+        leader = e % N
+
+        T = self.TIMEOUT
+        if self.mute:
+            seed = int.from_bytes(self.sid.encode('utf-8'), 'little')
+            if leader in np.random.RandomState(seed).permutation(self.N)[:int((self.N - 1) / 3)]:
+                T = 0.00001
 
         #S = self.SLOTS_NUM
         #T = self.TIMEOUT
@@ -309,7 +300,7 @@ class Mule():
 
             fast_thread = gevent.spawn(hsfastpath, epoch_id, pid, N, f, leader,
                                    self.transaction_buffer.get_nowait, fastpath_output,
-                                   self.SLOTS_NUM, self.FAST_BATCH_SIZE, self.TIMEOUT,
+                                   self.SLOTS_NUM, self.FAST_BATCH_SIZE, T,
                                    hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                                    fast_recv.get, fastpath_send, self.logger)
 
@@ -375,7 +366,7 @@ class Mule():
 
 
         # Start the fast path
-        leader = e % N
+
         fast_thread = _setup_fastpath(leader)
 
         #if self.logger is not None:
