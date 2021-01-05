@@ -11,7 +11,7 @@ from enum import Enum
 from collections import defaultdict
 from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
-from honeybadgerbft.core.binaryagreement import binaryagreement
+from dumbobft.core.baisedbinaryagreement import baisedbinaryagreement
 from dumbobft.core.consistentbroadcast import consistentbroadcast
 from honeybadgerbft.exceptions import UnknownTagError
 from crypto.threshsig.boldyreva import serialize, deserialize1
@@ -34,7 +34,7 @@ MessageReceiverQueues = namedtuple(
 
 def recv_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0)
+        gevent.sleep(0.0001)
         sender, (tag, j, msg) = recv_func()
         #print("recv2", (sender, (tag, j, msg)))
 
@@ -331,7 +331,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
             return aba_send
 
         # Only leader gets input
-        aba = gevent.spawn(binaryagreement, sid + 'ABA' + str(r), pid, N, f, coin,
+        aba = gevent.spawn(baisedbinaryagreement, sid + 'ABA' + str(r), pid, N, f, coin,
                      aba_inputs[r].get, aba_outputs[r].put_nowait,
                      aba_recvs[r].get, make_aba_send(r))
         # aba.get is a blocking function to get aba output
