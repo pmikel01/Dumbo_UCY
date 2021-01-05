@@ -57,12 +57,10 @@ class MuleBFTNode (Mule):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
         tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
-            k = 0
             for _ in range(self.K + 1):
-                for r in range(max(self.FAST_BATCH_SIZE * self.SLOTS_NUM, self.FALLBACK_BATCH_SIZE)):
+                for r in range(2*max(self.FAST_BATCH_SIZE * self.SLOTS_NUM, self.FALLBACK_BATCH_SIZE)):
                     suffix = hex(self.id) + hex(r) + ">"
                     Mule.submit_tx(self, tx[:-len(suffix)] + suffix)
-                    k += 1
                     if r % 50000 == 0:
                         self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
         else:
