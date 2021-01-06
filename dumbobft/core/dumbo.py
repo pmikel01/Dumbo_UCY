@@ -292,11 +292,12 @@ class Dumbo():
                     proof = vj
                     if prbc_sid in prbc_proofs.keys():
                         try:
-                            _, _roothash, _ = proof
+                            _prbc_sid, _roothash, _ = proof
+                            assert prbc_sid == _prbc_sid
                             _, roothash, _ = prbc_proofs[prbc_sid]
                             assert roothash == _roothash
                             return True
-                        except:
+                        except AssertionError:
                             print("1 Failed to verify proof for RBC")
                             return False
                     assert prbc_validate(prbc_sid, N, f, self.sPK2s, proof)
