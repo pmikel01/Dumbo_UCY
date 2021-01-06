@@ -269,7 +269,7 @@ class Dumbo():
             # Only leader gets input
             prbc_input = my_prbc_input.get if j == pid else None
             prbc_thread = gevent.spawn(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
-                               prbc_input, prbc_recvs[j].get, prbc_send)
+                               prbc_input, prbc_recvs[j].get, prbc_send, self.logger)
             #prbc_threads[j] = prbc_thread  # block for output from rbc
 
             def wait_for_prbc_output():
@@ -309,7 +309,7 @@ class Dumbo():
             vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f,
                                    self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                                    vacs_input.get, vacs_output.put_nowait,
-                                   vacs_recv.get, vacs_send, vacs_predicate)
+                                   vacs_recv.get, vacs_send, vacs_predicate, self.logger)
             vacs_thread.start()
 
         # N instances of PRBC
@@ -329,14 +329,14 @@ class Dumbo():
         # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
         dumboacs_thread = Greenlet(dumbocommonsubset, pid, N, f, [prbc_output.get for prbc_output in prbc_outputs],
                            vacs_input.put_nowait,
-                           vacs_output.get)
+                           vacs_output.get, self.logger)
 
         dumboacs_thread.start()
 
         _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
                           propose=json.dumps(tx_to_send),
                           acs_put_in=my_prbc_input.put_nowait, acs_get_out=dumboacs_thread.get,
-                          tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
+                          tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get, logger=self.logger)
 
         block = set()
         for batch in _output:
