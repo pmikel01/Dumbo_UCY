@@ -1,18 +1,16 @@
+from gevent import monkey; monkey.patch_all()
+
 import time
 import pickle
 from typing import List, Callable
-
 import gevent
 import os
-
 from multiprocessing import Value as mpValue, Process
-from gevent import socket, monkey, lock
+from gevent import socket, lock
 from gevent.queue import Queue
-
 import logging
 import traceback
 
-monkey.patch_all()
 
 
 

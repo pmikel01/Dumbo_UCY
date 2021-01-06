@@ -1,6 +1,6 @@
-import gevent
+from gevent import monkey; monkey.patch_all()
+
 from gevent.server import StreamServer
-from gevent import lock, monkey, socket
 import pickle
 from typing import Callable
 import os
@@ -8,7 +8,6 @@ import logging
 import traceback
 from multiprocessing import Value as mpValue, Process
 
-monkey.patch_all()
 
 
 # Network node class: deal with socket communications

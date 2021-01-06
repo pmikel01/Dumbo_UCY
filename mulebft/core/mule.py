@@ -1,3 +1,5 @@
+from gevent import monkey; monkey.patch_all()
+
 import hashlib
 import json
 import logging
@@ -7,7 +9,7 @@ import traceback
 import gevent
 import time
 import numpy as np
-from gevent import monkey, Greenlet
+from gevent import Greenlet
 from gevent.event import Event
 from gevent.queue import Queue
 from collections import namedtuple
@@ -27,7 +29,6 @@ from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.exceptions import UnknownTagError
 from crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
 
-monkey.patch_all()
 
 def set_consensus_log(id: int):
     logger = logging.getLogger("consensus-node-"+str(id))

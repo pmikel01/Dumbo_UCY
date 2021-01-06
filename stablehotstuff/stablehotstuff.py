@@ -1,3 +1,5 @@
+from gevent import monkey; monkey.patch_all()
+
 import hashlib
 import logging
 import os
@@ -5,13 +7,12 @@ import pickle
 import gevent
 import time
 import numpy as np
-from gevent import monkey, Greenlet
+from gevent import Greenlet
 from gevent.queue import Queue
 from stablehotstuff.hotstuff_notimeout import hsfastpath_notimeout
 from crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
 from crypto.ecdsa.ecdsa import PrivateKey
 
-monkey.patch_all()
 
 
 def set_consensus_log(id: int):

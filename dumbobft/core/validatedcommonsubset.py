@@ -1,3 +1,5 @@
+from gevent import monkey; monkey.patch_all()
+
 import time
 import traceback
 from datetime import datetime
@@ -5,12 +7,10 @@ from datetime import datetime
 import gevent
 from collections import namedtuple
 from enum import Enum
-from gevent import monkey
 from dumbobft.core.validatedagreement import validatedagreement
 from gevent.queue import Queue
 from honeybadgerbft.exceptions import UnknownTagError
 
-monkey.patch_all()
 
 
 

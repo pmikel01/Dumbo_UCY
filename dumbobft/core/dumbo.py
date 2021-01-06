@@ -1,3 +1,5 @@
+from gevent import monkey; monkey.patch_all()
+
 import json
 import logging
 import os
@@ -6,17 +8,15 @@ import gevent
 import numpy as np
 from collections import namedtuple
 from enum import Enum
-from gevent import monkey, Greenlet
+from gevent import Greenlet
 from gevent.queue import Queue
 from dumbobft.core.dumbocommonsubset import dumbocommonsubset
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
 from dumbobft.core.validators import prbc_validate
-from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
 
-monkey.patch_all()
 
 def set_consensus_log(id: int):
     logger = logging.getLogger("consensus-node-"+str(id))

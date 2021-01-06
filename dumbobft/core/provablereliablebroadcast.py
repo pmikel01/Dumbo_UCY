@@ -1,14 +1,12 @@
+from gevent import monkey; monkey.patch_all()
+
 from datetime import datetime
 import time
 from collections import defaultdict
-import gevent
-from gevent import monkey
-
 from crypto.ecdsa.ecdsa import ecdsa_vrfy, ecdsa_sign
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 from honeybadgerbft.core.reliablebroadcast import encode, decode
 import hashlib, pickle
-monkey.patch_all()
 
 def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()

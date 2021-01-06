@@ -1,11 +1,11 @@
+from gevent import monkey; monkey.patch_all()
+
 import gevent
-from gevent import monkey
 from gevent.event import Event
 from collections import defaultdict
 import logging
 from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
 
-monkey.patch_all()
 
 
 logger = logging.getLogger(__name__)

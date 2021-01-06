@@ -1,14 +1,10 @@
+from gevent import monkey; monkey.patch_all()
 import time
 
 import gevent
-from gevent import monkey
 from gevent.event import Event
 from collections import defaultdict
-import logging
 from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
-
-
-monkey.patch_all()
 
 
 def handle_conf_messages(*, sender, message, conf_values, pid, bv_signal):

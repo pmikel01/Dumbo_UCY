@@ -1,12 +1,12 @@
-import logging
+from gevent import monkey; monkey.patch_all()
 
+import logging
 from crypto.threshsig.boldyreva import g12deserialize, g12serialize
 from collections import defaultdict
-from gevent import Greenlet, monkey
+from gevent import Greenlet
 from gevent.queue import Queue
 import hashlib
 
-monkey.patch_all()
 
 logger = logging.getLogger(__name__)
 

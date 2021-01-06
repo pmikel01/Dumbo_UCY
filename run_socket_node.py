@@ -1,10 +1,11 @@
+from gevent import monkey; monkey.patch_all()
+
 import time
 import random
 import traceback
 from typing import List, Callable
-from gevent import monkey, Greenlet
+from gevent import Greenlet
 from myexperiements.sockettest.dumbo_node import DumboBFTNode
-from myexperiements.sockettest.dumbox_node import DumboXBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
 from myexperiements.sockettest.hotstuff_node import HotstuffBFTNode
 from network.socket_server import NetworkServer
@@ -12,7 +13,6 @@ from network.socket_client import NetworkClient
 from multiprocessing import Value as mpValue, Queue as mpQueue
 from ctypes import c_bool
 
-monkey.patch_all()
 
 def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
                          stop: mpValue, protocol="mule", mute=False, F=100000):

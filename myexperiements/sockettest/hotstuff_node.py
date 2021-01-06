@@ -1,3 +1,5 @@
+from gevent import monkey; monkey.patch_all()
+
 from stablehotstuff.stablehotstuff import Hotstuff
 from typing import List, Callable
 import os

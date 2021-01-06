@@ -1,14 +1,13 @@
+from gevent import monkey; monkey.patch_all()
+
 import copy
 import time
 import traceback
-import logging
 from datetime import datetime
-
 import gevent
 import numpy as np
 from collections import namedtuple
-
-from gevent import monkey, Greenlet
+from gevent import Greenlet
 from gevent.event import Event
 from enum import Enum
 from collections import defaultdict
@@ -18,9 +17,7 @@ from dumbobft.core.baisedbinaryagreement import baisedbinaryagreement
 from dumbobft.core.consistentbroadcast import consistentbroadcast
 from dumbobft.core.validators import cbc_validate
 from honeybadgerbft.exceptions import UnknownTagError
-from crypto.threshsig.boldyreva import serialize, deserialize1
 
-monkey.patch_all()
 
 
 class MessageTag(Enum):

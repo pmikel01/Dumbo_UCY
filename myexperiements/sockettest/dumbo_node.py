@@ -1,3 +1,5 @@
+from gevent import monkey; monkey.patch_all()
+
 import random
 from typing import  Callable
 import os
