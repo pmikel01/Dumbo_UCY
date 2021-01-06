@@ -235,7 +235,10 @@ class Dumbo():
         vacs_input = Queue(1)
 
         prbc_outputs = [Queue(1) for _ in range(N)]
+        prbc_proofs = dict()
+
         vacs_output = Queue(1)
+
 
 
         recv_queues = BroadcastReceiverQueues(
@@ -265,10 +268,16 @@ class Dumbo():
 
             # Only leader gets input
             prbc_input = my_prbc_input.get if j == pid else None
-            prbc_thread = Greenlet(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
+            prbc_thread = gevent.spawn(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
                                prbc_input, prbc_recvs[j].get, prbc_send)
-            prbc_thread.start()
-            prbc_outputs[j] = prbc_thread.get  # block for output from rbc
+            #prbc_threads[j] = prbc_thread  # block for output from rbc
+
+            def wait_for_prbc_output():
+                value, proof = prbc_thread.get()
+                prbc_proofs[sid+'PRBC'+str(r)+str(j)] = proof
+                prbc_outputs[j].put_nowait((value, proof))
+
+            gevent.spawn(wait_for_prbc_output)
 
         def _setup_vacs():
 
@@ -281,6 +290,15 @@ class Dumbo():
                 prbc_sid = sid + 'PRBC' + str(r) + str(j)
                 try:
                     proof = vj
+                    if prbc_sid in prbc_proofs.keys():
+                        try:
+                            _, _roothash, _ = proof
+                            _, roothash, _ = prbc_proofs[prbc_sid]
+                            assert roothash == _roothash
+                            return True
+                        except:
+                            print("1 Failed to verify proof for RBC")
+                            return False
                     assert prbc_validate(prbc_sid, N, f, self.sPK2s, proof)
                     return True
                 except AssertionError:
@@ -308,7 +326,7 @@ class Dumbo():
             send(-1, ('TPKE', '', o))
 
         # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
-        dumboacs_thread = Greenlet(dumbocommonsubset, pid, N, f, prbc_outputs,
+        dumboacs_thread = Greenlet(dumbocommonsubset, pid, N, f, [prbc_output.get for prbc_output in prbc_outputs],
                            vacs_input.put_nowait,
                            vacs_output.get)
 
