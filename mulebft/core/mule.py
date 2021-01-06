@@ -393,9 +393,10 @@ class Mule():
         start_vc = time.time()
 
         # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
+        notarization = None
         try:
             notarization = fast_thread.get(block=False)
-            notarized_block = None
+            #notarized_block = None
             if notarization is not None:
                 notarized_block = latest_notarized_block
                 payload_digest = hash(notarized_block[3])
@@ -407,13 +408,14 @@ class Mule():
                 o = (notarized_block_header, notarized_block_raw_Sig)
                 for j in range(N):
                     send(j, ('VIEW_CHANGE', '', o))
-            else:
+        except:
+            pass
+        finally:
+            if notarization is None:
                 notarized_block_header = None
                 o = (notarized_block_header, None)
                 for j in range(N):
                     send(j, ('VIEW_CHANGE', '', o))
-        except:
-            pass
 
         #
         delivered_slots = tcvba_output.get()  # Block to receive the output

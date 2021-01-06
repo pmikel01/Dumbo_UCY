@@ -106,6 +106,7 @@ if __name__ == '__main__':
         bft_to_client = client_bft_mpq.put_nowait
 
         server_bft_mpq = mpQueue()
+        #bft_from_server = server_bft_mpq.get
         bft_from_server = lambda: server_bft_mpq.get(timeout=0.00001)
         server_to_bft = server_bft_mpq.put_nowait
 
