@@ -12,6 +12,8 @@ from gevent.event import Event
 from gevent.queue import Queue
 from collections import namedtuple
 from enum import Enum
+
+from dumbobft.core.validators import prbc_validate
 from mulebft.core.hsfastpath import hsfastpath
 from mulebft.core.twovalueagreement import twovalueagreement
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
@@ -24,7 +26,6 @@ from crypto.ecdsa.ecdsa import PrivateKey
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.exceptions import UnknownTagError
 from crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
-monkey.patch_all()
 
 
 def set_consensus_log(id: int):
@@ -336,9 +337,6 @@ class Mule():
 
             while True:
 
-                gevent.sleep(0)
-                time.sleep(0)
-
                 j, (notarized_block_header_j, notarized_block_Sig_j) = viewchange_recv.get()
                 if notarized_block_Sig_j is not None:
                     (_, slot_num, Sig_p, _) = notarized_block_header_j
@@ -363,7 +361,6 @@ class Mule():
                 if viewchange_counter >= N - f:
                     tcvba_input.put_nowait(viewchange_max_slot)
                     break
-
 
         # Start the fast path
 
@@ -465,7 +462,7 @@ class Mule():
 
                 # Only leader gets input
                 prbc_input = my_prbc_input.get if j == pid else None
-                prbc = gevent.spawn(provablereliablebroadcast, epoch_id+'PRBC'+str(j), pid, N, f, self.sPK1, self.sSK1, j,
+                prbc = gevent.spawn(provablereliablebroadcast, epoch_id+'PRBC'+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
                                    prbc_input, prbc_recvs[j].get, prbc_send)
                 prbc_outputs[j] = prbc.get  # block for output from rbc
 
@@ -476,16 +473,17 @@ class Mule():
                     send(k, ('ACS_VACS', '', o))
 
                 def vacs_predicate(j, vj):
+                    prbc_sid = epoch_id+'PRBC'+str(j)
                     try:
-                        sid, roothash, raw_Sig = vj
-                        digest = self.sPK1.hash_message(str((sid, j, roothash)))
-                        assert self.sPK1.verify_signature(deserialize1(raw_Sig), digest)
+                        proof = vj
+                        assert prbc_validate(prbc_sid, N, f, self.sPK2s, proof)
                         return True
                     except AssertionError:
-                        print("Failed to verify proof for RBC")
+                        print("2 Failed to verify proof for RBC")
                         return False
 
-                gevent.spawn(validatedcommonsubset, epoch_id+'VACS', pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
+                gevent.spawn(validatedcommonsubset, epoch_id+'VACS', pid, N, f,
+                             self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                              vacs_input.get, vacs_output.put_nowait,
                              vacs_recv.get, vacs_send, vacs_predicate)
 
@@ -501,7 +499,6 @@ class Mule():
                 """Threshold encryption broadcast."""
                 def broadcast(o):
                     """Multicast the given input ``o``.
-
                     :param o: Input to multicast.
                     """
                     for j in range(N):

@@ -1,6 +1,9 @@
 import copy
+import time
 import traceback
 import logging
+from datetime import datetime
+
 import gevent
 import numpy as np
 from collections import namedtuple
@@ -13,10 +16,10 @@ from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
 from dumbobft.core.baisedbinaryagreement import baisedbinaryagreement
 from dumbobft.core.consistentbroadcast import consistentbroadcast
+from dumbobft.core.validators import cbc_validate
 from honeybadgerbft.exceptions import UnknownTagError
 from crypto.threshsig.boldyreva import serialize, deserialize1
 
-monkey.patch_all()
 
 
 class MessageTag(Enum):
@@ -34,7 +37,7 @@ MessageReceiverQueues = namedtuple(
 
 def recv_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0.0001)
+        #gevent.sleep(0.0001)
         sender, (tag, j, msg) = recv_func()
         #print("recv2", (sender, (tag, j, msg)))
 
@@ -52,10 +55,9 @@ def recv_loop(recv_func, recv_queues):
             traceback.print_exc(e)
 
 
-logger = logging.getLogger(__name__)
 
 
-def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, predicate=lambda x: True):
+def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decide, receive, send, predicate=lambda x: True, logger=None):
     """Multi-valued Byzantine consensus. It takes an input ``vi`` and will
     finally writes the decided value into ``decide`` channel.
 
@@ -67,6 +69,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     :param SK: ``boldyreva.TBLSPrivateKey`` with threshold f+1
     :param PK1: ``boldyreva.TBLSPublicKey`` with threshold n-f
     :param SK1: ``boldyreva.TBLSPrivateKey`` with threshold n-f
+    :param list PK2s: an array of ``coincurve.PublicKey'', i.e., N public keys of ECDSA for all parties
+    :param PublicKey SK2: ``coincurve.PrivateKey'', i.e., secret key of ECDSA
     :param input: ``input()`` is called to receive an input
     :param decide: ``decide()`` is eventually called
     :param receive: receive channel
@@ -101,6 +105,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     coin_recv = Queue()
     commit_recvs = [Queue() for _ in range(N)]
 
+    cbc_threads = [None] * N
     cbc_outputs = [Queue(1) for _ in range(N)]
     commit_outputs = [Queue(1) for _ in range(N)]
     aba_outputs = defaultdict(lambda: Queue(1))
@@ -136,10 +141,11 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
         # Only leader gets input
         cbc_input = my_cbc_input.get if j == pid else None
-        cbc = gevent.spawn(consistentbroadcast, sid + 'CBC' + str(j), pid, N, f, PK1, SK1, j,
-                           cbc_input, cbc_recvs[j].get, make_cbc_send(j))
+        cbc = gevent.spawn(consistentbroadcast, sid + 'CBC' + str(j), pid, N, f, PK2s, SK2, j,
+                           cbc_input, cbc_recvs[j].get, make_cbc_send(j), logger)
         # cbc.get is a blocking function to get cbc output
-        cbc_outputs[j] = cbc.get
+        #cbc_outputs[j].put_nowait(cbc.get())
+        cbc_threads[j] = cbc
 
     """ 
     Setup the sub protocols Commit CBCs"""
@@ -158,8 +164,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
         # Only leader gets input
         commit_input = my_commit_input.get if j == pid else None
-        commit = gevent.spawn(consistentbroadcast, sid + 'COMMIT-CBC' + str(j), pid, N, f, PK1, SK1, j,
-                           commit_input, commit_recvs[j].get, make_commit_send(j))
+        commit = gevent.spawn(consistentbroadcast, sid + 'COMMIT-CBC' + str(j), pid, N, f, PK2s, SK2, j,
+                           commit_input, commit_recvs[j].get, make_commit_send(j), logger)
         # commit.get is a blocking function to get commit-cbc output
         commit_outputs[j] = commit.get
 
@@ -173,7 +179,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         send(-1, ('VABA_COIN', 'leader_election', o))
 
     permutation_coin = shared_coin(sid + 'COIN', pid, N, f,
-                               PK, SK, coin_bcast, coin_recv.get, False)
+                               PK, SK, coin_bcast, coin_recv.get, False, logger)
     # False means to get a coin of 256 bits instead of a single bit
 
     """ 
@@ -188,20 +194,25 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     Run n CBC instance to consistently broadcast input values
     """
 
-    cbc_values = [None] * N
+    #cbc_values = [Queue(1) for _ in range(N)]
 
-    v = input()
-    assert predicate(v)
-    my_cbc_input.put_nowait(v)
+    def wait_for_input():
+        v = input()
+        if logger != None:
+            logger.info("VABA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+        #assert predicate(v)
+        my_cbc_input.put_nowait(v)
+
+    gevent.spawn(wait_for_input)
 
     wait_cbc_signal = Event()
     wait_cbc_signal.clear()
 
     def wait_for_cbc_to_continue(leader):
         # Receive output from CBC broadcast for input values
-        msg, raw_Sigma = cbc_outputs[leader]()
+        msg, sigmas = cbc_threads[leader].get()
         if predicate(msg):
-            cbc_values[leader] = (msg, raw_Sigma)  # May block
+            cbc_outputs[leader].put_nowait((msg, sigmas))
             is_cbc_delivered[leader] = 1
             if sum(is_cbc_delivered) >= N - f:
                 wait_cbc_signal.set()
@@ -233,9 +244,9 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
     def wait_for_commit_to_continue(leader):
         # Receive output from CBC broadcast for commitment
-        cl = commit_outputs[leader]()
-        if (sum(cl[0]) >= N - f) and all(item == 0 or 1 for item in cl[0]): #
-            commit_values[leader] = cl # May block
+        commit_list, proof = commit_outputs[leader]()
+        if (sum(commit_list) >= N - f) and all(item == 0 or 1 for item in commit_list): #
+            commit_values[leader] = commit_list # May block
             is_commit_delivered[leader] = 1
             if sum(is_commit_delivered) >= N - f:
                 wait_commit_signal.set()
@@ -268,35 +279,35 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     votes = defaultdict(set)
 
     while True:
-        gevent.sleep(0)
+        #gevent.sleep(0)
 
         a = pi[r]
         if is_cbc_delivered[a] == 1:
-            vote = (a, 1, cbc_values[a])
+            vote = (a, 1, cbc_outputs[a].queue[0])
         else:
             vote = (a, 0, "Bottom")
 
-        for j in range(N):
-            send(j, ('VABA_VOTE', r, vote))
+        send(-1, ('VABA_VOTE', r, vote))
 
         ballot_counter = 0
 
         while True:
-            gevent.sleep(0)
 
-            sender, msg = vote_recvs[r].get()
-            a, ballot_bit, o = msg
+            sender, vote = vote_recvs[r].get()
+            a, ballot_bit, cbc_out = vote
             if (pi[r] == a) and (ballot_bit == 0 or ballot_bit == 1):
                 if ballot_bit == 1:
-                    (m, raw_Sig) = o
-                    digestFromLeader = PK1.hash_message(str((sid + 'CBC' + str(a), a, m)))
-                    PK1.verify_signature(deserialize1(raw_Sig), digestFromLeader)
-                    votes[r].add((sender, msg))
-                    ballot_counter += 1
+                    try:
+                        (m, sigmas) = cbc_out
+                        cbc_sid = sid + 'CBC' + str(a)
+                        assert cbc_validate(cbc_sid, N, f, PK2s, m, sigmas)
+                        votes[r].add((sender, vote))
+                        ballot_counter += 1
+                    except:
+                        print("Invalid voting ballot")
                 else:
-                    if commit_values[sender] is not None and commit_values[sender][0][a] == 0:
-                        votes[r].add((sender, msg))
-
+                    if commit_values[sender] is not None and commit_values[sender][a] == 0:
+                        votes[r].add((sender, vote))
                         ballot_counter += 1
 
             if len(votes[r]) >= N - f:
@@ -305,10 +316,11 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         # print(votes[r])
         aba_r_input = 0
         for vote in votes[r]:
-            _, (_, bit, cbc_value) = vote
+            _, (_, bit, cbc_out) = vote
             if bit == 1:
                 aba_r_input = 1
-                cbc_values[a] = cbc_value
+                if is_cbc_delivered[a] == 0:
+                    cbc_outputs[a].put_nowait(cbc_out)
 
         def aba_coin_bcast(o):
             """Common coin multicast operation.
@@ -318,7 +330,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
         coin = shared_coin(sid + 'COIN' + str(r), pid, N, f,
                            PK, SK,
-                           aba_coin_bcast, aba_coin_recvs[r].get)
+                           aba_coin_bcast, aba_coin_recvs[r].get, logger)
 
         def make_aba_send(rnd): # this make will automatically deep copy the enclosed send func
             def aba_send(k, o):
@@ -333,16 +345,15 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         # Only leader gets input
         aba = gevent.spawn(baisedbinaryagreement, sid + 'ABA' + str(r), pid, N, f, coin,
                      aba_inputs[r].get, aba_outputs[r].put_nowait,
-                     aba_recvs[r].get, make_aba_send(r))
+                     aba_recvs[r].get, make_aba_send(r), logger)
         # aba.get is a blocking function to get aba output
         aba_inputs[r].put_nowait(aba_r_input)
         aba_r = aba_outputs[r].get()
         # print("Round", r, "ABA outputs", aba_r)
-
         if aba_r == 1:
             break
-
         r += 1
-
     assert a is not None
-    decide(cbc_values[a][0])  # In rare cases, there could return None. We let higher level caller of VABA to deal that
+    if logger != None:
+        logger.info("VABA %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+    decide(cbc_outputs[a].get()[0])

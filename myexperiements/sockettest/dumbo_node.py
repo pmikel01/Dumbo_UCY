@@ -6,7 +6,7 @@ from gevent import time
 from dumbobft.core.dumbo import Dumbo
 from myexperiements.sockettest.make_random_tx import tx_generator
 from multiprocessing import Value as mpValue
-
+from coincurve import PrivateKey, PublicKey
 
 def load_key(id, N):
 
@@ -15,6 +15,11 @@ def load_key(id, N):
 
     with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sPK1.key', 'rb') as fp:
         sPK1 = pickle.load(fp)
+
+    sPK2s = []
+    for i in range(N):
+        with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sPK2-' + str(i) + '.key', 'rb') as fp:
+            sPK2s.append(PublicKey(pickle.load(fp)))
 
     with open(os.getcwd() + '/keys-' + str(N) + '/' + 'ePK.key', 'rb') as fp:
         ePK = pickle.load(fp)
@@ -25,16 +30,18 @@ def load_key(id, N):
     with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sSK1-' + str(id) + '.key', 'rb') as fp:
         sSK1 = pickle.load(fp)
 
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sSK2-' + str(id) + '.key', 'rb') as fp:
+        sSK2 = PrivateKey(pickle.load(fp))
+
     with open(os.getcwd() + '/keys-' + str(N) + '/' + 'eSK-' + str(id) + '.key', 'rb') as fp:
         eSK = pickle.load(fp)
 
-    return sPK, sPK1, ePK, sSK, sSK1, eSK
-
+    return sPK, sPK1, sPK2s, ePK, sSK, sSK1, sSK2, eSK
 
 class DumboBFTNode (Dumbo):
 
     def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
-        self.sPK, self.sPK1, self.ePK, self.sSK, self.sSK1, self.eSK = load_key(id, N)
+        self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
         self.bft_from_server = bft_from_server
         self.bft_to_client = bft_to_client
         self.send = lambda j, o: self.bft_to_client((j, o))
@@ -42,7 +49,7 @@ class DumboBFTNode (Dumbo):
         self.ready = ready
         self.stop = stop
         self.mode = mode
-        Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute)
+        Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute)
 
     def prepare_bootstrap(self):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))

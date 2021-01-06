@@ -44,7 +44,7 @@ def deserialize_UVW(U, V, W):
     return U, V, W
 
 
-def honeybadger_block(pid, N, f, PK, SK, propose, acs_put_in, acs_get_out, tpke_bcast, tpke_recv):
+def honeybadger_block(pid, N, f, PK, SK, propose, acs_put_in, acs_get_out, tpke_bcast, tpke_recv, logger=None):
     """The HoneyBadgerBFT algorithm for a single block
 
     :param pid: my identifier

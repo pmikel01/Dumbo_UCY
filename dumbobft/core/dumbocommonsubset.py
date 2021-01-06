@@ -1,10 +1,10 @@
+from datetime import datetime
+
 import gevent
-from gevent import monkey
-
-monkey.patch_all()
 
 
-def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out):
+
+def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out, logger=None):
     """The BKR93 algorithm for asynchronous common subset.
 
     :param pid: my identifier
@@ -38,13 +38,15 @@ def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out):
         is_prbc_delivered[leader] = 1
         if leader == pid:
             vacs_in(prbc_proofs[leader])
+            if logger != None:
+                logger.info("DumboACS transfers prbc out to vacs in at %s" % datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
 
     prbc_threads = [gevent.spawn(wait_for_prbc_to_continue, j) for j in range(N)]
 
     prbc_proofs_vector = vacs_out()
 
     if prbc_proofs_vector is not None:
-        assert type(prbc_proofs_vector) == list and len(prbc_proofs_vector) == N
+        #assert type(prbc_proofs_vector) == list and len(prbc_proofs_vector) == N
         for j in range(N):
             if prbc_proofs_vector[j] is not None:
                 prbc_threads[j].join()

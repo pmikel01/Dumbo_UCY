@@ -1,57 +1,25 @@
-# coding=utf-8
+from datetime import datetime
 import time
 from collections import defaultdict
-from typing import List
 import gevent
-from gevent import monkey
-from crypto.threshsig.boldyreva import serialize, deserialize1
+from crypto.ecdsa.ecdsa import ecdsa_vrfy, ecdsa_sign
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 from honeybadgerbft.core.reliablebroadcast import encode, decode
-#from pyeclib.ec_iface import ECDriver
+import hashlib, pickle
 
-monkey.patch_all()
+def hash(x):
+    return hashlib.sha256(pickle.dumps(x)).digest()
 
-#
-# def encode(K: int, N: int, m):
-#     coder = ECDriver(k=K, m=N-K, ec_type='isa_l_rs_vand')
-#     assert coder.k == K
-#     assert coder.m == N - K
-#     try:
-#         m = m.encode()
-#     except AttributeError:
-#         pass
-#     stripes = [_ for _ in coder.encode(m)]
-#     #assert len(stripes[0]) == len(stripes[-1])
-#     #print(str(len(stripes[0])))
-#     return stripes
-#
-# def decode(K: int, N: int, stripes: List[bytes]):
-#     coder = ECDriver(k=K, m=N-K, ec_type='isa_l_rs_vand')
-#     #assert len(stripes) == N
-#     #assert len(stripes) == coder.k + coder.m
-#     blocks = []
-#     for block in stripes:
-#         if block is None:
-#             continue
-#         blocks.append(block)
-#         if len(blocks) == K:
-#             break
-#     else:
-#         raise ValueError("Too few to recover")
-#     rec = coder.decode(blocks)
-#     return rec
-
-
-
-
-def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send, logger=None):
-    """Reliable broadcast
+def provablereliablebroadcast(sid, pid, N, f,  PK2s, SK2, leader, input, receive, send, logger=None):
+    """Reliable broadcastdef hash(x):
+    return hashlib.sha256(pickle.dumps(x)).digest()
 
     :param int pid: ``0 <= pid < N``
     :param int N:  at least 3
     :param int f: fault tolerance, ``N >= 3f + 1``
-    :param PK1: ``boldyreva.TBLSPublicKey`` with threshold n-f
-    :param SK1: ``boldyreva.TBLSPrivateKey`` with threshold n-f
+
+    :param list PK2s: an array of ``coincurve.PublicKey'', i.e., N public keys of ECDSA for all parties
+    :param PublicKey SK2: ``coincurve.PrivateKey'', i.e., secret key of ECDSA
     :param int leader: ``0 <= leader < N``
     :param input: if ``pid == leader``, then :func:`input()` is called
         to wait for the input value
@@ -116,20 +84,18 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
         #print("block to wait for RBC input")
         m = input()  # block until an input is received
         #print("RBC input received: ", m)
-        # XXX Python 3 related issue, for now let's tolerate both bytes and
-        # strings
-        # (with Python 2 it used to be: assert type(m) is str)
-        assert isinstance(m, (str, bytes))
+        if logger != None:
+            logger.info("ABA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+        # assert isinstance(m, (str, bytes))
         # print('Input received: %d bytes' % (len(m),))
-        start = time.time()
         stripes = encode(K, N, m)
         mt = merkleTree(stripes)  # full binary tree
         roothash = mt[1]
         for i in range(N):
             branch = getMerkleBranch(i, mt)
             send(i, ('VAL', roothash, branch, stripes[i]))
-        end = time.time()
         #print("encoding time: " + str(end - start))
+
 
     # TODO: filter policy: if leader, discard all messages until sending VAL
 
@@ -144,20 +110,15 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
 
     def decode_output(roothash):
         # Rebuild the merkle tree to guarantee decoding is correct
-        start = time.time()
         m = decode(K, N, stripes[roothash])
         _stripes = encode(K, N, m)
         _mt = merkleTree(_stripes)
         _roothash = _mt[1]
         # TODO: Accountability: If this fails, incriminate leader
         assert _roothash == roothash
-        end = time.time()
-        #print("decoding time:" + str(end - start))
         return m
 
     while True:  # main receive loop
-        gevent.sleep(0.0001)
-
         sender, msg = receive()
         if msg[0] == 'VAL' and fromLeader is None:
             # Validation
@@ -170,7 +131,6 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
             except Exception as e:
                 print("Failed to validate VAL message:", e)
                 continue
-
             # Update
             fromLeader = roothash
             broadcast(('ECHO', roothash, branch, stripe))
@@ -195,24 +155,22 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
 
             if echoCounter[roothash] >= EchoThreshold and not readySent:
                 readySent = True
-                digest = PK1.hash_message(str((sid, leader, roothash)))
-                # print((sid, leader, roothash))
-                # print(digest)
-                broadcast(('READY', roothash, serialize(SK1.sign(digest))))
+                digest = hash((sid, roothash))
+                sig = ecdsa_sign(SK2, digest)
+                send(-1, ('READY', roothash, sig))
 
             #if len(ready[roothash]) >= OutputThreshold and echoCounter[roothash] >= K:
             #    return decode_output(roothash)
 
         elif msg[0] == 'READY':
-            (_, roothash, raw_sigma) = msg
-            sigma = deserialize1(raw_sigma)
+            (_, roothash, sig) = msg
             # Validation
             if sender in ready[roothash] or sender in readySenders:
                 print("Redundant READY")
                 continue
             try:
-                digest = PK1.hash_message(str((sid, leader, roothash)))
-                assert PK1.verify_share(sigma, sender, digest)
+                digest = hash((sid, roothash))
+                assert ecdsa_vrfy(PK2s[sender], digest, sig)
             except AssertionError:
                 print("Signature share failed in PRBC!", (sid, pid, sender, msg))
                 continue
@@ -220,18 +178,21 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
             # Update
             ready[roothash].add(sender)
             readySenders.add(sender)
-            readySigShares[sender] = sigma
+            readySigShares[sender] = sig
 
             # Amplify ready messages
             if len(ready[roothash]) >= ReadyThreshold and not readySent:
                 readySent = True
-                digest = PK1.hash_message(str((sid, leader, roothash)))
-                broadcast(('READY', roothash, serialize(SK1.sign(digest))))
+                digest = hash((sid, roothash))
+                sig = ecdsa_sign(SK2, digest)
+                send(-1, ('READY', roothash, sig))
 
             if len(ready[roothash]) >= OutputThreshold and echoCounter[roothash] >= K:
-                sigmas = dict(list(readySigShares.items())[:OutputThreshold])
-                Sigma = PK1.combine_shares(sigmas)
+                sigmas = tuple(list(readySigShares.items())[:OutputThreshold])
                 value = decode_output(roothash)
-                proof = (sid, roothash, serialize(Sigma))
+                proof = (sid, roothash, sigmas)
                 #print("RBC finished for leader", leader)
+                if logger != None:
+                    logger.info(
+                        "ABA %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
                 return value, proof

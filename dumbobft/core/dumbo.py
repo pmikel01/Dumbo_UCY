@@ -11,10 +11,10 @@ from gevent.queue import Queue
 from dumbobft.core.dumbocommonsubset import dumbocommonsubset
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
+from dumbobft.core.validators import prbc_validate
 from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
-monkey.patch_all()
 
 
 def set_consensus_log(id: int):
@@ -43,7 +43,7 @@ BroadcastReceiverQueues = namedtuple(
 
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0.0001)
+        #gevent.sleep(0)
         sender, (tag, j, msg) = recv_func()
         if tag not in BroadcastTag.__members__:
             # TODO Post python 3 port: Add exception chaining.
@@ -78,6 +78,8 @@ class Dumbo():
         (:math:`\mathsf{TSIG}`) scheme.
     :param TBLSPrivateKey sSK1: Signing key of the (N-f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
+    :param list sPK2s: Public key(s) of ECDSA signature for all N parties.
+    :param PrivateKey sSK2: Signing key of ECDSA signature.
     :param str ePK: Public key of the threshold encryption
         (:math:`\mathsf{TPKE}`) scheme.
     :param str eSK: Signing key of the threshold encryption
@@ -87,7 +89,7 @@ class Dumbo():
     :param K: a test parameter to specify break out after K rounds
     """
 
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, ePK, eSK, send, recv, K=3, mute=False):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, mute=False):
         self.sid = sid
         self.id = pid
         self.B = B
@@ -97,6 +99,8 @@ class Dumbo():
         self.sSK = sSK
         self.sPK1 = sPK1
         self.sSK1 = sSK1
+        self.sPK2s = sPK2s
+        self.sSK2 = sSK2
         self.ePK = ePK
         self.eSK = eSK
         self._send = send
@@ -127,22 +131,6 @@ class Dumbo():
     def run_bft(self):
         """Run the Dumbo protocol."""
 
-        if self.mute:
-
-            def send_blackhole(*args):
-                pass
-
-            def recv_blackhole(*args):
-                while True:
-                    gevent.sleep(1)
-                    time.sleep(1)
-                    pass
-
-            seed = int.from_bytes(self.sid.encode('utf-8'), 'little')
-            if self.id in np.random.RandomState(seed).permutation(self.N)[:int((self.N - 1) / 3)]:
-                self._send = send_blackhole
-                self._recv = recv_blackhole
-
         def _recv_loop():
             """Receive messages."""
             #print("start recv loop...")
@@ -171,7 +159,7 @@ class Dumbo():
         while True:
 
             # For each round...
-            gevent.sleep(0)
+            #gevent.sleep(0)
 
             start = time.time()
 
@@ -222,7 +210,7 @@ class Dumbo():
         else:
             print("node %d breaks" % self.id)
 
-        self._recv_thread.join(timeout=2)
+        #self._recv_thread.join(timeout=2)
 
     #
     def _run_round(self, r, tx_to_send, send, recv):
@@ -249,6 +237,16 @@ class Dumbo():
         prbc_outputs = [Queue(1) for _ in range(N)]
         vacs_output = Queue(1)
 
+
+        recv_queues = BroadcastReceiverQueues(
+            ACS_PRBC=prbc_recvs,
+            ACS_VACS=vacs_recv,
+            TPKE=tpke_recv,
+        )
+
+        bc_recv_loop_thread = Greenlet(broadcast_receiver_loop, recv, recv_queues)
+        bc_recv_loop_thread.start()
+
         #print(pid, r, 'tx_to_send:', tx_to_send)
         #if self.logger != None:
         #    self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
@@ -267,8 +265,8 @@ class Dumbo():
 
             # Only leader gets input
             prbc_input = my_prbc_input.get if j == pid else None
-            prbc_thread = Greenlet(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK1, self.sSK1, j,
-                               prbc_input, prbc_recvs[j].get, prbc_send)
+            prbc_thread = Greenlet(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
+                               prbc_input, prbc_recvs[j].get, prbc_send, self.logger)
             prbc_thread.start()
             prbc_outputs[j] = prbc_thread.get  # block for output from rbc
 
@@ -276,21 +274,23 @@ class Dumbo():
 
             def vacs_send(k, o):
                 """Threshold encryption broadcast."""
+                """Threshold encryption broadcast."""
                 send(k, ('ACS_VACS', '', o))
 
             def vacs_predicate(j, vj):
+                prbc_sid = sid + 'PRBC' + str(r) + str(j)
                 try:
-                    sid, roothash, raw_Sig = vj
-                    digest = self.sPK1.hash_message(str((sid, j, roothash)))
-                    assert self.sPK1.verify_signature(deserialize1(raw_Sig), digest)
+                    proof = vj
+                    assert prbc_validate(prbc_sid, N, f, self.sPK2s, proof)
                     return True
                 except AssertionError:
-                    print("Failed to verify proof for RBC")
+                    print("2 Failed to verify proof for RBC")
                     return False
 
-            vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
-                         vacs_input.get, vacs_output.put_nowait,
-                         vacs_recv.get, vacs_send, vacs_predicate)
+            vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f,
+                                   self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
+                                   vacs_input.get, vacs_output.put_nowait,
+                                   vacs_recv.get, vacs_send, vacs_predicate, self.logger)
             vacs_thread.start()
 
         # N instances of PRBC
@@ -310,16 +310,9 @@ class Dumbo():
         # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
         dumboacs_thread = Greenlet(dumbocommonsubset, pid, N, f, prbc_outputs,
                            vacs_input.put_nowait,
-                           vacs_output.get)
-        dumboacs_thread.start()
+                           vacs_output.get, self.logger)
 
-        recv_queues = BroadcastReceiverQueues(
-            ACS_PRBC=prbc_recvs,
-            ACS_VACS=vacs_recv,
-            TPKE=tpke_recv,
-        )
-        bc_recv_loop_thread = Greenlet(broadcast_receiver_loop, recv, recv_queues)
-        bc_recv_loop_thread.start()
+        dumboacs_thread.start()
 
         _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
                           propose=json.dumps(tx_to_send),
@@ -332,7 +325,7 @@ class Dumbo():
             for tx in decoded_batch:
                 block.add(tx)
 
-        bc_recv_loop_thread.join(timeout=0)
+        bc_recv_loop_thread.kill()
 
         return list(block)
 

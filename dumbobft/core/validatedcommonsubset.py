@@ -1,4 +1,7 @@
+import time
 import traceback
+from datetime import datetime
+
 import gevent
 from collections import namedtuple
 from enum import Enum
@@ -7,7 +10,6 @@ from dumbobft.core.validatedagreement import validatedagreement
 from gevent.queue import Queue
 from honeybadgerbft.exceptions import UnknownTagError
 
-monkey.patch_all()
 
 
 
@@ -22,7 +24,7 @@ MessageReceiverQueues = namedtuple(
 
 def vacs_msg_receiving_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0.0001)
+        #gevent.sleep(0.0001)
         sender, (tag, msg) = recv_func()
         # print(sender, (tag, msg))
         if tag not in MessageTag.__members__:
@@ -38,7 +40,7 @@ def vacs_msg_receiving_loop(recv_func, recv_queues):
             traceback.print_exc(e)
 
 
-def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, predicate=lambda i, v: True):
+def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decide, receive, send, predicate=lambda i, v: True, logger=None):
     """Validated vector consensus. It takes an input ``vi`` and will
     finally writes the decided value (i.e., a vector of different nodes' vi) into ``decide`` channel.
     Each vi is validated by a predicate function predicate(i, vi)
@@ -51,6 +53,8 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
     :param SK: ``boldyreva.TBLSPrivateKey`` with threshold f+1
     :param PK1: ``boldyreva.TBLSPublicKey`` with threshold n-f
     :param SK1: ``boldyreva.TBLSPrivateKey`` with threshold n-f
+    :param list PK2s: an array of ``coincurve.PublicKey'', i.e., N public keys of ECDSA for all parties
+    :param PublicKey SK2: ``coincurve.PrivateKey'', i.e., secret key of ECDSA
     :param input: ``input()`` is called to receive an input
     :param decide: ``decide()`` is eventually called
     :param receive: receive channel
@@ -60,10 +64,10 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
     #print("Starts to run validated common subset...")
 
-    assert PK.k == f + 1
-    assert PK.l == N
-    assert PK1.k == N - f
-    assert PK1.l == N
+    #assert PK.k == f + 1
+    #assert PK.l == N
+    #assert PK1.k == N - f
+    #assert PK1.l == N
 
     """ 
     """
@@ -109,8 +113,8 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
         return vaba_predicate
 
-    vaba = gevent.spawn(validatedagreement, sid + 'VACS-VABA', pid, N, f, PK, SK, PK1, SK1,
-                        vaba_input.get, vaba_output.put_nowait, vaba_recv.get, make_vaba_send(), make_vaba_predicate())
+    vaba = gevent.spawn(validatedagreement, sid + 'VACS-VABA', pid, N, f, PK, SK, PK1, SK1, PK2s, SK2,
+                        vaba_input.get, vaba_output.put_nowait, vaba_recv.get, make_vaba_send(), make_vaba_predicate(), logger)
 
     """ 
     """
@@ -120,15 +124,18 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
     """ 
     """
 
-    v = input()
-    assert predicate(pid, v)
+    def wait_for_input():
+        v = input()
+        if logger != None:
+            logger.info("VACS %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+        #assert predicate(pid, v)
+        send(-1, ('VACS_VAL', v))
 
-    for k in range(N):
-        send(k, ('VACS_VAL', v))
+    gevent.spawn(wait_for_input)
 
     values = [None] * N
     while True:
-        gevent.sleep(0)
+        #gevent.sleep(0)
         j, vj = value_recv.get()
         if predicate(j, vj):
             valueSenders.add(j)
@@ -138,4 +145,8 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
     vaba_input.put_nowait(tuple(values))
     decide(list(vaba_output.get()))
+
+    if logger != None:
+        logger.info("VACS %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+
     vaba.kill()

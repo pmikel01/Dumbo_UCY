@@ -1,5 +1,4 @@
 import time
-
 import gevent
 from gevent import monkey
 from gevent.event import Event
@@ -7,10 +6,8 @@ from collections import defaultdict
 import logging
 
 from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
-monkey.patch_all()
 
 
-logger = logging.getLogger(__name__)
 #logger.setLevel(logging.DEBUG)
 #ch = logging.StreamHandler(sys.stdout)
 #ch.setFormatter(format)
@@ -50,11 +47,10 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
     def _recv():
         while True:  # not finished[pid]:
 
-            gevent.sleep(0)
+            #gevent.sleep(0)
 
             (sender, msg) = receive()
-            logger.debug(f'receive {msg} from node {sender}',
-                         extra={'nodeid': pid, 'epoch': msg[1]})
+
             assert sender in range(N)
 
             if msg[0] == 'EST':
@@ -66,10 +62,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
                     # because it appeared first, but maybe the protocol simply
                     # needs to continue.
                     # print(f'Redundant EST received by {sender}', msg)
-                    logger.warning(
-                        f'Redundant EST message received by {sender}: {msg}',
-                        extra={'nodeid': pid, 'epoch': msg[1]}
-                    )
+
                     # raise RedundantMessageError(
                     #    'Redundant EST received {}'.format(msg))
                     continue
@@ -79,18 +72,13 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
                 if len(est_values[r][v]) >= f + 1 and not est_sent[r][v]:
                     est_sent[r][v] = True
                     broadcast(('EST', r, v))
-                    logger.debug(f"broadcast {('EST', r, v)}",
-                                 extra={'nodeid': pid, 'epoch': r})
+
 
                 # Output after reaching second threshold
                 if len(est_values[r][v]) >= 2 * f + 1:
-                    logger.debug(
-                        f'add v = {v} to bin_value[{r}] = {int_values[r]}',
-                        extra={'nodeid': pid, 'epoch': r},
-                    )
+
                     int_values[r].add(v)
-                    logger.debug(f'bin_values[{r}] is now: {int_values[r]}',
-                                 extra={'nodeid': pid, 'epoch': r})
+
                     bv_signal.set()
 
             elif msg[0] == 'AUX':
@@ -105,23 +93,16 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
                     # raise RedundantMessageError(
                     #    'Redundant AUX received {}'.format(msg))
                     continue
-                logger.debug(
-                    f'add sender = {sender} to aux_value[{r}][{v}] = {aux_values[r][v]}',
-                    extra={'nodeid': pid, 'epoch': r},
-                )
+
                 aux_values[r][v].add(sender)
-                logger.debug(
-                    f'aux_value[{r}][{v}] is now: {aux_values[r][v]}',
-                    extra={'nodeid': pid, 'epoch': r},
-                )
+
                 bv_signal.set()
 
             elif msg[0] == 'CONF':
                 _, r, v = msg
                 assert len(v) == 1 or len(v) == 2
                 if sender in conf_values[r][v]:
-                    logger.warning(f'Redundant CONF received {msg} by {sender}',
-                                   extra={'nodeid': pid, 'epoch': r})
+
                     # FIXME: Raise for now to simplify things & be consistent
                     # with how other TAGs are handled. Will replace the raise
                     # with a continue statement as part of
@@ -130,10 +111,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
                     #    'Redundant CONF received {}'.format(msg))
                     continue
                 conf_values[r][v].add(sender)
-                logger.debug(
-                    f'add v = {v} to conf_value[{r}] = {conf_values[r]}',
-                    extra={'nodeid': pid, 'epoch': r},
-                )
+
                 bv_signal.set()
 
     # Translate mmr14 broadcast into coin.broadcast
@@ -146,9 +124,9 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
 
     # Block waiting for the input
     # print(pid, sid, 'PRE-ENTERING CRITICAL')
+
     vi = input()
     # print(pid, sid, 'PRE-EXITING CRITICAL', vi)
-
     assert type(vi) is int
     est = vi
     r = 0
@@ -156,10 +134,8 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
     while True:  # Unbounded number of rounds
         # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
 
-        gevent.sleep(0)
+        #gevent.sleep(0)
 
-        logger.info(f'Starting with est = {est}',
-                    extra={'nodeid': pid, 'epoch': r})
 
         if not est_sent[r][est]:
             est_sent[r][est] = True
@@ -169,7 +145,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
 
         while len(int_values[r]) == 0:
             # Block until a value is output
-            gevent.sleep(0)
+            #gevent.sleep(0)
 
             bv_signal.clear()
             bv_signal.wait()
@@ -177,22 +153,11 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
         # print("debug", pid, sid, 'GETS BIN VAL at epoch', r)
 
         w = next(iter(int_values[r]))  # take an element
-        logger.debug(f"broadcast {('AUX', r, w)}",
-                     extra={'nodeid': pid, 'epoch': r})
-        broadcast(('AUX', r, w))
 
-        logger.debug(
-            f'block until at least N-f ({N-f}) AUX values are received',
-            extra={'nodeid': pid, 'epoch': r})
+        broadcast(('AUX', r, w))
 
         while True:
 
-            gevent.sleep(0)
-
-            logger.debug(f'int_values[{r}]: {int_values[r]}',
-                         extra={'nodeid': pid, 'epoch': r})
-            logger.debug(f'aux_values[{r}]: {aux_values[r]}',
-                         extra={'nodeid': pid, 'epoch': r})
             len_int_values = len(int_values[r])
             assert len_int_values == 1 or len_int_values == 2
             if len_int_values == 1:
@@ -206,25 +171,17 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
             bv_signal.clear()
             bv_signal.wait()
 
-        logger.debug(f'Completed AUX phase with values = {values}',
-                     extra={'nodeid': pid, 'epoch': r})
 
         # CONF phase
-        logger.debug(
-            f'block until at least N-f ({N-f}) CONF values are received',
-            extra={'nodeid': pid, 'epoch': r})
+
 
         if not conf_sent[r][tuple(values)]:
-            logger.debug(f"broadcast {('CONF', r, tuple(values))}",
-                     extra={'nodeid': pid, 'epoch': r})
+
             broadcast(('CONF', r, tuple(int_values[r])))
             conf_sent[r][tuple(values)] = True
         while True:
-            gevent.sleep(0)
-            logger.debug(
-                f'looping ... conf_values[epoch] is: {conf_values[r]}',
-                extra={'nodeid': pid, 'epoch': r},
-            )
+            #gevent.sleep(0)
+
             # len_int_values = len(int_values[r])
             # assert len_int_values == 1 or len_int_values == 2
             if len(conf_values[r][tuple(int_values[r])]) >= N - f:
@@ -233,21 +190,12 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
             bv_signal.clear()
             bv_signal.wait()
 
-        logger.debug(f'Completed CONF phase with values = {values}',
-                     extra={'nodeid': pid, 'epoch': r})
-
-        logger.debug(
-            f'Block until receiving the common coin value',
-            extra={'nodeid': pid, 'epoch': r},
-        )
         # Block until receiving the common coin value
 
         # print("debug", pid, sid, 'fetchs a coin at epoch', r)
         s = coin(r)
         # print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
 
-        logger.info(f'Received coin with value = {s}',
-                    extra={'nodeid': pid, 'epoch': r})
 
         try:
             est, already_decided = set_new_estimate(
@@ -260,8 +208,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
         except AbandonedNodeError:
             # print('debug node %d quits %s' % (pid, sid))
             # print('[sid:%s] [pid:%d] QUITTING in round %d' % (sid,pid,r)))
-            logger.debug(f'QUIT!',
-                         extra={'nodeid': pid, 'epoch': r})
+
             _thread_recv.kill()
             return
 
