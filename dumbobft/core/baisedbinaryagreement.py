@@ -8,6 +8,7 @@ import logging
 from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
 
 
+monkey.patch_all()
 
 
 def handle_conf_messages(*, sender, message, conf_values, pid, bv_signal):

@@ -2,9 +2,14 @@ from datetime import datetime
 
 import gevent
 from collections import defaultdict
+
+from gevent import monkey
+
 from crypto.threshsig.boldyreva import serialize, deserialize1
 from crypto.ecdsa.ecdsa import ecdsa_vrfy, ecdsa_sign
 import hashlib, pickle
+
+monkey.patch_all()
 
 def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()

@@ -20,6 +20,7 @@ from dumbobft.core.validators import cbc_validate
 from honeybadgerbft.exceptions import UnknownTagError
 from crypto.threshsig.boldyreva import serialize, deserialize1
 
+monkey.patch_all()
 
 
 class MessageTag(Enum):

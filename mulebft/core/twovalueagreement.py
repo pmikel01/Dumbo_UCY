@@ -7,6 +7,7 @@ import logging
 
 from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
 
+monkey.patch_all()
 
 
 
