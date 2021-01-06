@@ -1,4 +1,4 @@
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey; monkey.patch_all(thread=False)
 
 import random
 from typing import  Callable

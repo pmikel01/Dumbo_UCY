@@ -1,4 +1,4 @@
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey; monkey.patch_all(thread=False)
 
 from stablehotstuff.stablehotstuff import Hotstuff
 from typing import List, Callable
