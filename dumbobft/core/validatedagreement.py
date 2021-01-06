@@ -213,13 +213,13 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
         msg, sigmas = cbc_threads[leader].get()
         if predicate(msg):
             try:
-                cbc_outputs[leader].put_nowait((msg, sigmas))
-            except gevent.queue.Full:
-                print("Queue is already full")
+                if cbc_outputs[leader].empty():
+                    cbc_outputs[leader].put_nowait((msg, sigmas))
+                    is_cbc_delivered[leader] = 1
+                    if sum(is_cbc_delivered) >= N - f:
+                        wait_cbc_signal.set()
+            except:
                 pass
-            is_cbc_delivered[leader] = 1
-            if sum(is_cbc_delivered) >= N - f:
-                wait_cbc_signal.set()
             #print("Node %d finishes CBC for Leader %d" % (pid, leader) )
             #print(is_cbc_delivered)
 
@@ -324,7 +324,9 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
             if bit == 1:
                 aba_r_input = 1
                 if is_cbc_delivered[a] == 0:
-                    cbc_outputs[a].put_nowait(cbc_out)
+                    if cbc_outputs[a].empty():
+                        cbc_outputs[a].put_nowait(cbc_out)
+                        #is_cbc_delivered[a] = 1
 
         def aba_coin_bcast(o):
             """Common coin multicast operation.

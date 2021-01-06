@@ -227,7 +227,6 @@ def generate_ecdsa(seed=None):
 def ecdsa_sign(SK, msg):
     return SK.sign(hash(msg))
 
-
 def ecdsa_vrfy(PK, msg, sig):
     return ecdsa_vrify(sig, hash(msg), PK.format())
 
