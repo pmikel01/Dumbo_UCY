@@ -396,9 +396,9 @@ class Mule():
         notarization = None
         try:
             notarization = fast_thread.get(block=False)
-            #notarized_block = None
             if notarization is not None:
                 notarized_block = latest_notarized_block
+                assert notarized_block is not None
                 payload_digest = hash(notarized_block[3])
                 notarized_block_header = (notarized_block[0], notarized_block[1], notarized_block[2], payload_digest)
                 notarized_block_hash, notarized_block_raw_Sig, (epoch_txcnt, weighted_delay) = notarization
@@ -406,16 +406,14 @@ class Mule():
                 self.txcnt += epoch_txcnt
                 assert hash(notarized_block_header) == notarized_block_hash
                 o = (notarized_block_header, notarized_block_raw_Sig)
-                for j in range(N):
-                    send(j, ('VIEW_CHANGE', '', o))
-        except:
-            pass
+                send(-1, ('VIEW_CHANGE', '', o))
+        except AssertionError:
+            print("Problematic notarization....")
         finally:
             if notarization is None:
                 notarized_block_header = None
                 o = (notarized_block_header, None)
-                for j in range(N):
-                    send(j, ('VIEW_CHANGE', '', o))
+                send(-1, ('VIEW_CHANGE', '', o))
 
         #
         delivered_slots = tcvba_output.get()  # Block to receive the output
