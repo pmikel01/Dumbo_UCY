@@ -380,15 +380,28 @@ class Mule():
         coin_thread = _setup_coin()
         tcvba_thread = _setup_tcvba(coin_thread)
 
+
+
         # Wait either view_change handler done or fast_path done
-        ready = gevent.event.Event()
-        ready.clear()
+        vc_ready = gevent.event.Event()
+        vc_ready.clear()
 
-        lst = [vc_thread, fast_thread]
-        for g in lst:
-            g.link(lambda *args: ready.set())
+        def wait_for_fastpath():
+            fast_thread.get()
+            vc_ready.set()
 
-        ready.wait()
+        def wait_for_vc_msg():
+            vc_thread.get()
+            vc_ready.set()
+
+        gevent.spawn(wait_for_fastpath)
+        gevent.spawn(wait_for_vc_msg)
+
+        #lst = [vc_thread, fast_thread]
+        #for g in lst:
+        #    g.link(lambda *args: ready.set())
+
+        vc_ready.wait()
 
         start_vc = time.time()
 
