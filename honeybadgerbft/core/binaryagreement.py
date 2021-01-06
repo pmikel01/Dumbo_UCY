@@ -40,7 +40,7 @@ def wait_for_conf_values(*, pid, N, f, epoch, conf_sent, bin_values,
                  extra={'nodeid': pid, 'epoch': epoch})
     broadcast(('CONF', epoch, tuple(bin_values[epoch])))
     while True:
-
+        gevent.sleep(0)
         logger.debug(
             f'looping ... conf_values[epoch] is: {conf_values[epoch]}',
             extra={'nodeid': pid, 'epoch': epoch},
@@ -90,7 +90,7 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
 
     def _recv():
         while True:  # not finished[pid]:
-
+            gevent.sleep(0)
             (sender, msg) = receive()
             logger.debug(f'receive {msg} from node {sender}',
                          extra={'nodeid': pid, 'epoch': msg[1]})
@@ -182,7 +182,7 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
     r = 0
     already_decided = None
     while True:  # Unbounded number of rounds
-
+        gevent.sleep(0)
         # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
 
         logger.info(f'Starting with est = {est}',
@@ -210,7 +210,7 @@ def binaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
             f'block until at least N-f ({N-f}) AUX values are received',
             extra={'nodeid': pid, 'epoch': r})
         while True:
-
+            gevent.sleep(0)
             logger.debug(f'bin_values[{r}]: {bin_values[r]}',
                          extra={'nodeid': pid, 'epoch': r})
             logger.debug(f'aux_values[{r}]: {aux_values[r]}',

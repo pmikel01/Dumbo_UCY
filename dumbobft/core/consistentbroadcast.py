@@ -74,7 +74,7 @@ def consistentbroadcast(sid, pid, N, f, PK2s, SK2, leader, input, receive, send,
 
     # Handle all consensus messages
     while True:
-        #gevent.sleep(0.0001)
+        gevent.sleep(0)
 
         (j, msg) = receive()
         #print("recv3", (j, msg))

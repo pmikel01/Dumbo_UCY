@@ -103,11 +103,11 @@ if __name__ == '__main__':
 
         client_bft_mpq = mpQueue()
         #client_from_bft = client_bft_mpq.get
-        client_from_bft = lambda: client_bft_mpq.get(timeout=0.001)
+        client_from_bft = lambda: client_bft_mpq.get(timeout=0.00001)
         bft_to_client = client_bft_mpq.put_nowait
 
         server_bft_mpq = mpQueue()
-        bft_from_server = lambda: server_bft_mpq.get(timeout=0.001)
+        bft_from_server = lambda: server_bft_mpq.get(timeout=0.00001)
         server_to_bft = server_bft_mpq.put_nowait
 
         client_ready = mpValue(c_bool, False)

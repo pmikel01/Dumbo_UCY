@@ -31,8 +31,9 @@ def wait_for_conf_values(*, pid, N, f, epoch, conf_sent, bin_values,
     conf_sent[epoch][tuple(values)] = True
 
     broadcast(('CONF', epoch, tuple(bin_values[epoch])))
-    while True:
 
+    while True:
+        gevent.sleep(0)
 
         if 1 in bin_values[epoch] and len(conf_values[epoch][(1,)]) >= N - f:
             return set((1,))
@@ -79,7 +80,7 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send, lo
 
     def _recv():
         while True:  # not finished[pid]:
-            #gevent.sleep(0.0001)
+            gevent.sleep(0)
 
             (sender, msg) = receive()
 
@@ -139,10 +140,11 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send, lo
     est = vi
     r = 0
     already_decided = None
+
     while True:  # Unbounded number of rounds
 
         # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
-
+        gevent.sleep(0)
 
         if not est_sent[r][est]:
             est_sent[r][est] = True
@@ -163,6 +165,7 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send, lo
 
         while True:
 
+            gevent.sleep(0)
 
             # Block until at least N-f AUX values are received
             if 1 in bin_values[r] and len(aux_values[r][1]) >= N - f:

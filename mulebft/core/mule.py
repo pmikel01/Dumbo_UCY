@@ -64,7 +64,7 @@ BroadcastReceiverQueues = namedtuple(
 
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0.0001)
+        gevent.sleep(0)
         sender, (tag, j, msg) = recv_func()
         if tag not in BroadcastTag.__members__:
             # TODO Post python 3 port: Add exception chaining.
@@ -178,7 +178,7 @@ class Mule():
             self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
         while True:
-
+            gevent.sleep(0)
             # For each epoch
             e = self.epoch
             if e not in self._per_epoch_recv:
@@ -320,7 +320,7 @@ class Mule():
 
             coin = shared_coin(epoch_id, pid, N, f,
                                self.sPK, self.sSK,
-                               coin_bcast, coin_recv.get)
+                               coin_bcast, coin_recv.get, logger=self.logger)
 
             return coin
 
@@ -331,7 +331,7 @@ class Mule():
 
             tcvba = gevent.spawn(twovalueagreement, epoch_id, pid, N, f, coin,
                          tcvba_input.get, tcvba_output.put_nowait,
-                         tcvba_recv.get, tcvba_send)
+                         tcvba_recv.get, tcvba_send, logger=self.logger)
 
             return tcvba
 
@@ -339,7 +339,7 @@ class Mule():
             nonlocal viewchange_counter, viewchange_max_slot
 
             while True:
-
+                gevent.sleep(0)
                 j, (notarized_block_header_j, notarized_block_Sig_j) = viewchange_recv.get()
                 if notarized_block_Sig_j is not None:
                     (_, slot_num, Sig_p, _) = notarized_block_header_j

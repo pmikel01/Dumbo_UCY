@@ -37,7 +37,7 @@ MessageReceiverQueues = namedtuple(
 
 def recv_loop(recv_func, recv_queues):
     while True:
-        #gevent.sleep(0.0001)
+        gevent.sleep(0)
         sender, (tag, j, msg) = recv_func()
         #print("recv2", (sender, (tag, j, msg)))
 
@@ -283,7 +283,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
     votes = defaultdict(set)
 
     while True:
-        #gevent.sleep(0)
+        gevent.sleep(0)
 
         a = pi[r]
         if is_cbc_delivered[a] == 1:
@@ -296,7 +296,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
         ballot_counter = 0
 
         while True:
-
+            gevent.sleep(0)
             sender, vote = vote_recvs[r].get()
             a, ballot_bit, cbc_out = vote
             if (pi[r] == a) and (ballot_bit == 0 or ballot_bit == 1):
