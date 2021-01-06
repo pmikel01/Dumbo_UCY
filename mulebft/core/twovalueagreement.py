@@ -1,6 +1,7 @@
-from datetime import datetime
+
 
 from gevent import monkey; monkey.patch_all(thread=False)
+from datetime import datetime
 
 import time
 import gevent
@@ -74,9 +75,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
 
                 # Output after reaching second threshold
                 if len(est_values[r][v]) >= 2 * f + 1:
-
                     int_values[r].add(v)
-
                     bv_signal.set()
 
             elif msg[0] == 'AUX':
@@ -125,7 +124,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
 
     vi = input()
     if logger != None:
-        logger.info("TCVBA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+        logger.info("TCVBA %s gets input" % sid)
 
     # print(pid, sid, 'PRE-EXITING CRITICAL', vi)
     assert type(vi) is int
@@ -137,7 +136,8 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
         # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
 
         #gevent.sleep(0)
-
+        if logger != None:
+            logger.info("TCVBA %s enters round %d" % (sid, r))
 
         if not est_sent[r][est]:
             est_sent[r][est] = True
@@ -151,6 +151,8 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
             bv_signal.clear()
             bv_signal.wait()
 
+        if logger != None:
+            logger.info("TCVBA %s gets BIN VAL at epoch %d" % (sid, r))
         # print("debug", pid, sid, 'GETS BIN VAL at epoch', r)
 
         w = next(iter(int_values[r]))  # take an element
@@ -210,7 +212,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
             # print('debug node %d quits %s' % (pid, sid))
             # print('[sid:%s] [pid:%d] QUITTING in round %d' % (sid,pid,r)))
             if logger != None:
-                logger.info("TCVBA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+                logger.info("TCVBA %s completes" % sid)
             _thread_recv.kill()
             return
 
