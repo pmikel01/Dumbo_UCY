@@ -441,11 +441,11 @@ class Mule():
         #print(("fast blocks: ", fast_blocks))
 
         if delivered_slots > 0:
-            gevent.joinall([vc_thread, fast_thread])
+            #gevent.joinall([vc_thread, fast_thread])
             #if self.logger != None:
             #    self.logger.info('Fast block tx at Node %d:' % self.id + str(fast_blocks))
             #return delivered_slots
-
+            pass
         else:
             # Select B transactions (TODO: actual random selection)
             tx_to_send = []
