@@ -257,6 +257,9 @@ class Mule():
         vacs_recv = Queue()
         tpke_recv = Queue()
 
+        prbc_outputs = [Queue(1) for _ in range(N)]
+        prbc_proofs = dict()
+
         aba_recv = Queue()
 
         recv_queues = BroadcastReceiverQueues(
@@ -440,8 +443,8 @@ class Mule():
                     tx_to_send.append("Dummy")
 
             my_prbc_input = Queue(1)
+
             vacs_input = Queue(1)
-            prbc_outputs = [Queue(1) for _ in range(N)]
             vacs_output = Queue(1)
 
             # if self.logger != None: self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
@@ -462,9 +465,15 @@ class Mule():
 
                 # Only leader gets input
                 prbc_input = my_prbc_input.get if j == pid else None
-                prbc = gevent.spawn(provablereliablebroadcast, epoch_id+'PRBC'+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
+                prbc_thread = gevent.spawn(provablereliablebroadcast, epoch_id+'PRBC'+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
                                    prbc_input, prbc_recvs[j].get, prbc_send)
-                prbc_outputs[j] = prbc.get  # block for output from rbc
+
+                def wait_for_prbc_output():
+                    value, proof = prbc_thread.get()
+                    prbc_proofs[epoch_id+'PRBC'+str(j)] = proof
+                    prbc_outputs[j].put_nowait((value, proof))
+
+                gevent.spawn(wait_for_prbc_output)
 
             def _setup_vacs():
 
@@ -476,6 +485,16 @@ class Mule():
                     prbc_sid = epoch_id+'PRBC'+str(j)
                     try:
                         proof = vj
+                        if prbc_sid in prbc_proofs.keys():
+                            try:
+                                _prbc_sid, _roothash, _ = proof
+                                assert prbc_sid == _prbc_sid
+                                _, roothash, _ = prbc_proofs[prbc_sid]
+                                assert roothash == _roothash
+                                return True
+                            except AssertionError:
+                                print("1 Failed to verify proof for RBC")
+                                return False
                         assert prbc_validate(prbc_sid, N, f, self.sPK2s, proof)
                         return True
                     except AssertionError:
@@ -506,7 +525,7 @@ class Mule():
                 broadcast(('TPKE', '', o))
 
             # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
-            dumboacs_thread = gevent.spawn(dumbocommonsubset, pid, N, f, prbc_outputs,
+            dumboacs_thread = gevent.spawn(dumbocommonsubset, pid, N, f, [prbc_output.get for prbc_output in prbc_outputs],
                                vacs_input.put_nowait,
                                vacs_output.get)
 

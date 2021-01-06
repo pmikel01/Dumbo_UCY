@@ -212,7 +212,11 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
         # Receive output from CBC broadcast for input values
         msg, sigmas = cbc_threads[leader].get()
         if predicate(msg):
-            cbc_outputs[leader].put_nowait((msg, sigmas))
+            try:
+                cbc_outputs[leader].put_nowait((msg, sigmas))
+            except gevent.queue.Full:
+                print("Queue is already full")
+                pass
             is_cbc_delivered[leader] = 1
             if sum(is_cbc_delivered) >= N - f:
                 wait_cbc_signal.set()

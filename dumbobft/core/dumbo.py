@@ -232,11 +232,11 @@ class Dumbo():
         tpke_recv = Queue()
 
         my_prbc_input = Queue(1)
-        vacs_input = Queue(1)
 
         prbc_outputs = [Queue(1) for _ in range(N)]
         prbc_proofs = dict()
 
+        vacs_input = Queue(1)
         vacs_output = Queue(1)
 
 
