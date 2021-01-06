@@ -55,7 +55,7 @@ class NetworkServer (Process):
                             self.logger.error('syntax error messages')
                             raise ValueError
                         tmp = buf.split(self.SEP, 1)
-                    gevent.sleep(0)
+                    #gevent.sleep(0)
             except Exception as e:
                 self.logger.error(str((e, traceback.print_exc())))
 

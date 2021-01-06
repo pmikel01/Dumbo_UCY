@@ -44,7 +44,7 @@ BroadcastReceiverQueues = namedtuple(
 
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0)
+        #gevent.sleep(0)
         sender, (tag, j, msg) = recv_func()
         if tag not in BroadcastTag.__members__:
             # TODO Post python 3 port: Add exception chaining.
@@ -136,7 +136,7 @@ class Dumbo():
             """Receive messages."""
             #print("start recv loop...")
             while True:
-                gevent.sleep(0)
+                #gevent.sleep(0)
                 try:
                     (sender, (r, msg) ) = self._recv()
                     #self.logger.info('recv1' + str((sender, o)))
@@ -160,7 +160,7 @@ class Dumbo():
         while True:
 
             # For each round...
-            gevent.sleep(0)
+            #gevent.sleep(0)
 
             start = time.time()
 

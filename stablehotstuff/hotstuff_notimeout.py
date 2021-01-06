@@ -86,7 +86,7 @@ def hsfastpath_notimeout(sid, pid, N, f, leader, get_input, put_output, Snum, Bs
 
         while True:
 
-            gevent.sleep(0)
+            #gevent.sleep(0)
 
             (sender, msg) = recv()
             #logger.info("receving a fast path msg " + str((sender, msg)))
@@ -260,7 +260,7 @@ def hsfastpath_notimeout(sid, pid, N, f, leader, get_input, put_output, Snum, Bs
 
     while slot_cur <= SLOTS_NUM + 2:
 
-        gevent.sleep(0)
+        #.sleep(0)
 
         #if logger is not None:
         #    logger.info("entering fastpath slot %d ..." % slot_cur)

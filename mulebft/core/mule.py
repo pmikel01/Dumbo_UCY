@@ -65,7 +65,7 @@ BroadcastReceiverQueues = namedtuple(
 
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0)
+        #gevent.sleep(0)
         sender, (tag, j, msg) = recv_func()
         if tag not in BroadcastTag.__members__:
             # TODO Post python 3 port: Add exception chaining.
@@ -159,7 +159,7 @@ class Mule():
         def _recv_loop():
             """Receive messages."""
             while True:
-                gevent.sleep(0)
+                #gevent.sleep(0)
                 try:
                     (sender, (r, msg)) = self._recv()
                     # Maintain an *unbounded* recv queue for each epoch
@@ -179,7 +179,7 @@ class Mule():
             self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
         while True:
-            gevent.sleep(0)
+            #gevent.sleep(0)
             # For each epoch
             e = self.epoch
             if e not in self._per_epoch_recv:
@@ -213,8 +213,7 @@ class Mule():
             if self.epoch >= self.K:
                 break
 
-            gevent.sleep(0)
-            time.sleep(0)
+            #gevent.sleep(0)
 
     def _recovery(self):
         # TODO: here to implement to recover blocks
@@ -340,7 +339,7 @@ class Mule():
             nonlocal viewchange_counter, viewchange_max_slot
 
             while True:
-                gevent.sleep(0)
+                #gevent.sleep(0)
                 j, (notarized_block_header_j, notarized_block_Sig_j) = viewchange_recv.get()
                 if notarized_block_Sig_j is not None:
                     (_, slot_num, Sig_p, _) = notarized_block_header_j

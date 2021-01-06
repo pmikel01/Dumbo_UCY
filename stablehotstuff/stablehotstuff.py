@@ -100,7 +100,7 @@ class Hotstuff():
         def _recv_loop():
             """Receive messages."""
             while True:
-                gevent.sleep(0)
+                #gevent.sleep(0)
                 try:
                     (sender, msg) = self._recv()
                     self.fast_recv.put_nowait((sender, msg))

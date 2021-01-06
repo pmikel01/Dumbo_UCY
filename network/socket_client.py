@@ -74,7 +74,7 @@ class NetworkClient (Process):
 
     def _send(self, j: int):
         while not self.stop.value:
-            gevent.sleep(0)
+            #gevent.sleep(0)
             #self.sock_locks[j].acquire()
             o = self.sock_queues[j].get()
             try:

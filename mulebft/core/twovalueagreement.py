@@ -44,7 +44,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
     def _recv():
         while True:  # not finished[pid]:
 
-            gevent.sleep(0)
+            #gevent.sleep(0)
 
             (sender, msg) = receive()
 
@@ -128,10 +128,11 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
     est = vi
     r = 0
     already_decided = None
+
     while True:  # Unbounded number of rounds
         # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
 
-        gevent.sleep(0)
+        #gevent.sleep(0)
 
 
         if not est_sent[r][est]:
@@ -154,7 +155,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
         broadcast(('AUX', r, w))
 
         while True:
-            gevent.sleep(0)
+            #gevent.sleep(0)
             len_int_values = len(int_values[r])
             assert len_int_values == 1 or len_int_values == 2
             if len_int_values == 1:
@@ -177,7 +178,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
             broadcast(('CONF', r, tuple(int_values[r])))
             conf_sent[r][tuple(values)] = True
         while True:
-            gevent.sleep(0)
+            #gevent.sleep(0)
 
             # len_int_values = len(int_values[r])
             # assert len_int_values == 1 or len_int_values == 2

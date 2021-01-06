@@ -88,7 +88,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
 
         while True:
 
-            gevent.sleep(0)
+            #gevent.sleep(0)
 
             (sender, msg) = recv()
             #logger.info("receving a fast path msg " + str((sender, msg)))
@@ -258,7 +258,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
     """
 
     recv_thread = gevent.spawn(handle_messages)
-    gevent.sleep(0)
+    #gevent.sleep(0)
 
     while slot_cur <= SLOTS_NUM + 2:
 
@@ -282,7 +282,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
 
             try:
                 one_slot()
-                gevent.sleep(0)
+                #gevent.sleep(0)
             except Timeout:
                 try:
                     msg_noncritical_signal.wait()
