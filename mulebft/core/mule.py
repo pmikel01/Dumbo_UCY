@@ -180,9 +180,12 @@ class Mule():
             self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
         while True:
-            #gevent.sleep(0)
+
             # For each epoch
             e = self.epoch
+            if self.logger != None:
+                self.logger.info('Node %d enters epoch %d' % e)
+
             if e not in self._per_epoch_recv:
                 self._per_epoch_recv[e] = Queue()
 
@@ -206,7 +209,7 @@ class Mule():
 
             self.e_time = time.time()
             if self.logger != None:
-                self.logger.info("node %d breaks in %f seconds with total delivered Txs %d and average delay %f and average VC delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay, sum(self.vcdelay)/len(self.vcdelay)) )
+                self.logger.info("node %d breaks in %f seconds in epoch %d with total delivered Txs %d and average delay %f and average VC delay %f" % (self.id, self.e_time-self.s_time, e, self.txcnt, self.txdelay, sum(self.vcdelay)/len(self.vcdelay)) )
             else:
                 print("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
 
@@ -389,10 +392,14 @@ class Mule():
         def wait_for_fastpath():
             fast_thread.get()
             vc_ready.set()
+            if self.logger != None:
+                self.logger.info('Fastpath of epoch %d completed' % e)
 
         def wait_for_vc_msg():
             vc_thread.get()
             vc_ready.set()
+            if self.logger != None:
+                self.logger.info('VC messages of epoch %d collected' % e)
 
         gevent.spawn(wait_for_fastpath)
         gevent.spawn(wait_for_vc_msg)
