@@ -183,8 +183,6 @@ class Mule():
 
             # For each epoch
             e = self.epoch
-            if self.logger != None:
-                self.logger.info('Node %d enters epoch %d' % e)
 
             if e not in self._per_epoch_recv:
                 self._per_epoch_recv[e] = Queue()
@@ -231,6 +229,8 @@ class Mule():
         :param send:
         :param recv:
         """
+        if self.logger != None:
+            self.logger.info('Node enters epoch %d' % e)
 
         sid = self.sid
         pid = self.id
@@ -309,8 +309,8 @@ class Mule():
             fast_thread = gevent.spawn(hsfastpath, epoch_id, pid, N, f, leader,
                                    self.transaction_buffer.get_nowait, fastpath_output,
                                    self.SLOTS_NUM, self.FAST_BATCH_SIZE, T,
-                                   hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
-                                   fast_recv.get, fastpath_send, self.logger)
+                                   hash_genesis, self.sPK2s, self.sSK2,
+                                   fast_recv.get, fastpath_send)
 
             return fast_thread
 
@@ -324,7 +324,7 @@ class Mule():
 
             coin = shared_coin(epoch_id, pid, N, f,
                                self.sPK, self.sSK,
-                               coin_bcast, coin_recv.get, logger=self.logger)
+                               coin_bcast, coin_recv.get)
 
             return coin
 
@@ -335,7 +335,7 @@ class Mule():
 
             tcvba = gevent.spawn(twovalueagreement, epoch_id, pid, N, f, coin,
                          tcvba_input.get, tcvba_output.put_nowait,
-                         tcvba_recv.get, tcvba_send, logger=self.logger)
+                         tcvba_recv.get, tcvba_send)
 
             return tcvba
 

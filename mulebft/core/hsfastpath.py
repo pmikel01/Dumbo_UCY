@@ -7,7 +7,6 @@ from gevent.event import Event
 from gevent.queue import Queue
 from gevent import Timeout
 from crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
-from crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
 import os
 import json
 import gevent
@@ -18,7 +17,7 @@ def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
 
 
-def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, hash_genesis, PK1, SK1, PK2s, SK2, recv, send, logger=None):
+def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, hash_genesis, PK2s, SK2, recv, send, logger=None):
     """Fast path, Byzantine Safe Broadcast
     :param str sid: ``the string of identifier``
     :param int pid: ``0 <= pid < N``
@@ -27,8 +26,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
     :param int leader: the pid of leading node
     :param get_input: a function to get input TXs, e.g., input() to get a transaction
     :param put_output: a function to deliver output blocks, e.g., output(block)
-    :param TBLSPublicKey PK1: ``boldyreva.TBLSPublicKey`` with threshold N-f
-    :param TBLSPrivateKey SK1: ``boldyreva.TBLSPrivateKey`` with threshold N-f
+
     :param list PK2s: an array of ``coincurve.PublicKey'', i.e., N public keys of ECDSA for all parties
     :param PublicKey SK2: ``coincurve.PrivateKey'', i.e., secret key of ECDSA
     :param int Tout: timeout of a slot
@@ -41,7 +39,8 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
     :return tuple: False to represent timeout, and True to represent success
     """
 
-    #if logger is not None: logger.info("Entering fast path of epoch %d" % pid)
+    if logger is not None:
+        logger.info("Entering fast path")
 
     TIMEOUT = Tout
     SLOTS_NUM = Snum
@@ -112,7 +111,8 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                     try:
                         assert slot == slot_cur
                     except AssertionError:
-                        #print("vote out of sync...")
+                        if logger is not None:
+                            logger.info("vote out of sync from node %d" % sender)
                         #if slot < slot_cur:
                         #    if logger is not None: logger.info("Late vote from node %d! Not needed anymore..." % sender)
                         #else:
@@ -163,14 +163,16 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                 try:
                     assert slot == slot_cur
                 except AssertionError:
-                    if logger is not None: logger.info("Out of synchronization")
+                    if logger is not None:
+                        logger.info("Out of synchronization")
                     #msg_noncritical_signal.set()
                     continue
 
                 try:
                     assert len(Sigma_p) >= N - f
                 except AssertionError:
-                    if logger is not None: logger.info("No enough ecdsa signatures!")
+                    if logger is not None:
+                        logger.info("No enough ecdsa signatures!")
                     #msg_noncritical_signal.set()
                     continue
 
@@ -180,7 +182,8 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                         (sender, sig_p) = item
                         assert ecdsa_vrfy(PK2s[sender], hash_p, sig_p)
                 except AssertionError:
-                    if logger is not None: logger.info("ecdsa signature failed!")
+                    if logger is not None:
+                        logger.info("ecdsa signature failed!")
                     #msg_noncritical_signal.set()
                     continue
 
@@ -262,6 +265,9 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
 
     while slot_cur <= SLOTS_NUM + 2:
 
+        #if logger is not None:
+        #    logger.info("Enter fastpath's slot %d out of all %d slots" % (slot_cur, SLOTS_NUM))
+
         #print('0')
 
         #if logger is not None:
@@ -295,6 +301,9 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                     break
             finally:
                 timeout.cancel()
+
+    if logger is not None:
+        logger.info("Leaves fastpath at %d slot" % (slot_cur))
 
     if notraized_block != None:
         return pending_block[2], pending_block[3], (epoch_txcnt, weighted_delay)  # represents fast_path successes
