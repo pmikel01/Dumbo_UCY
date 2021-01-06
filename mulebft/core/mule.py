@@ -417,7 +417,7 @@ class Mule():
                 notarized_block_hash, notarized_block_raw_Sig, (epoch_txcnt, weighted_delay) = notarization
                 self.txdelay = (self.txcnt * self.txdelay + epoch_txcnt * weighted_delay) / (self.txcnt + epoch_txcnt)
                 self.txcnt += epoch_txcnt
-                assert hash(notarized_block_header) == notarized_block_hash
+                #assert hash(notarized_block_header) == notarized_block_hash
                 o = (notarized_block_header, notarized_block_raw_Sig)
                 send(-1, ('VIEW_CHANGE', '', o))
         except AssertionError:

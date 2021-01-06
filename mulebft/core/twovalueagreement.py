@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from gevent import monkey; monkey.patch_all(thread=False)
 
 import time
@@ -122,6 +124,9 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
     # print(pid, sid, 'PRE-ENTERING CRITICAL')
 
     vi = input()
+    if logger != None:
+        logger.info("TCVBA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+
     # print(pid, sid, 'PRE-EXITING CRITICAL', vi)
     assert type(vi) is int
     est = vi
@@ -143,7 +148,6 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
         while len(int_values[r]) == 0:
             # Block until a value is output
             #gevent.sleep(0)
-
             bv_signal.clear()
             bv_signal.wait()
 
@@ -205,7 +209,8 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
         except AbandonedNodeError:
             # print('debug node %d quits %s' % (pid, sid))
             # print('[sid:%s] [pid:%d] QUITTING in round %d' % (sid,pid,r)))
-
+            if logger != None:
+                logger.info("TCVBA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
             _thread_recv.kill()
             return
 
@@ -240,4 +245,5 @@ def set_new_estimate(*, values, s, already_decided, decide):
             est = vals[0]
         else:
             est = vals[1]
+
     return est, already_decided
