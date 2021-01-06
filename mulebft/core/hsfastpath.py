@@ -61,11 +61,11 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
 
     decide_sent = [False] * (SLOTS_NUM + 3)  # The first item of the list is not used
 
-    msg_noncritical_signal = Event()
-    msg_noncritical_signal.set()
+    #msg_noncritical_signal = Event()
+    #msg_noncritical_signal.set()
 
-    slot_noncritical_signal = Event()
-    slot_noncritical_signal.set()
+    #slot_noncritical_signal = Event()
+    #slot_noncritical_signal.set()
 
     s_times = [0] * (SLOTS_NUM + 3)
     e_times = [0] * (SLOTS_NUM + 3)
@@ -99,7 +99,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
             # Enter critical block #
             ########################
 
-            msg_noncritical_signal.clear()
+            #msg_noncritical_signal.clear()
 
             if msg[0] == 'VOTE' and pid == leader and len(voters[slot_cur]) < N - f:
 
@@ -117,7 +117,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                         #    if logger is not None: logger.info("Late vote from node %d! Not needed anymore..." % sender)
                         #else:
                         #    if logger is not None: logger.info("Too early vote from node %d! I do not decide earlier block yet..." % sender)
-                        msg_noncritical_signal.set()
+                        #msg_noncritical_signal.set()
                         continue
 
                     try:
@@ -125,7 +125,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                     except AssertionError:
                         if logger is not None:
                             logger.info("False vote from node %d though within the same slot!" % sender)
-                        msg_noncritical_signal.set()
+                        #msg_noncritical_signal.set()
                         continue
 
                     try:
@@ -133,7 +133,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                     except AssertionError:
                         if logger is not None:
                             logger.info("Vote signature failed!")
-                        msg_noncritical_signal.set()
+                        #msg_noncritical_signal.set()
                         continue
 
 
@@ -164,14 +164,14 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                     assert slot == slot_cur
                 except AssertionError:
                     if logger is not None: logger.info("Out of synchronization")
-                    msg_noncritical_signal.set()
+                    #msg_noncritical_signal.set()
                     continue
 
                 try:
                     assert len(Sigma_p) >= N - f
                 except AssertionError:
                     if logger is not None: logger.info("No enough ecdsa signatures!")
-                    msg_noncritical_signal.set()
+                    #msg_noncritical_signal.set()
                     continue
 
                 try:
@@ -181,13 +181,13 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                         assert ecdsa_vrfy(PK2s[sender], hash_p, sig_p)
                 except AssertionError:
                     if logger is not None: logger.info("ecdsa signature failed!")
-                    msg_noncritical_signal.set()
+                    #msg_noncritical_signal.set()
                     continue
 
                 decides[slot_cur].put_nowait((hash_p, Sigma_p, batches))
 
 
-            msg_noncritical_signal.set()
+            #msg_noncritical_signal.set()
 
             ########################
             # Leave critical block #
@@ -223,8 +223,8 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
         # Enter critical block #
         ########################
 
-        slot_noncritical_signal.clear()
-        msg_noncritical_signal.wait()
+        #slot_noncritical_signal.clear()
+        #msg_noncritical_signal.wait()
 
         if pending_block is not None:
 
@@ -247,7 +247,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
 
         slot_cur = slot_cur + 1
 
-        slot_noncritical_signal.set()
+        #slot_noncritical_signal.set()
 
         ########################
         # Leave critical block #
@@ -270,8 +270,8 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
 
         #print('1')
 
-        msg_noncritical_signal.wait()
-        slot_noncritical_signal.wait()
+        #msg_noncritical_signal.wait()
+        #slot_noncritical_signal.wait()
 
         #print('2')
 
@@ -285,8 +285,8 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
                 #gevent.sleep(0)
             except Timeout:
                 try:
-                    msg_noncritical_signal.wait()
-                    slot_noncritical_signal.wait()
+                    #msg_noncritical_signal.wait()
+                    #slot_noncritical_signal.wait()
                     gevent.killall([recv_thread])
                 except Timeout as e:
                     print("node " + str(pid) + " error: " + str(e))
