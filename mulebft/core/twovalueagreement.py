@@ -36,21 +36,16 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
 
     finish_sent = False
     finish_value = set()
+    finish_cnt = 0
 
     # This event is triggered whenever int_values or aux_values changes
     bv_signal = Event()
 
     finish_signal = Event()
 
-    def broadcast(o):
-        for i in range(N):
-            send(i, o)
-
     def recv():
 
-        nonlocal finish_sent, est_values, est_sent, int_values, aux_values, bv_signal, finish_value
-
-        finish_cnt = 0
+        nonlocal finish_sent, est_values, est_sent, int_values, aux_values, bv_signal, finish_value, finish_cnt
 
         while True:  # not finished[pid]:
 
@@ -78,7 +73,8 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
                 # Relay after reaching first threshold
                 if len(est_values[r][v]) >= f + 1 and not est_sent[r][v]:
                     est_sent[r][v] = True
-                    broadcast(('EST', r, v))
+                    est_values[r][v].add(sender)
+                    send(-2, ('EST', r, v))
 
 
                 # Output after reaching second threshold
@@ -98,16 +94,13 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
                     # raise RedundantMessageError(
                     #    'Redundant AUX received {}'.format(msg))
                     continue
-
                 aux_values[r][v].add(sender)
-
                 bv_signal.set()
 
             elif msg[0] == 'CONF':
                 _, r, v = msg
                 assert len(v) == 1 or len(v) == 2
                 if sender in conf_values[r][v]:
-
                     # FIXME: Raise for now to simplify things & be consistent
                     # with how other TAGs are handled. Will replace the raise
                     # with a continue statement as part of
@@ -116,7 +109,6 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
                     #    'Redundant CONF received {}'.format(msg))
                     continue
                 conf_values[r][v].add(sender)
-
                 bv_signal.set()
 
             elif msg[0] == 'FINISH':
@@ -127,7 +119,8 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
                 assert len(finish_value) == 1
                 if finish_sent is False and finish_cnt >= f + 1:
                     decide(v)
-                    broadcast(('FINISH', '', list(finish_value)[0]))
+                    send(-2, ('FINISH', '', list(finish_value)[0]))
+                    finish_cnt = finish_cnt + 1
                     finish_sent = True
                 if finish_cnt >= 2*f + 1:
                     finish_signal.set()
@@ -156,7 +149,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
     r = 0
 
     def main_loop():
-        nonlocal r, finish_sent
+        nonlocal r, finish_sent, finish_cnt
         est = vi
         while True:  # Unbounded number of rounds
             # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
@@ -167,8 +160,8 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
 
             if not est_sent[r][est]:
                 est_sent[r][est] = True
-                broadcast(('EST', r, est))
-
+                send(-2, ('EST', r, est))
+                est_values[r][est].add(pid)
             # print("debug", pid, sid, 'WAITS BIN VAL at epoch', r)
 
             while len(int_values[r]) == 0:
@@ -183,7 +176,9 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
 
             w = next(iter(int_values[r]))  # take an element
 
-            broadcast(('AUX', r, w))
+            send(-2, ('AUX', r, w))
+            aux_values[r][w].add(pid)
+            bv_signal.set()
 
             while True:
                 #gevent.sleep(0)
@@ -203,12 +198,13 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
             # CONF phase
 
             if not conf_sent[r][tuple(values)]:
-
-                broadcast(('CONF', r, tuple(int_values[r])))
+                send(-2, ('CONF', r, tuple(int_values[r])))
                 conf_sent[r][tuple(values)] = True
+                conf_values[r][tuple(int_values[r])].add(pid)
+                bv_signal.set()
+
             while True:
                 #gevent.sleep(0)
-
                 # len_int_values = len(int_values[r])
                 # assert len_int_values == 1 or len_int_values == 2
                 if len(conf_values[r][tuple(int_values[r])]) >= N - f:
@@ -220,7 +216,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
             # Block until receiving the common coin value
 
             # print("debug", pid, sid, 'fetchs a coin at epoch', r)
-            if r < 50:
+            if r < 10:
                 s = (cheap_coins >> r) & 1
             else:
                 s = coin(r)
@@ -233,8 +229,11 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
                 if (v % 2) == s:
                     if finish_sent is False:
                         decide(v)
-                        broadcast(('FINISH', '', v))
+                        send(-2, ('FINISH', '', v))
+                        finish_cnt = finish_cnt + 1
                         finish_sent = True
+                        if finish_cnt >= 2 * f + 1:
+                            finish_signal.set()
                 est = v
             else:
                 vals = tuple(values)
