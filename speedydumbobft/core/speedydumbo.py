@@ -10,10 +10,10 @@ from collections import namedtuple
 from enum import Enum
 from gevent import Greenlet
 from gevent.queue import Queue
-from dumbobft.core.dumbocommonsubset import dumbocommonsubset
-from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
+from speedydumbobft.core.speedydumbocommonsubset import speedydumbocommonsubset
+from speedydumbobft.core.provablebroadcast import provablebroadcast
+from speedydumbobft.core.validators import pb_validate
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
-from dumbobft.core.validators import prbc_validate
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
 
@@ -62,7 +62,7 @@ def broadcast_receiver_loop(recv_func, recv_queues):
             traceback.print_exc(e)
 
 
-class Dumbo():
+class SpeedyDumbo():
     """Dumbo object used to run the protocol.
 
     :param str sid: The base name of the common coin that will be used to
@@ -228,22 +228,21 @@ class Dumbo():
         N = self.N
         f = self.f
 
-        prbc_recvs = [Queue() for _ in range(N)]
+        pb_recvs = [Queue() for _ in range(N)]
         vacs_recv = Queue()
         tpke_recv = Queue()
 
-        my_prbc_input = Queue(1)
+        my_pb_input = Queue(1)
 
-        prbc_outputs = [Queue(1) for _ in range(N)]
-        prbc_proofs = dict()
+        pb_value_outputs = [Queue(1) for _ in range(N)]
+        pb_proof_output = Queue(1)
+        pb_proofs = dict()
 
         vacs_input = Queue(1)
         vacs_output = Queue(1)
 
-
-
         recv_queues = BroadcastReceiverQueues(
-            ACS_PRBC=prbc_recvs,
+            ACS_PRBC=pb_recvs,
             ACS_VACS=vacs_recv,
             TPKE=tpke_recv,
         )
@@ -255,12 +254,12 @@ class Dumbo():
         #if self.logger != None:
         #    self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
 
-        def _setup_prbc(j):
+        def _setup_pb(j):
             """Setup the sub protocols RBC, BA and common coin.
             :param int j: Node index for which the setup is being done.
             """
 
-            def prbc_send(k, o):
+            def pb_send(k, o):
                 """Reliable send operation.
                 :param k: Node to send.
                 :param o: Value to send.
@@ -268,17 +267,21 @@ class Dumbo():
                 send(k, ('ACS_PRBC', j, o))
 
             # Only leader gets input
-            prbc_input = my_prbc_input.get if j == pid else None
-            prbc_thread = gevent.spawn(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
-                               prbc_input, prbc_recvs[j].get, prbc_send)
-            #prbc_threads[j] = prbc_thread  # block for output from rbc
+            pb_input = my_pb_input.get if j == pid else None
+            pb_thread = gevent.spawn(provablebroadcast, sid+'PB'+str(r)+str(j), pid,
+                                     N, f, self.sPK2s, self.sSK2, j, pb_input,
+                                     pb_value_outputs[j].put_nowait,
+                                     recv=pb_recvs[j].get, send=pb_send)
 
-            def wait_for_prbc_output():
-                value, proof = prbc_thread.get()
-                prbc_proofs[sid+'PRBC'+str(r)+str(j)] = proof
-                prbc_outputs[j].put_nowait((value, proof))
+            def wait_for_pb_proof():
+                proof = pb_thread.get()
+                pb_proofs[sid+'PB'+str(r)+str(j)] = proof
+                pb_proof_output.put_nowait(proof)
+                print("node %d gets PB proof" % pid)
 
-            gevent.spawn(wait_for_prbc_output)
+            # wait for pb proof, only when I am the leader
+            if j == pid:
+                gevent.spawn(wait_for_pb_proof)
 
         def _setup_vacs():
 
@@ -288,25 +291,23 @@ class Dumbo():
                 send(k, ('ACS_VACS', '', o))
 
             def vacs_predicate(j, vj):
-                prbc_sid = sid + 'PRBC' + str(r) + str(j)
+                prbc_sid = sid + 'PB' + str(r) + str(j)
                 try:
                     proof = vj
-                    if prbc_sid in prbc_proofs.keys():
+                    if prbc_sid in pb_proofs.keys():
                         try:
-                            _prbc_sid, _roothash, _ = proof
+                            _prbc_sid, _digest, _sigmas = proof
                             assert prbc_sid == _prbc_sid
-                            _, roothash, _ = prbc_proofs[prbc_sid]
-                            assert roothash == _roothash
+                            _, digest, _ = pb_proofs[prbc_sid]
+                            assert digest == _digest
                             return True
                         except AssertionError:
-                            print("1 Failed to verify proof for PB")
+                            print("1 Failed to verify proof for RBC")
                             return False
-                    else:
-                        assert prbc_validate(prbc_sid, N, f, self.sPK2s, proof)
-                        prbc_proofs[prbc_sid] = proof
-                        return True
+                    assert pb_validate(prbc_sid, N, f, self.sPK2s, proof)
+                    return True
                 except AssertionError:
-                    print("2 Failed to verify proof for PB")
+                    print("2 Failed to verify proof for RBC")
                     return False
 
             vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f,
@@ -315,10 +316,10 @@ class Dumbo():
                                    vacs_recv.get, vacs_send, vacs_predicate)
             vacs_thread.start()
 
-        # N instances of PRBC
+        # N instances of PB
         for j in range(N):
             #print("start to set up RBC %d" % j)
-            _setup_prbc(j)
+            _setup_pb(j)
 
         # One instance of (validated) ACS
         #print("start to set up VACS")
@@ -330,7 +331,9 @@ class Dumbo():
             send(-1, ('TPKE', '', o))
 
         # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
-        dumboacs_thread = Greenlet(dumbocommonsubset, pid, N, f, [prbc_output.get for prbc_output in prbc_outputs],
+        dumboacs_thread = Greenlet(speedydumbocommonsubset, pid, N, f,
+                           [_.get for _ in pb_value_outputs],
+                           pb_proof_output.get,
                            vacs_input.put_nowait,
                            vacs_output.get)
 
@@ -338,7 +341,7 @@ class Dumbo():
 
         _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
                           propose=json.dumps(tx_to_send),
-                          acs_put_in=my_prbc_input.put_nowait, acs_get_out=dumboacs_thread.get,
+                          acs_put_in=my_pb_input.put_nowait, acs_get_out=dumboacs_thread.get,
                           tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
 
         block = set()

@@ -129,6 +129,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, de
         v = input()
         if logger != None:
             logger.info("VACS %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+        print("node %d gets VACS input" % pid)
         #assert predicate(pid, v)
         send(-1, ('VACS_VAL', v))
 
@@ -136,18 +137,23 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, de
 
     values = [None] * N
     while True:
-        #gevent.sleep(0)
         j, vj = value_recv.get()
-        if predicate(j, vj):
+        try:
+            assert predicate(j, vj)
             valueSenders.add(j)
             values[j] = vj
             if len(valueSenders) >= N - f:
                 break
+        except:
+            traceback.print_exc()
+
+    print("node %d collects enough proofs to input VABA" % pid)
 
     vaba_input.put_nowait(tuple(values))
     decide(list(vaba_output.get()))
 
     if logger != None:
         logger.info("VACS %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+    print("node %d output in VACS" % pid)
 
     vaba.kill()

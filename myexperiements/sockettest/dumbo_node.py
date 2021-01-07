@@ -5,10 +5,11 @@ from typing import  Callable
 import os
 import pickle
 from gevent import time
-from dumbobft.core.dumbo import Dumbo
+from speedydumbobft.core.speedydumbo import SpeedyDumbo
 from myexperiements.sockettest.make_random_tx import tx_generator
 from multiprocessing import Value as mpValue
 from coincurve import PrivateKey, PublicKey
+
 
 def load_key(id, N):
 
@@ -40,7 +41,7 @@ def load_key(id, N):
 
     return sPK, sPK1, sPK2s, ePK, sSK, sSK1, sSK2, eSK
 
-class DumboBFTNode (Dumbo):
+class DumboBFTNode (SpeedyDumbo):
 
     def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
@@ -51,7 +52,7 @@ class DumboBFTNode (Dumbo):
         self.ready = ready
         self.stop = stop
         self.mode = mode
-        Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute)
+        SpeedyDumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute)
 
     def prepare_bootstrap(self):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
@@ -60,7 +61,7 @@ class DumboBFTNode (Dumbo):
             k = 0
             for _ in range(self.K):
                 for r in range(self.B):
-                    Dumbo.submit_tx(self, tx.replace(">", hex(r) + ">"))
+                    SpeedyDumbo.submit_tx(self, tx.replace(">", hex(r) + ">"))
                     k += 1
                     if r % 50000 == 0:
                         self.logger.info('node id %d just inserts 50000 TXs' % (self.id))

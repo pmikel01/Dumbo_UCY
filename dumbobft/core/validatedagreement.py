@@ -198,7 +198,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
         v = input()
         if logger != None:
             logger.info("VABA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
-        #assert predicate(v)
+        print("node %d gets VABA input" % pid)
+
         my_cbc_input.put_nowait(v)
 
     gevent.spawn(wait_for_input)
@@ -360,4 +361,5 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
     assert a is not None
     if logger != None:
         logger.info("VABA %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+    print("node %d output in VABA" % pid)
     decide(cbc_outputs[a].get()[0])
