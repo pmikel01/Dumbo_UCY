@@ -64,8 +64,7 @@ def consistentbroadcast(sid, pid, N, f, PK2s, SK2, leader, input, receive, send,
         #print("block to wait for CBC input")
 
         m = input() # block until an input is received
-        if logger != None:
-            logger.info("CBC %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+
         #print("CBC input received: ", m)
         assert isinstance(m, (str, bytes, list, tuple))
         digestFromLeader = hash((sid, m))
@@ -129,7 +128,5 @@ def consistentbroadcast(sid, pid, N, f, PK2s, SK2, leader, input, receive, send,
                 print("Signature failed!", (sid, pid, j, msg))
                 continue
             #print("CBC finished for leader", leader)
-            if logger != None:
-                logger.info("CBC %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
 
             return m, sigmas

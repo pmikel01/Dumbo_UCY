@@ -118,6 +118,7 @@ class SpeedyDumbo():
         self.txcnt = 0
 
         self.mute = mute
+        self.debug = True
 
     def submit_tx(self, tx):
         """Appends the given transaction to the transaction buffer.
@@ -268,7 +269,13 @@ class SpeedyDumbo():
 
             # Only leader gets input
             pb_input = my_pb_input.get if j == pid else None
-            pb_thread = gevent.spawn(provablebroadcast, sid+'PB'+str(r)+str(j), pid,
+            if self.debug:
+                pb_thread = gevent.spawn(provablebroadcast, sid+'PB'+str(r)+str(j), pid,
+                                     N, f, self.sPK2s, self.sSK2, j, pb_input,
+                                     pb_value_outputs[j].put_nowait,
+                                     recv=pb_recvs[j].get, send=pb_send, logger=self.logger)
+            else:
+                pb_thread = gevent.spawn(provablebroadcast, sid+'PB'+str(r)+str(j), pid,
                                      N, f, self.sPK2s, self.sSK2, j, pb_input,
                                      pb_value_outputs[j].put_nowait,
                                      recv=pb_recvs[j].get, send=pb_send)
@@ -309,8 +316,13 @@ class SpeedyDumbo():
                 except AssertionError:
                     print("2 Failed to verify proof for RBC")
                     return False
-
-            vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f,
+            if self.debug:
+                vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f,
+                                   self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
+                                   vacs_input.get, vacs_output.put_nowait,
+                                   vacs_recv.get, vacs_send, vacs_predicate, logger=self.logger)
+            else:
+                vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f,
                                    self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                                    vacs_input.get, vacs_output.put_nowait,
                                    vacs_recv.get, vacs_send, vacs_predicate)

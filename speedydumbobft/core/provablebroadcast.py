@@ -1,3 +1,5 @@
+import time
+
 from gevent import monkey; monkey.patch_all(thread=False)
 
 from datetime import datetime
@@ -53,7 +55,7 @@ def provablebroadcast(sid, pid, N, f, PK2s, SK2, leader, input, value_output, re
     digestFromLeader = None
     cbc_echo_sshares = defaultdict(lambda: None)
     m = None
-
+    start = time.time()
 
     #print("CBC starts...")
 
@@ -62,8 +64,7 @@ def provablebroadcast(sid, pid, N, f, PK2s, SK2, leader, input, value_output, re
         #print("block to wait for CBC input")
 
         m = input() # block until an input is received
-        if logger != None:
-            logger.info("CBC %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+
         #print("CBC input received: ", m)
         assert isinstance(m, (str, bytes, list, tuple))
         digestFromLeader = hash((sid, hash(m)))
@@ -92,6 +93,9 @@ def provablebroadcast(sid, pid, N, f, PK2s, SK2, leader, input, value_output, re
             send(leader, ('PB_ECHO', ecdsa_sign(SK2, digestFromLeader)))
             if pid != leader:
                 value_output(v)
+                end = time.time()
+                if logger != None:
+                    logger.info("ABA %d completes in %f seconds" % (leader, end-start))
 
         elif msg[0] == 'PB_ECHO':
             # CBC_READY message
@@ -109,4 +113,7 @@ def provablebroadcast(sid, pid, N, f, PK2s, SK2, leader, input, value_output, re
             cbc_echo_sshares[j] = sig
             if len(cbc_echo_sshares) >= EchoThreshold:
                 sigmas = tuple(list(cbc_echo_sshares.items())[:N - f])
+                end = time.time()
+                if logger != None:
+                    logger.info("ABA %d completes in %f seconds" % (leader, end-start))
                 return sid, hash(m), sigmas

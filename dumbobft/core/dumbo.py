@@ -118,6 +118,7 @@ class Dumbo():
         self.txcnt = 0
 
         self.mute = mute
+        self.debug = True
 
     def submit_tx(self, tx):
         """Appends the given transaction to the transaction buffer.
@@ -269,9 +270,14 @@ class Dumbo():
 
             # Only leader gets input
             prbc_input = my_prbc_input.get if j == pid else None
-            prbc_thread = gevent.spawn(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
-                               prbc_input, prbc_recvs[j].get, prbc_send)
-            #prbc_threads[j] = prbc_thread  # block for output from rbc
+
+            if self.debug:
+                prbc_thread = gevent.spawn(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
+                                           prbc_input, prbc_recvs[j].get, prbc_send, self.logger)
+            else:
+                prbc_thread = gevent.spawn(provablereliablebroadcast, sid + 'PRBC' + str(r) + str(j), pid, N, f,
+                                           self.sPK2s, self.sSK2, j,
+                                           prbc_input, prbc_recvs[j].get, prbc_send)
 
             def wait_for_prbc_output():
                 value, proof = prbc_thread.get()
@@ -308,8 +314,13 @@ class Dumbo():
                 except AssertionError:
                     print("2 Failed to verify proof for PB")
                     return False
-
-            vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f,
+            if self.debug:
+                vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f,
+                                   self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
+                                   vacs_input.get, vacs_output.put_nowait,
+                                   vacs_recv.get, vacs_send, vacs_predicate, self.logger)
+            else:
+                vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f,
                                    self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                                    vacs_input.get, vacs_output.put_nowait,
                                    vacs_recv.get, vacs_send, vacs_predicate)

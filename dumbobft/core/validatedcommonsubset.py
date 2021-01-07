@@ -115,7 +115,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, de
         return vaba_predicate
 
     vaba = gevent.spawn(validatedagreement, sid + 'VACS-VABA', pid, N, f, PK, SK, PK1, SK1, PK2s, SK2,
-                        vaba_input.get, vaba_output.put_nowait, vaba_recv.get, make_vaba_send(), make_vaba_predicate(), logger)
+                        vaba_input.get, vaba_output.put_nowait, vaba_recv.get, make_vaba_send(), make_vaba_predicate())
 
     """ 
     """
@@ -128,7 +128,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, de
     def wait_for_input():
         v = input()
         if logger != None:
-            logger.info("VACS %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+            logger.info("VACS gets input")
         #print("node %d gets VACS input" % pid)
         #assert predicate(pid, v)
         send(-1, ('VACS_VAL', v))
@@ -153,7 +153,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, de
     decide(list(vaba_output.get()))
 
     if logger != None:
-        logger.info("VACS %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+        logger.info("VACS completes")
     #print("node %d output in VACS" % pid)
 
     vaba.kill()

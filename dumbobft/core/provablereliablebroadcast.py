@@ -80,13 +80,13 @@ def provablereliablebroadcast(sid, pid, N, f,  PK2s, SK2, leader, input, receive
     def broadcast(o):
         send(-1, o)
 
+    start = time.time()
+
     if pid == leader:
         # The leader erasure encodes the input, sending one strip to each participant
         #print("block to wait for RBC input")
         m = input()  # block until an input is received
         #print("RBC input received: ", m)
-        if logger != None:
-            logger.info("ABA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
         # assert isinstance(m, (str, bytes))
         # print('Input received: %d bytes' % (len(m),))
         stripes = encode(K, N, m)
@@ -194,7 +194,7 @@ def provablereliablebroadcast(sid, pid, N, f,  PK2s, SK2, leader, input, receive
                 value = decode_output(roothash)
                 proof = (sid, roothash, sigmas)
                 #print("RBC finished for leader", leader)
+                end = time.time()
                 if logger != None:
-                    logger.info(
-                        "ABA %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+                    logger.info("ABA %d completes in %f seconds" % (leader, end-start))
                 return value, proof

@@ -54,7 +54,7 @@ class NetworkClient (Process):
                 self.logger.info(str((e, traceback.print_exc())))
         send_threads = [gevent.spawn(self._send, j) for j in range(self.N)]
         self._handle_send_loop()
-        gevent.joinall(send_threads)
+        #gevent.joinall(send_threads)
 
     def _connect(self, j: int):
         sock = socket.socket()
