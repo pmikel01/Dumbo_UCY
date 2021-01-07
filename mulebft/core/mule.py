@@ -335,7 +335,7 @@ class Mule():
 
             tcvba = gevent.spawn(twovalueagreement, epoch_id, pid, N, f, coin,
                          tcvba_input.get, tcvba_output.put_nowait,
-                         tcvba_recv.get, tcvba_send)
+                         tcvba_recv.get, tcvba_send, logger=self.logger)
 
             return tcvba
 

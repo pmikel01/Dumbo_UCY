@@ -32,6 +32,8 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
     conf_sent = defaultdict(lambda: defaultdict(lambda: False))
     int_values = defaultdict(set)
 
+    input_recived = False
+
     finish_sent = False
     finish_value = set()
 
@@ -45,6 +47,9 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
             send(i, o)
 
     def recv():
+
+        nonlocal finish_sent, est_values, est_sent, int_values, aux_values, bv_signal, finish_value
+
         finish_cnt = 0
 
         while True:  # not finished[pid]:
@@ -121,7 +126,9 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
                 finish_value.add(v)
                 assert len(finish_value) == 1
                 if finish_sent is False and finish_cnt >= f + 1:
+                    decide(v)
                     broadcast(('FINISH', '', list(finish_value)[0]))
+                    finish_sent = True
                 if finish_cnt >= 2*f + 1:
                     finish_signal.set()
 
@@ -146,16 +153,17 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
     assert type(vi) is int
 
     cheap_coins = int.from_bytes(hash(sid), byteorder='big')
+    r = 0
 
     def main_loop():
+        nonlocal r, finish_sent
         est = vi
-        r = 0
         while True:  # Unbounded number of rounds
             # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
 
             #gevent.sleep(0)
-            if logger != None:
-                logger.info("TCVBA %s enters round %d" % (sid, r))
+            #if logger != None:
+            #    logger.info("TCVBA %s enters round %d" % (sid, r))
 
             if not est_sent[r][est]:
                 est_sent[r][est] = True
@@ -169,8 +177,8 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
                 bv_signal.clear()
                 bv_signal.wait()
 
-            if logger != None:
-                logger.info("TCVBA %s gets BIN VAL at epoch %d" % (sid, r))
+            #if logger != None:
+            #    logger.info("TCVBA %s gets BIN VAL at epoch %d" % (sid, r))
             # print("debug", pid, sid, 'GETS BIN VAL at epoch', r)
 
             w = next(iter(int_values[r]))  # take an element
@@ -223,9 +231,10 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
                 v = next(iter(values))
                 assert type(v) is int
                 if (v % 2) == s:
-                    decide(v)
                     if finish_sent is False:
+                        decide(v)
                         broadcast(('FINISH', '', v))
+                        finish_sent = True
                 est = v
             else:
                 vals = tuple(values)
@@ -246,7 +255,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
     finish_signal.wait()
 
     if logger != None:
-        logger.info("TCVBA %s completes" % sid)
+        logger.info("TCVBA %s completes at round %d" % (sid, r))
 
     _thread_recv.kill()
     _thread_main_loop.kill()
