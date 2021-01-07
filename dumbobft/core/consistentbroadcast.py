@@ -1,3 +1,5 @@
+from queue import Queue
+
 from gevent import monkey; monkey.patch_all(thread=False)
 
 from datetime import datetime
@@ -50,6 +52,7 @@ def consistentbroadcast(sid, pid, N, f, PK2s, SK2, leader, input, receive, send,
 
 
     EchoThreshold = N - f      # Wait for this many CBC_ECHO to send CBC_FINAL
+    m = None
     digestFromLeader = None
     finalSent = False
     cbc_echo_sshares = defaultdict(lambda: None)
@@ -87,7 +90,7 @@ def consistentbroadcast(sid, pid, N, f, PK2s, SK2, leader, input, receive, send,
                 continue
             digestFromLeader = hash((sid, m))
             #print("Node", pid, "has digest:", digestFromLeader, "for leader", leader, "session id", sid, "message", m)
-            send(leader, ('CBC_ECHO', m, ecdsa_sign(SK2, digestFromLeader)))
+            send(leader, ('CBC_ECHO', ecdsa_sign(SK2, digestFromLeader)))
 
         elif msg[0] == 'CBC_ECHO':
             # CBC_READY message
@@ -95,7 +98,7 @@ def consistentbroadcast(sid, pid, N, f, PK2s, SK2, leader, input, receive, send,
             if pid != leader:
                 print("I reject CBC_ECHO from %d as I am not CBC leader:", j)
                 continue
-            (_, m, sig) = msg
+            (_, sig) = msg
             try:
                 assert ecdsa_vrfy(PK2s[j], digestFromLeader, sig)
             except AssertionError:
