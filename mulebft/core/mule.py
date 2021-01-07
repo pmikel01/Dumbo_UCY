@@ -429,11 +429,12 @@ class Mule():
                 send(-1, ('VIEW_CHANGE', '', o))
         except AssertionError:
             print("Problematic notarization....")
-        finally:
-            if notarization is None:
-                notarized_block_header = None
-                o = (notarized_block_header, None)
-                send(-1, ('VIEW_CHANGE', '', o))
+        except gevent.timeout.Timeout:
+            assert notarization is None
+            notarized_block_header = None
+            o = (notarized_block_header, None)
+            send(-1, ('VIEW_CHANGE', '', o))
+
 
         #
         delivered_slots = tcvba_output.get()  # Block to receive the output
