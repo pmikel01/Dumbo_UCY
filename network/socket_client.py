@@ -12,8 +12,6 @@ import logging
 import traceback
 
 
-
-
 # Network node class: deal with socket communications
 class NetworkClient (Process):
 
@@ -97,6 +95,10 @@ class NetworkClient (Process):
                     if j == -1: # -1 means broadcast
                         for i in range(self.N):
                             self.sock_queues[i].put_nowait(o)
+                    elif j == -2: # -2 means broadcast except myself
+                        for i in range(self.N):
+                            if i != self.pid:
+                                self.sock_queues[i].put_nowait(o)
                     else:
                         self.sock_queues[j].put_nowait(o)
                 except Exception as e:

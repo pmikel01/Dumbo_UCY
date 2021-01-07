@@ -71,13 +71,6 @@ def hsfastpath_notimeout(sid, pid, N, f, leader, get_input, put_output, Snum, Bs
     epoch_txcnt = 0
     weighted_delay = 0
 
-    def bcast_to_all_but_not_me(m):
-        for i in range(N):
-            if i != pid:
-                send(i, m)
-
-    def bcast(o):
-        send(-1, o)
 
     def handle_messages():
         nonlocal leader, hash_prev, pending_block, notraized_block, voters, votes, slot_cur
@@ -147,7 +140,7 @@ def hsfastpath_notimeout(sid, pid, N, f, leader, get_input, put_output, Snum, Bs
                             except Exception as e:
                                 tx_batch = json.dumps(['Dummy' for _ in range(BATCH_SIZE)])
 
-                        bcast(('DECIDE', slot_cur, hash_prev, Sigma, tx_batch))
+                        send(-2, ('DECIDE', slot_cur, hash_prev, Sigma, tx_batch))
                         #if logger is not None: logger.info("Decide made and sent")
                         decide_sent[slot_cur] = True
                         decides[slot_cur].put_nowait((hash_p, Sigma, tx_batch))

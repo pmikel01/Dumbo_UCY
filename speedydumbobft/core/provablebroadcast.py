@@ -51,7 +51,6 @@ def provablebroadcast(sid, pid, N, f, PK2s, SK2, leader, input, value_output, re
 
     EchoThreshold = N - f      # Wait for this many PB_ECHO to send PB_PROOF
     digestFromLeader = None
-    finalSent = False
     cbc_echo_sshares = defaultdict(lambda: None)
     m = None
 
@@ -71,7 +70,7 @@ def provablebroadcast(sid, pid, N, f, PK2s, SK2, leader, input, value_output, re
         # print("leader", pid, "has digest:", digestFromLeader)
         cbc_echo_sshares[pid] = ecdsa_sign(SK2, digestFromLeader)
         value_output(m)
-        send(-1, ('PB_SEND', m))
+        send(-2, ('PB_SEND', m))
         #print("Leader %d broadcasts CBC SEND messages" % leader)
 
 
@@ -108,6 +107,6 @@ def provablebroadcast(sid, pid, N, f, PK2s, SK2, leader, input, value_output, re
                 continue
             #print("I accept PB_ECHO from node %d" % j)
             cbc_echo_sshares[j] = sig
-            if len(cbc_echo_sshares) >= EchoThreshold and not finalSent:
+            if len(cbc_echo_sshares) >= EchoThreshold:
                 sigmas = tuple(list(cbc_echo_sshares.items())[:N - f])
                 return sid, hash(m), sigmas
