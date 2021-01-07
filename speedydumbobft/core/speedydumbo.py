@@ -304,6 +304,7 @@ class SpeedyDumbo():
                             print("1 Failed to verify proof for RBC")
                             return False
                     assert pb_validate(prbc_sid, N, f, self.sPK2s, proof)
+                    pb_proofs[prbc_sid] = proof
                     return True
                 except AssertionError:
                     print("2 Failed to verify proof for RBC")

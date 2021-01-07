@@ -6,6 +6,7 @@ import traceback
 from typing import List, Callable
 from gevent import Greenlet
 from myexperiements.sockettest.dumbo_node import DumboBFTNode
+from myexperiements.sockettest.sdumbo_node import SDumboBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
 from myexperiements.sockettest.hotstuff_node import HotstuffBFTNode
 from network.socket_server import NetworkServer
@@ -19,16 +20,14 @@ def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bf
     bft = None
     if protocol == 'dumbo':
         bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
-    # elif protocol == 'dumbox':
-    #    bft = DumboXBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client,  ready, stop, K, mute=mute)
+    elif protocol == 'sdumbo':
+        bft = SDumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client,  ready, stop, K, mute=mute)
     elif protocol == "mule":
-        bft = MuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K,
-                          mute=mute)
+        bft = MuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
     elif protocol == 'hotstuff':
-        bft = HotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, 1,
-                              mute=mute)
+        bft = HotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, 1, mute=mute)
     else:
-        print("Only support dumbo or dumbox or mule or hotstuff")
+        print("Only support dumbo or sdumbo or mule or hotstuff")
     return bft
 
 
