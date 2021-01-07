@@ -427,6 +427,10 @@ class Mule():
                 #assert hash(notarized_block_header) == notarized_block_hash
                 o = (notarized_block_header, notarized_block_raw_Sig)
                 send(-1, ('VIEW_CHANGE', '', o))
+            else:
+                notarized_block_header = None
+                o = (notarized_block_header, None)
+                send(-1, ('VIEW_CHANGE', '', o))
         except AssertionError:
             print("Problematic notarization....")
         except gevent.timeout.Timeout:

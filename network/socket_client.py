@@ -29,7 +29,6 @@ class NetworkClient (Process):
         self.addresses_list = addresses_list
         self.N = len(self.addresses_list)
 
-
         self.is_out_sock_connected = [False] * self.N
 
         self.socks = [None for _ in self.addresses_list]
@@ -55,7 +54,7 @@ class NetworkClient (Process):
                 self.logger.info(str((e, traceback.print_exc())))
         send_threads = [gevent.spawn(self._send, j) for j in range(self.N)]
         self._handle_send_loop()
-        #gevent.joinall(send_threads)
+        gevent.joinall(send_threads)
 
     def _connect(self, j: int):
         sock = socket.socket()
@@ -75,13 +74,13 @@ class NetworkClient (Process):
             o = self.sock_queues[j].get()
             try:
                 self.socks[j].sendall(pickle.dumps(o) + self.SEP)
-            except Exception as e1:
+            except:
                 self.logger.error("fail to send msg")
-                self.logger.error(str((e1, traceback.print_exc())))
-                pass
+                #self.logger.error(str((e1, traceback.print_exc())))
+                self.socks[j].close()
+                break
             #self.sock_locks[j].release()
 
-    ##
     ##
     def _handle_send_loop(self):
         while not self.stop.value:
@@ -117,11 +116,9 @@ class NetworkClient (Process):
             self.ready.value = False
         self._connect_and_send_forever()
 
-
     def stop_service(self):
         with self.stop.get_lock():
             self.stop.value = True
-
 
     def _set_client_logger(self, id: int):
         logger = logging.getLogger("node-" + str(id))

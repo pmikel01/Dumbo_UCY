@@ -61,6 +61,7 @@ class NetworkServer (Process):
         self.streamServer = StreamServer((self.ip, self.port), _handler)
         self.streamServer.serve_forever()
 
+
     def run(self):
         pid = os.getpid()
         self.logger = self._set_server_logger(self.id)
