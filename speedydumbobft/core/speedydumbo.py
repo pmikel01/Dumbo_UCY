@@ -277,7 +277,6 @@ class SpeedyDumbo():
                 proof = pb_thread.get()
                 pb_proofs[sid+'PB'+str(r)+str(j)] = proof
                 pb_proof_output.put_nowait(proof)
-                print("node %d gets PB proof" % pid)
 
             # wait for pb proof, only when I am the leader
             if j == pid:

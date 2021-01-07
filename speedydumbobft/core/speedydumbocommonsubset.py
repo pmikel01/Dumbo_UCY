@@ -35,13 +35,13 @@ def speedydumbocommonsubset(pid, N, f, pb_values_out, pb_proof_out, vacs_in, vac
         vacs_in(prbc_proof)
         if logger != None:
             logger.info("DumboACS transfers prbc out to vacs in at %s" % datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
-        print("node %d get PB proof in ACS" % pid)
+        #print("node %d get PB proof in ACS" % pid)
 
     def wait_for_pb_value(leader):
         msg = pb_values_out[leader]()
         assert msg is not None
         prbc_values[leader] = msg
-        print("node %d get PB value in ACS from leader %d" % (pid, leader))
+        #print("node %d get PB value in ACS from leader %d" % (pid, leader))
 
     pb_proof_thread = gevent.spawn(wait_for_pb_proof)
     pb_value_threads = [gevent.spawn(wait_for_pb_value, i) for i in range(N)]
@@ -56,16 +56,16 @@ def speedydumbocommonsubset(pid, N, f, pb_values_out, pb_proof_out, vacs_in, vac
                    # TODO: It is possible never wait the delivered pb value, so there shall be a help function to allow retrive
                 try:
                     assert prbc_values[j] is not None   # TODO: Check delivered value consistent to pb proof
-                    print("node %d collects one more value in ACS 1 from leader %d" % (pid, j))
+                    #print("node %d collects one more value in ACS 1 from leader %d" % (pid, j))
                 except AssertionError:
-                    print("node %d finds None PB value in ACS from leader %d" % (pid, j))
+                    #print("node %d finds None PB value in ACS from leader %d" % (pid, j))
                     pb_value_threads[j].join()
                     assert prbc_values[j] is not None
-                    print("node %d collects one more value in ACS 2 from leader %d" % (pid, j))
+                    #print("node %d collects one more value in ACS 2 from leader %d" % (pid, j))
             else:
                 pb_value_threads[j].kill()
                 prbc_values[j] = None
 
-    print("node %d output in ACS" % pid)
+    #print("node %d output in ACS" % pid)
     pb_proof_thread.kill()
     return tuple(prbc_values)
