@@ -310,7 +310,7 @@ class Mule():
                                    self.transaction_buffer.get_nowait, fastpath_output,
                                    self.SLOTS_NUM, self.FAST_BATCH_SIZE, T,
                                    hash_genesis, self.sPK2s, self.sSK2,
-                                   fast_recv.get, fastpath_send)
+                                   fast_recv.get, fastpath_send, logger=self.logger)
 
             return fast_thread
 

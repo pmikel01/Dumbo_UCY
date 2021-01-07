@@ -1,17 +1,13 @@
-
-
 from gevent import monkey; monkey.patch_all(thread=False)
 from datetime import datetime
-
 import time
 import gevent
 from gevent.event import Event
 from collections import defaultdict
-import logging
-from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
+import hashlib, pickle
 
-
-
+def hash(x):
+    return hashlib.sha256(pickle.dumps(x)).digest()
 
 def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger=None):
     """Binary consensus from [MMR14]. It takes an input ``vi`` and will
@@ -36,14 +32,21 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
     conf_sent = defaultdict(lambda: defaultdict(lambda: False))
     int_values = defaultdict(set)
 
+    finish_sent = False
+    finish_value = set()
+
     # This event is triggered whenever int_values or aux_values changes
     bv_signal = Event()
+
+    finish_signal = Event()
 
     def broadcast(o):
         for i in range(N):
             send(i, o)
 
-    def _recv():
+    def recv():
+        finish_cnt = 0
+
         while True:  # not finished[pid]:
 
             #gevent.sleep(0)
@@ -111,13 +114,26 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
 
                 bv_signal.set()
 
+            elif msg[0] == 'FINISH':
+                _, _, v = msg
+                assert type(v) == int
+                finish_cnt = finish_cnt + 1
+                finish_value.add(v)
+                assert len(finish_value) == 1
+                if finish_sent is False and finish_cnt >= f + 1:
+                    broadcast(('FINISH', '', list(finish_value)[0]))
+                if finish_cnt >= 2*f + 1:
+                    finish_signal.set()
+
     # Translate mmr14 broadcast into coin.broadcast
     # _coin_broadcast = lambda (r, sig): broadcast(('COIN', r, sig))
     # _coin_recv = Queue()
     # coin = shared_coin(sid+'COIN', pid, N, f, _coin_broadcast, _coin_recv.get)
 
+    finish_signal.clear()
+
     # Run the receive loop in the background
-    _thread_recv = gevent.spawn(_recv)
+    _thread_recv = gevent.spawn(recv)
 
     # Block waiting for the input
     # print(pid, sid, 'PRE-ENTERING CRITICAL')
@@ -128,124 +144,109 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
 
     # print(pid, sid, 'PRE-EXITING CRITICAL', vi)
     assert type(vi) is int
-    est = vi
-    r = 0
-    already_decided = None
 
-    while True:  # Unbounded number of rounds
-        # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
+    cheap_coins = int.from_bytes(hash(sid), byteorder='big')
 
-        #gevent.sleep(0)
-        if logger != None:
-            logger.info("TCVBA %s enters round %d" % (sid, r))
+    def main_loop():
+        est = vi
+        r = 0
+        while True:  # Unbounded number of rounds
+            # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
 
-        if not est_sent[r][est]:
-            est_sent[r][est] = True
-            broadcast(('EST', r, est))
-
-        # print("debug", pid, sid, 'WAITS BIN VAL at epoch', r)
-
-        while len(int_values[r]) == 0:
-            # Block until a value is output
             #gevent.sleep(0)
-            bv_signal.clear()
-            bv_signal.wait()
-
-        if logger != None:
-            logger.info("TCVBA %s gets BIN VAL at epoch %d" % (sid, r))
-        # print("debug", pid, sid, 'GETS BIN VAL at epoch', r)
-
-        w = next(iter(int_values[r]))  # take an element
-
-        broadcast(('AUX', r, w))
-
-        while True:
-            #gevent.sleep(0)
-            len_int_values = len(int_values[r])
-            assert len_int_values == 1 or len_int_values == 2
-            if len_int_values == 1:
-                if len(aux_values[r][tuple(int_values[r])[0]]) >= N - f:
-                    values = set(int_values[r])
-                    break
-            else:
-                if sum(len(aux_values[r][v]) for v in int_values[r]) >= N - f:
-                    values = set(int_values[r])
-                    break
-            bv_signal.clear()
-            bv_signal.wait()
-
-
-        # CONF phase
-
-
-        if not conf_sent[r][tuple(values)]:
-
-            broadcast(('CONF', r, tuple(int_values[r])))
-            conf_sent[r][tuple(values)] = True
-        while True:
-            #gevent.sleep(0)
-
-            # len_int_values = len(int_values[r])
-            # assert len_int_values == 1 or len_int_values == 2
-            if len(conf_values[r][tuple(int_values[r])]) >= N - f:
-                values = set(int_values[r])
-                break
-            bv_signal.clear()
-            bv_signal.wait()
-
-        # Block until receiving the common coin value
-
-        # print("debug", pid, sid, 'fetchs a coin at epoch', r)
-        s = coin(r)
-        # print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
-
-
-        try:
-            est, already_decided = set_new_estimate(
-                values=values,
-                s=s,
-                already_decided=already_decided,
-                decide=decide,
-            )
-            # print('debug then decided:', already_decided, '%s' % sid)
-        except AbandonedNodeError:
-            # print('debug node %d quits %s' % (pid, sid))
-            # print('[sid:%s] [pid:%d] QUITTING in round %d' % (sid,pid,r)))
             if logger != None:
-                logger.info("TCVBA %s completes" % sid)
-            _thread_recv.kill()
-            return
+                logger.info("TCVBA %s enters round %d" % (sid, r))
 
-        r += 1
+            if not est_sent[r][est]:
+                est_sent[r][est] = True
+                broadcast(('EST', r, est))
 
+            # print("debug", pid, sid, 'WAITS BIN VAL at epoch', r)
 
-def set_new_estimate(*, values, s, already_decided, decide):
-    if len(values) == 1:
-        v = next(iter(values))
-        assert type(v) is int
-        if (v % 2) == s:
-            if already_decided is None:
-                already_decided = v
-                decide(v)
-            elif already_decided == v:
-                # Here corresponds to a proof that if one party
-                # decides at round r, then in all the following
-                # rounds, everybody will propose r as an
-                # estimation. (Lemma 2, Lemma 1) An abandoned
-                # party is a party who has decided but no enough
-                # peers to help him end the loop.  Lemma: # of
-                # abandoned party <= t
-                raise AbandonedNodeError
-        est = v
-    else:
-        vals = tuple(values)
-        assert len(values) == 2
-        assert type(vals[0]) is int
-        assert type(vals[1]) is int
-        assert abs(vals[0] - vals[1]) == 1
-        if vals[0] % 2 == s:
-            est = vals[0]
-        else:
-            est = vals[1]
+            while len(int_values[r]) == 0:
+                # Block until a value is output
+                #gevent.sleep(0)
+                bv_signal.clear()
+                bv_signal.wait()
 
-    return est, already_decided
+            if logger != None:
+                logger.info("TCVBA %s gets BIN VAL at epoch %d" % (sid, r))
+            # print("debug", pid, sid, 'GETS BIN VAL at epoch', r)
+
+            w = next(iter(int_values[r]))  # take an element
+
+            broadcast(('AUX', r, w))
+
+            while True:
+                #gevent.sleep(0)
+                len_int_values = len(int_values[r])
+                assert len_int_values == 1 or len_int_values == 2
+                if len_int_values == 1:
+                    if len(aux_values[r][tuple(int_values[r])[0]]) >= N - f:
+                        values = set(int_values[r])
+                        break
+                else:
+                    if sum(len(aux_values[r][v]) for v in int_values[r]) >= N - f:
+                        values = set(int_values[r])
+                        break
+                bv_signal.clear()
+                bv_signal.wait()
+
+            # CONF phase
+
+            if not conf_sent[r][tuple(values)]:
+
+                broadcast(('CONF', r, tuple(int_values[r])))
+                conf_sent[r][tuple(values)] = True
+            while True:
+                #gevent.sleep(0)
+
+                # len_int_values = len(int_values[r])
+                # assert len_int_values == 1 or len_int_values == 2
+                if len(conf_values[r][tuple(int_values[r])]) >= N - f:
+                    values = set(int_values[r])
+                    break
+                bv_signal.clear()
+                bv_signal.wait()
+
+            # Block until receiving the common coin value
+
+            # print("debug", pid, sid, 'fetchs a coin at epoch', r)
+            if r < 50:
+                s = (cheap_coins >> r) & 1
+            else:
+                s = coin(r)
+            # print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
+
+            # Set estimate
+            if len(values) == 1:
+                v = next(iter(values))
+                assert type(v) is int
+                if (v % 2) == s:
+                    decide(v)
+                    if finish_sent is False:
+                        broadcast(('FINISH', '', v))
+                est = v
+            else:
+                vals = tuple(values)
+                assert len(values) == 2
+                assert type(vals[0]) is int
+                assert type(vals[1]) is int
+                assert abs(vals[0] - vals[1]) == 1
+                if vals[0] % 2 == s:
+                    est = vals[0]
+                else:
+                    est = vals[1]
+            # print('debug then decided:', already_decided, '%s' % sid)
+
+            r += 1
+
+    _thread_main_loop = gevent.spawn(main_loop)
+
+    finish_signal.wait()
+
+    if logger != None:
+        logger.info("TCVBA %s completes" % sid)
+
+    _thread_recv.kill()
+    _thread_main_loop.kill()
