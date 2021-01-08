@@ -82,8 +82,8 @@ def honeybadger_block(pid, N, f, PK, SK, propose, acs_put_in, acs_get_out, tpke_
     vall = acs_get_out()
 
     #TODO: here skip the following checks since ACS might not return N-f values
-    #assert len(vall) == N
-    #assert len([_ for _ in vall if _ is not None]) >= N - f  # This many must succeed
+    assert len(vall) == N
+    assert len([_ for _ in vall if _ is not None]) >= N - f  # This many must succeed
 
     # Broadcast all our decryption shares
     my_shares = []

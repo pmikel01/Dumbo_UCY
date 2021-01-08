@@ -61,10 +61,10 @@ def speedydumbocommonsubset(pid, N, f, pb_values_out, pb_proof_out, vacs_in, vac
                     #print("node %d collects one more value in ACS 1 from leader %d" % (pid, j))
                 except AssertionError as e:
                     #print("node %d finds None PB value in ACS from leader %d" % (pid, j))
-                    #pb_value_threads[j].join()
-                    #assert pb_values[j] is not None
+                    pb_value_threads[j].join()
+                    assert pb_values[j] is not None
                     #print("node %d collects one more value in ACS 2 from leader %d" % (pid, j))
-                    traceback.print_exc()
+                    #traceback.print_exc()
                     pass
             else:
                 pb_value_threads[j].kill()

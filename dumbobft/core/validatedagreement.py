@@ -176,8 +176,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
         """
         send(-1, ('VABA_COIN', 'leader_election', o))
 
-    permutation_coin = shared_coin(sid + 'COIN', pid, N, f,
-                               PK, SK, coin_bcast, coin_recv.get, False, logger)
+    permutation_coin = shared_coin(sid + 'PERMUTE', pid, N, f,
+                               PK, SK, coin_bcast, coin_recv.get, single_bit=False)
     # False means to get a coin of 256 bits instead of a single bit
 
     """ 
