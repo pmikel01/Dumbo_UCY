@@ -201,12 +201,18 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send, lo
 
         # Block until receiving the common coin value
 
-        # print("debug", pid, sid, 'fetchs a coin at epoch', r)
         if r == 0:
             s = 1
         else:
             s = coin(r)
-        # print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
+
+        try:
+            assert s in (0, 1)
+        except AssertionError:
+            s = s % 2
+
+        if r > 20:
+            print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
 
 
 

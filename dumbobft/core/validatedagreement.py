@@ -335,7 +335,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
 
         coin = shared_coin(sid + 'COIN' + str(r), pid, N, f,
                            PK, SK,
-                           aba_coin_bcast, aba_coin_recvs[r].get, logger)
+                           aba_coin_bcast, aba_coin_recvs[r].get, single_bit=True)
 
         def make_aba_send(rnd): # this make will automatically deep copy the enclosed send func
             def aba_send(k, o):

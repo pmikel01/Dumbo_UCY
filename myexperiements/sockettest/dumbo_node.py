@@ -52,8 +52,7 @@ class DumboBFTNode (Dumbo):
         self.ready = ready
         self.stop = stop
         self.mode = mode
-        self.debug = debug
-        Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute)
+        Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
 
     def prepare_bootstrap(self):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))

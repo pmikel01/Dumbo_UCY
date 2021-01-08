@@ -90,7 +90,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
                     # FIXME: raise or continue? For now will raise just
                     # because it appeared first, but maybe the protocol simply
                     # needs to continue.
-                    print('Redundant AUX received', msg)
+                    # print('Redundant AUX received', msg)
                     # raise RedundantMessageError(
                     #    'Redundant AUX received {}'.format(msg))
                     continue
@@ -221,6 +221,11 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
             else:
                 s = coin(r)
             # print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
+
+            try:
+                assert s in (0, 1)
+            except AssertionError:
+                s = s % 2
 
             # Set estimate
             if len(values) == 1:

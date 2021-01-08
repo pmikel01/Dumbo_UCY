@@ -90,7 +90,7 @@ class Dumbo():
     :param K: a test parameter to specify break out after K rounds
     """
 
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, mute=False):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, mute=False, debug=False):
         self.sid = sid
         self.id = pid
         self.B = B
@@ -118,7 +118,7 @@ class Dumbo():
         self.txcnt = 0
 
         self.mute = mute
-        self.debug = True
+        self.debug = debug
 
     def submit_tx(self, tx):
         """Appends the given transaction to the transaction buffer.

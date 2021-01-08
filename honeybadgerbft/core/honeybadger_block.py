@@ -81,11 +81,9 @@ def honeybadger_block(pid, N, f, PK, SK, propose, acs_put_in, acs_get_out, tpke_
     # Wait for the corresponding ACS to finish
     vall = acs_get_out()
 
-    assert len(vall) == N
-    assert len([_ for _ in vall if _ is not None]) >= N - f  # This many must succeed
-
-    #print("node %d is making block ..." % pid)
-
+    #TODO: here skip the following checks since ACS might not return N-f values
+    #assert len(vall) == N
+    #assert len([_ for _ in vall if _ is not None]) >= N - f  # This many must succeed
 
     # Broadcast all our decryption shares
     my_shares = []

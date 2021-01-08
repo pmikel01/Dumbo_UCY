@@ -324,7 +324,7 @@ class Mule():
 
             coin = shared_coin(epoch_id, pid, N, f,
                                self.sPK, self.sSK,
-                               coin_bcast, coin_recv.get)
+                               coin_bcast, coin_recv.get, single_bit=True)
 
             return coin
 
