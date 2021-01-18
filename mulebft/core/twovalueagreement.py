@@ -139,8 +139,8 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
     # print(pid, sid, 'PRE-ENTERING CRITICAL')
 
     vi = input()
-    if logger != None:
-        logger.info("TCVBA %s gets input" % sid)
+    #if logger != None:
+    #    logger.info("TCVBA %s gets input" % sid)
 
     # print(pid, sid, 'PRE-EXITING CRITICAL', vi)
     assert type(vi) is int
@@ -258,8 +258,8 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
 
     finish_signal.wait()
 
-    if logger != None:
-        logger.info("TCVBA %s completes at round %d" % (sid, r))
+    #if logger != None:
+    #    logger.info("TCVBA %s completes at round %d" % (sid, r))
 
-    _thread_recv.kill()
-    _thread_main_loop.kill()
+    #_thread_recv.kill()
+    #_thread_main_loop.kill()
