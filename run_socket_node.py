@@ -16,7 +16,7 @@ from ctypes import c_bool
 
 
 def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
-                         stop: mpValue, protocol="mule", mute=False, F=100000, debug=False):
+                         stop: mpValue, protocol="mule", mute=False, F=100, debug=False):
     bft = None
     if protocol == 'dumbo':
         bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug)
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument('--M', metavar='M', required=False,
                         help='whether to mute a third of nodes', type=bool, default=False)
     parser.add_argument('--F', metavar='F', required=False,
-                        help='batch size of fallback path', type=int, default=100000)
+                        help='batch size of fallback path', type=int, default=100)
     parser.add_argument('--D', metavar='D', required=False,
                         help='whether to debug mode', type=bool, default=False)
     args = parser.parse_args()
@@ -142,7 +142,6 @@ if __name__ == '__main__':
         time.sleep(1)
         net_server.terminate()
         net_server.join()
-
 
     except FileNotFoundError or AssertionError as e:
         traceback.print_exc()
