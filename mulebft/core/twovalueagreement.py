@@ -261,5 +261,5 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send, logger
     #if logger != None:
     #    logger.info("TCVBA %s completes at round %d" % (sid, r))
 
-    #_thread_recv.kill()
-    #_thread_main_loop.kill()
+    _thread_recv.kill()
+    _thread_main_loop.kill()
