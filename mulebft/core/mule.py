@@ -157,6 +157,12 @@ class Mule():
     def run_bft(self):
         """Run the Mule protocol."""
 
+        if self.mute:
+            muted_nodes = [each * 3 + 1 for each in range(int((self.N-1)/3))]
+            if self.pid in muted_nodes:
+                self._send = lambda j, o: time.sleep(100)
+                self._recv = lambda: (time.sleep(100) for i in range(10000))
+
         def _recv_loop():
             """Receive messages."""
             while True:
@@ -239,12 +245,10 @@ class Mule():
         leader = e % N
 
         T = self.TIMEOUT
-        if self.mute:
-            #seed = int.from_bytes(self.sid.encode('utf-8'), 'little')
-            muted_nodes = [each * 3 + 1 for each in range(int((N-1)/3))]
-            #if leader in np.random.RandomState(seed).permutation(self.N)[:int((self.N - 1) / 3)]:
-            if leader in muted_nodes:
-                T = 0.00001
+        #if self.mute:
+        #    muted_nodes = [each * 3 + 1 for each in range(int((N-1)/3))]
+        #    if leader in muted_nodes:
+        #        T = 0.00001
 
         #S = self.SLOTS_NUM
         #T = self.TIMEOUT
