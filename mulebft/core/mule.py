@@ -286,6 +286,7 @@ class Mule():
 
         latest_delivered_block = None
         latest_notarized_block = None
+        latest_notarization = None
 
         viewchange_counter = 0
         viewchange_max_slot = 0
@@ -296,14 +297,14 @@ class Mule():
                 send(k, ('FAST', '', o))
 
             def fastpath_output(o):
-                nonlocal latest_delivered_block, latest_notarized_block
+                nonlocal latest_delivered_block, latest_notarized_block, latest_notarization
                 if not fast_blocks.empty():
                     latest_delivered_block = fast_blocks.get()
                     #tx_cnt = str(latest_delivered_block).count("Dummy TX")
                     #self.txcnt += tx_cnt
                     #if self.logger is not None:
                     #    self.logger.info('Node %d Delivers Fastpath Block in Epoch %d at Slot %d with having %d TXs' % (self.id, self.epoch, latest_delivered_block[1], tx_cnt))
-                latest_notarized_block = o
+                latest_notarized_block, latest_notarization = o
                 fast_blocks.put(o)
 
             fast_thread = gevent.spawn(hsfastpath, epoch_id, pid, N, f, leader,
@@ -413,9 +414,9 @@ class Mule():
         start_vc = time.time()
 
         # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
-        notarization = None
+        notarization = latest_notarization
         try:
-            notarization = fast_thread.get(block=False)
+            #notarization = fast_thread.get(block=False)
             if notarization is not None:
                 notarized_block = latest_notarized_block
                 assert notarized_block is not None
@@ -433,11 +434,11 @@ class Mule():
                 send(-1, ('VIEW_CHANGE', '', o))
         except AssertionError:
             print("Problematic notarization....")
-        except gevent.timeout.Timeout:
-            assert notarization is None
-            notarized_block_header = None
-            o = (notarized_block_header, None)
-            send(-1, ('VIEW_CHANGE', '', o))
+        #except gevent.timeout.Timeout:
+        #    assert notarization is None
+        #    notarized_block_header = None
+        #    o = (notarized_block_header, None)
+        #    send(-1, ('VIEW_CHANGE', '', o))
 
 
         #

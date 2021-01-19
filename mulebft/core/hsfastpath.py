@@ -17,7 +17,7 @@ def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
 
 
-def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, hash_genesis, PK2s, SK2, recv, send, logger=None):
+def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, Bsize, Tout, hash_genesis, PK2s, SK2, recv, send, logger=None):
     """Fast path, Byzantine Safe Broadcast
     :param str sid: ``the string of identifier``
     :param int pid: ``0 <= pid < N``
@@ -25,7 +25,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
     :param int f: fault tolerance, ``N >= 3f + 1``
     :param int leader: the pid of leading node
     :param get_input: a function to get input TXs, e.g., input() to get a transaction
-    :param put_output: a function to deliver output blocks, e.g., output(block)
+    :param output_notraized_block: a function to deliver notraized blocks, e.g., output(block)
 
     :param list PK2s: an array of ``coincurve.PublicKey'', i.e., N public keys of ECDSA for all parties
     :param PublicKey SK2: ``coincurve.PrivateKey'', i.e., secret key of ECDSA
@@ -52,6 +52,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
     hash_prev = hash_genesis
     pending_block = None
     notraized_block = None
+    fixed_block = None
 
     # Leader's temp variables
     voters = defaultdict(lambda: set())
@@ -77,7 +78,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
 
 
     def handle_messages():
-        nonlocal leader, hash_prev, pending_block, notraized_block, voters, votes, slot_cur
+        nonlocal leader, hash_prev, pending_block, notraized_block, fixed_block, voters, votes, slot_cur
 
         while True:
 
@@ -197,7 +198,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
     """
 
     def one_slot():
-        nonlocal pending_block, notraized_block, hash_prev, slot_cur, epoch_txcnt, delay, e_times, s_times, txcnt, weighted_delay
+        nonlocal pending_block, notraized_block, fixed_block, hash_prev, slot_cur, epoch_txcnt, delay, e_times, s_times, txcnt, weighted_delay
 
         #print('3')
 
@@ -227,18 +228,22 @@ def hsfastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout,
 
         if pending_block is not None:
 
+            if notraized_block is not None:
+                fixed_block = notraized_block
+                assert fixed_block[1] + 2 == slot_cur
+
             notraized_block = (pending_block[0], pending_block[1], pending_block[2], pending_block[4])
-            if put_output is not None: put_output(notraized_block)
-            txcnt[pending_block[1]] = str(notraized_block).count("Dummy TX")
+            assert notraized_block[1] + 1 == slot_cur
 
-            if pending_block[1] >= 2:
-                e_times[pending_block[1]-1] = time.time()
-                delay[pending_block[1]-1] = e_times[pending_block[1]-1] - s_times[pending_block[1]-1]
-                weighted_delay = (epoch_txcnt * weighted_delay + txcnt[pending_block[1]-1] * delay[pending_block[1]-1]) / (epoch_txcnt + txcnt[pending_block[1]-1])
-                epoch_txcnt += txcnt[pending_block[1]-1]
+            if fixed_block is not None:
+                e_times[fixed_block[1]] = time.time()
+                delay[fixed_block[1]] = e_times[fixed_block[1]] - s_times[fixed_block[1]]
+                txcnt[fixed_block[1]] = str(fixed_block).count("Dummy TX")
+                weighted_delay = (epoch_txcnt * weighted_delay + txcnt[fixed_block[1]] * delay[fixed_block[1]]) / (epoch_txcnt + txcnt[fixed_block[1]])
+                epoch_txcnt += txcnt[fixed_block[1]]
 
-                #if logger is not None:
-                #    logger.info('Fast block Delay at Node %d for Epoch %s and Slot %d: ' % (pid, sid, pending_block[1]-1) + str(delay))
+            if output_notraized_block is not None:
+                output_notraized_block((notraized_block, (h_p, Sigma_p, (epoch_txcnt, weighted_delay))))
 
         pending_block = (sid, slot_cur, h_p, Sigma_p, batches)
         pending_block_header = (sid, slot_cur, h_p, hash(batches))
