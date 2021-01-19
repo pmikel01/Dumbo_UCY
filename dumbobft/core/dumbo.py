@@ -135,7 +135,7 @@ class Dumbo():
 
         if self.mute:
             muted_nodes = [each * 3 + 1 for each in range(int((self.N-1)/3))]
-            if self.pid in muted_nodes:
+            if self.id in muted_nodes:
                 self._send = lambda j, o: time.sleep(100)
                 self._recv = lambda: (time.sleep(100) for i in range(10000))
 
