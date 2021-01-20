@@ -606,6 +606,6 @@ class RbcMule():
 
             #recv_t.kill()
             #return list(block)
-            self.actual_txcnt += self.FAST_BATCH_SIZE
+            self.actual_txcnt += self.FALLBACK_BATCH_SIZE * (N - f)
 
 
