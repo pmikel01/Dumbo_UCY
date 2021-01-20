@@ -595,7 +595,8 @@ class RbcMule():
             #    self.txcnt += tx_cnt
             #    self.logger.info('Node %d Delivers ACS Block in Epoch %d with having %d TXs' % (self.id, self.epoch, tx_cnt))
 
-            blkcnt = str(block).count("Dummy TX")
+            #blkcnt = str(block).count("Dummy TX")
+            blkcnt = self.FAST_BATCH_SIZE
             blkdelay = end - start
 
             self.txdelay = (self.txcnt * self.txdelay + blkcnt * blkdelay) / (self.txcnt + blkcnt)
