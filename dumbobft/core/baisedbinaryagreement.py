@@ -243,6 +243,7 @@ def set_new_estimate(*, sid, start, values, s, already_decided, decide, logger):
         if v == s:
             if already_decided is None:
                 already_decided = v
+                assert v in (0, 1)
                 decide(v)
                 end = time.time()
                 if logger != None:
