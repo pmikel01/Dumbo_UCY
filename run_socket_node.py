@@ -8,6 +8,7 @@ from gevent import Greenlet
 from myexperiements.sockettest.dumbo_node import DumboBFTNode
 from myexperiements.sockettest.sdumbo_node import SDumboBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
+from myexperiements.sockettest.rbcmule_node import RbcMuleBFTNode
 from myexperiements.sockettest.hotstuff_node import HotstuffBFTNode
 from network.socket_server import NetworkServer
 from network.socket_client import NetworkClient
@@ -24,6 +25,8 @@ def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bf
         bft = SDumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client,  ready, stop, K, mute=mute, debug=debug)
     elif protocol == "mule":
         bft = MuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
+    elif protocol == "rbcmule":
+        bft = RbcMuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
     elif protocol == 'hotstuff':
         bft = HotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, 1, mute=mute)
     else:

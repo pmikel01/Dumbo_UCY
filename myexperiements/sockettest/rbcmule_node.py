@@ -1,3 +1,4 @@
+import gevent
 from gevent import monkey; monkey.patch_all(thread=False)
 
 import random
@@ -5,7 +6,7 @@ from typing import Callable
 import os
 import pickle
 from gevent import time
-from mulebft.core.mule import Mule
+from rbcmulebft.core.rbcmule import RbcMule
 from myexperiements.sockettest.make_random_tx import tx_generator
 from coincurve import PrivateKey, PublicKey
 from multiprocessing import Value as mpValue
@@ -42,7 +43,7 @@ def load_key(id, N):
     return sPK, sPK1, sPK2s, ePK, sSK, sSK1, sSK2, eSK
 
 
-class MuleBFTNode (Mule):
+class RbcMuleBFTNode (RbcMule):
 
     def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
@@ -53,7 +54,7 @@ class MuleBFTNode (Mule):
         self.ready = ready
         self.stop = stop
         self.mode = mode
-        Mule.__init__(self, sid, id, S, T, max(int(Bfast), 1), max(int(Bacs/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
+        RbcMule.__init__(self, sid, id, S, T, max(int(Bfast), 1), max(int(Bacs/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
 
     def prepare_bootstrap(self):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
@@ -62,7 +63,7 @@ class MuleBFTNode (Mule):
             for _ in range(self.K + 1):
                 for r in range(self.SLOTS_NUM):
                     suffix = hex(self.id) + hex(r) + ">"
-                    Mule.submit_tx(self, tx[:-len(suffix)] + suffix)
+                    RbcMule.submit_tx(self, tx[:-len(suffix)] + suffix)
                     if r % 50000 == 0:
                         self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
         else:
@@ -79,6 +80,7 @@ class MuleBFTNode (Mule):
         self._recv = lambda: self.bft_from_server()
 
         self.prepare_bootstrap()
+        #gevent.spawn(self.prepare_bootstrap)
 
         while not self.ready.value:
             time.sleep(1)
@@ -88,7 +90,7 @@ class MuleBFTNode (Mule):
 
 
 def main(sid, i, S, T, B, N, f, addresses, K):
-    mule = MuleBFTNode(sid, i, S, T, B, N, f, addresses, K)
+    mule = RbcMuleBFTNode(sid, i, S, T, B, N, f, addresses, K)
     mule.run_bft()
 
 

@@ -143,7 +143,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
                             tx_batch = 'Dummy'
                         else:
                             try:
-                                tx_batch = json.dumps([get_input() for _ in range(BATCH_SIZE)])
+                                tx_batch = json.dumps([get_input()] * BATCH_SIZE)
                             except Exception as e:
                                 tx_batch = json.dumps(['Dummy' for _ in range(BATCH_SIZE)])
 
@@ -282,26 +282,21 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
 
         #print('2')
 
-        timeout = Timeout(TIMEOUT, False)
-        timeout.start()
+        #timeout = Timeout(TIMEOUT, False)
+        #timeout.start()
 
-        with Timeout(TIMEOUT):
-
-            try:
-                one_slot()
-                #gevent.sleep(0)
-            except Timeout:
-                try:
-                    msg_noncritical_signal.wait()
-                    slot_noncritical_signal.wait()
-                    gevent.killall([recv_thread])
-                except Timeout as e:
-                    print("node " + str(pid) + " error: " + str(e))
-                    if logger is not None:
-                        logger.info("Fastpath Timeout!")
-                    break
-            finally:
-                timeout.cancel()
+        try:
+            with Timeout(TIMEOUT):
+                    one_slot()
+                    #gevent.sleep(0)
+        except Timeout as e:
+            msg_noncritical_signal.wait()
+            slot_noncritical_signal.wait()
+            gevent.killall([recv_thread])
+            print("node " + str(pid) + " error: " + str(e))
+            if logger is not None:
+                logger.info("Fastpath Timeout!")
+            break
 
     if logger is not None:
         logger.info("Leaves fastpath at %d slot" % (slot_cur))

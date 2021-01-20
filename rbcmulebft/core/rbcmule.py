@@ -15,8 +15,7 @@ from gevent.queue import Queue
 from collections import namedtuple
 from enum import Enum
 
-from dumbobft.core.validators import prbc_validate
-from mulebft.core.hsfastpath import hsfastpath
+from rbcmulebft.core.rbcfastpath import rbcfastpath
 from mulebft.core.twovalueagreement import twovalueagreement
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
@@ -28,6 +27,7 @@ from crypto.ecdsa.ecdsa import PrivateKey
 from honeybadgerbft.core.commoncoin import shared_coin
 from honeybadgerbft.exceptions import UnknownTagError
 from crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
+from dumbobft.core.validators import prbc_validate
 
 
 def set_consensus_log(id: int):
@@ -84,7 +84,7 @@ def broadcast_receiver_loop(recv_func, recv_queues):
             traceback.print_exc()
 
 
-class Mule():
+class RbcMule():
     """Mule object used to run the protocol
 
     :param str sid: The base name of the common coin that will be used to
@@ -152,7 +152,7 @@ class Mule():
         # print('backlog_tx', self.id, tx)
         #if self.logger != None:
         #    self.logger.info('Backlogged tx at Node %d:' % self.id + str(tx))
-        self.transaction_buffer.put_nowait(tx)
+        self.transaction_buffer.put(tx)
 
     def run_bft(self):
         """Run the Mule protocol."""
@@ -163,12 +163,6 @@ class Mule():
                 #T = 0.00001
                 while True:
                     time.sleep(10)
-
-        #if self.mute:
-        #    muted_nodes = [each * 3 + 1 for each in range(int((self.N-1)/3))]
-        #    if self.id in muted_nodes:
-        #        self._send = lambda j, o: time.sleep(100)
-        #        self._recv = lambda: (time.sleep(100) for i in range(10000))
 
         def _recv_loop():
             """Receive messages."""
@@ -264,7 +258,9 @@ class Mule():
         epoch_id = sid + 'FAST' + str(e)
         hash_genesis = hash(epoch_id)
 
-        fast_recv = Queue()  # The thread-safe queue to receive the messages sent to fast_path of this epoch
+        prbc_proofs = dict()
+
+        fast_recv = Queue()
         viewchange_recv = Queue()
         tcvba_recv = Queue()
         coin_recv = Queue()
@@ -320,7 +316,7 @@ class Mule():
                 latest_notarized_block, latest_notarization = o
                 fast_blocks.put(o)
 
-            fast_thread = gevent.spawn(hsfastpath, epoch_id, pid, N, f, leader,
+            fast_thread = gevent.spawn(rbcfastpath, epoch_id, pid, N, f, leader,
                                    self.transaction_buffer.get_nowait, fastpath_output,
                                    self.SLOTS_NUM, self.FAST_BATCH_SIZE, T,
                                    hash_genesis, self.sPK2s, self.sSK2,
@@ -358,21 +354,22 @@ class Mule():
 
             while True:
                 #gevent.sleep(0)
-                j, (notarized_block_header_j, notarized_block_Sig_j) = viewchange_recv.get()
-                if notarized_block_Sig_j is not None:
-                    (_, slot_num, Sig_p, _) = notarized_block_header_j
-                    notarized_block_hash_j = hash(notarized_block_header_j)
+                j, (slot_j, proof_j) = viewchange_recv.get()
+                if slot_j is not None:
+                    prbc_sid_j = epoch_id + 'FAST_PRBC' + str(slot_j) + str(leader)
                     try:
-                        assert len(notarized_block_Sig_j) >= N-f
-                        for item in notarized_block_Sig_j:
-                            # print(Sigma_p)
-                            (sender, sig_p) = item
-                            assert ecdsa_vrfy(self.sPK2s[sender], notarized_block_hash_j, sig_p)
+                        if prbc_sid_j in prbc_proofs.keys():
+                            assert slot_j == prbc_proofs[prbc_sid_j][0]
+                        else:
+                            assert prbc_validate(prbc_sid_j, N, f, self.sPK2s, proof_j)
+                            prbc_proofs[prbc_sid_j] = (slot_j, proof_j)
+                        slot_num = slot_j
                     except AssertionError:
-                        if self.logger is not None: self.logger.info("False view change with invalid notarization")
+                        if self.logger is not None:
+                            self.logger.info("False view change with invalid notarization")
                         continue  # go to next iteration without counting ViewChange Counter
                 else:
-                    assert notarized_block_header_j == None
+                    assert slot_j is None
                     slot_num = 0
 
                 viewchange_counter += 1
@@ -433,24 +430,29 @@ class Mule():
             if notarization is not None:
                 notarized_block = latest_notarized_block
                 assert notarized_block is not None
-                payload_digest = hash(notarized_block[3])
-                notarized_block_header = (notarized_block[0], notarized_block[1], notarized_block[2], payload_digest)
-                notarized_block_hash, notarized_block_raw_Sig, (epoch_txcnt, weighted_delay) = notarization
-                self.txdelay = (self.txcnt * self.txdelay + epoch_txcnt * weighted_delay) / (self.txcnt + epoch_txcnt)
-                self.txcnt += epoch_txcnt
-                #assert hash(notarized_block_header) == notarized_block_hash
-                o = (notarized_block_header, notarized_block_raw_Sig)
+                _sid, _slot, _leader, _batch = notarized_block
+                slot, proof, (epoch_txcnt, weighted_delay) = notarization
+                assert epoch_id == _sid
+                assert leader == _leader
+                assert _slot == slot
+                prbc_sid = epoch_id + 'FAST_PRBC' + str(slot) + str(leader)
+                assert prbc_validate(prbc_sid, N, f, self.sPK2s, proof)
+                prbc_proofs[prbc_sid] = (slot, proof)
+                if (self.txcnt + epoch_txcnt) != 0:
+                    self.txdelay = (self.txcnt * self.txdelay + epoch_txcnt * weighted_delay) / (self.txcnt + epoch_txcnt)
+                    self.txcnt += epoch_txcnt
+                o = (slot, proof)
                 send(-1, ('VIEW_CHANGE', '', o))
             else:
-                notarized_block_header = None
-                o = (notarized_block_header, None)
+                o = (None, None)
                 send(-1, ('VIEW_CHANGE', '', o))
         except AssertionError:
             print("Problematic notarization....")
+            if self.logger is not None:
+                self.logger.info("Problematic notarization....")
         #except gevent.timeout.Timeout:
         #    assert notarization is None
-        #    notarized_block_header = None
-        #    o = (notarized_block_header, None)
+        #    o = (None, None)
         #    send(-1, ('VIEW_CHANGE', '', o))
 
 
@@ -460,7 +462,7 @@ class Mule():
         #
 
         end_vc = time.time()
-        if self.logger != None:
+        if self.logger is not None:
            self.logger.info('VIEW CHANGE costs time: %f' % (end_vc - start_vc) )
         self.vcdelay.append(end_vc - start_vc)
 
@@ -476,7 +478,6 @@ class Mule():
             # Select B transactions (TODO: actual random selection)
             tx_to_send = []
 
-            #for _ in range(self.FALLBACK_BATCH_SIZE):
             try:
                 tx_to_send.append(self.transaction_buffer.get_nowait())
                 tx_to_send = tx_to_send * self.FALLBACK_BATCH_SIZE
