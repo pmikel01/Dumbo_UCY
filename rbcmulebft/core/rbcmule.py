@@ -138,6 +138,7 @@ class RbcMule():
         self.s_time = 0
         self.e_time = 0
 
+        self.actual_txcnt = 0
         self.txcnt = 0
         self.txdelay = 0
         self.vcdelay = []
@@ -214,7 +215,7 @@ class RbcMule():
 
             self.e_time = time.time()
             if self.logger != None:
-                self.logger.info("node %d breaks in %f seconds in epoch %d with total delivered Txs %d and average delay %f and average VC delay %f" % (self.id, self.e_time-self.s_time, e, self.txcnt, self.txdelay, sum(self.vcdelay)/len(self.vcdelay)) )
+                self.logger.info("node %d breaks in %f seconds in epoch %d with total delivered Txs %d (%d) and average delay %f and average VC delay %f" % (self.id, self.e_time-self.s_time, e, self.txcnt, self.actual_txcnt, self.txdelay, sum(self.vcdelay)/len(self.vcdelay)) )
             else:
                 print("node %d breaks in %f seconds with total delivered Txs %d and average delay %f" % (self.id, self.e_time-self.s_time, self.txcnt, self.txdelay))
 
@@ -460,7 +461,8 @@ class RbcMule():
 
         #
         delivered_slots = tcvba_output.get()  # Block to receive the output
-        delivered_slots = max(delivered_slots - 1, 0)
+        #delivered_slots = max(delivered_slots - 1, 0)
+        self.actual_txcnt += delivered_slots * self.FAST_BATCH_SIZE
         #
 
         end_vc = time.time()
@@ -604,3 +606,6 @@ class RbcMule():
 
             #recv_t.kill()
             #return list(block)
+            self.actual_txcnt += self.FAST_BATCH_SIZE
+
+
