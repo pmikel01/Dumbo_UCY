@@ -13,7 +13,8 @@ from enum import Enum
 from collections import defaultdict
 from gevent.queue import Queue
 from honeybadgerbft.core.commoncoin import shared_coin
-from dumbobft.core.haltingtwovalueagreement import haltingtwovalueagreement
+from dumbobft.core.baisedbinaryagreement import baisedbinaryagreement
+#from dumbobft.core.haltingtwovalueagreement import haltingtwovalueagreement
 #from mulebft.core.twovalueagreement import twovalueagreement
 from dumbobft.core.consistentbroadcast import consistentbroadcast
 from dumbobft.core.validators import cbc_validate
@@ -349,9 +350,9 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
             return aba_send
 
         # Only leader gets input
-        aba = gevent.spawn(haltingtwovalueagreement, sid + 'ABA' + str(r), pid, N, f, coin,
+        aba = gevent.spawn(baisedbinaryagreement, sid + 'ABA' + str(r), pid, N, f, coin,
                      aba_inputs[r].get, aba_outputs[r].put_nowait,
-                     aba_recvs[r].get, make_aba_send(r), logger)
+                     aba_recvs[r].get, make_aba_send(r))
         # aba.get is a blocking function to get aba output
         aba_inputs[r].put_nowait(aba_r_input)
         aba_r = aba_outputs[r].get()
