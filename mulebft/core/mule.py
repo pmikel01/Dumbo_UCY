@@ -252,6 +252,8 @@ class Mule():
         leader = e % N
 
         T = self.TIMEOUT
+        if e == 0:
+            T = 10
         #if self.mute:
         #    muted_nodes = [each * 3 + 1 for each in range(int((N-1)/3))]
         #    if leader in muted_nodes:
