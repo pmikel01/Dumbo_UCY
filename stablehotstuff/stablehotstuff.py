@@ -98,6 +98,13 @@ class Hotstuff():
     def run_bft(self):
         """Run the Mule protocol."""
 
+        if self.mute:
+            muted_nodes = [each * 3 + 1 for each in range(int((self.N - 1) / 3))]
+            if self.id in muted_nodes:
+                # T = 0.00001
+                while True:
+                    time.sleep(10)
+
         def _recv_loop():
             """Receive messages."""
             while True:

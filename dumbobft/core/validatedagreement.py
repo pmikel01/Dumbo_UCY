@@ -310,6 +310,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
                         ballot_counter += 1
                     except:
                         print("Invalid voting ballot")
+                        if logger is not None:
+                            logger.info("Invalid voting ballot")
                 else:
                     if commit_values[sender] is not None and commit_values[sender][a] == 0:
                         votes[r].add((sender, vote))
@@ -362,6 +364,6 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decid
         r += 1
     assert a is not None
     if logger != None:
-        logger.info("VABA %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+        logger.info("VABA %s completes at round %d" % (sid, r))
     #print("node %d output in VABA" % pid)
     decide(cbc_outputs[a].get()[0])
