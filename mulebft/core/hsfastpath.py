@@ -95,7 +95,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
 
             msg_noncritical_signal.clear()
 
-            if msg[0] == 'VOTE' and pid == leader and len(voters[slot_cur]) < N - f and omitfast is False:
+            if msg[0] == 'VOTE' and pid == leader and len(voters[slot_cur]) < N - f:
 
                 _, slot, hash_p, sig_p = msg
                 #_, slot, hash_p, raw_sig_p, tx_batch, tx_sig = msg
@@ -287,8 +287,11 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
 
         try:
             with Timeout(TIMEOUT):
+                if omitfast is False:
                     one_slot()
-                    #gevent.sleep(0)
+                else:
+                    while True:
+                        gevent.sleep(0.01)
         except Timeout as e:
             msg_noncritical_signal.wait()
             slot_noncritical_signal.wait()

@@ -79,7 +79,7 @@ def rbcfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum,
 
                 s_times[slot_cur] = time.time()
 
-                if pid == leader and omitfast is False:
+                if pid == leader:
                     tx_batch = json.dumps([get_input()] * BATCH_SIZE)
                     slot_prbc_input = Queue(1)
                     slot_prbc_input.put(tx_batch)
@@ -97,14 +97,17 @@ def rbcfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum,
                         send(k, ('FAST_PRBC', slot_cur, o))
 
                     # Only leader gets input
-                    prbc_input = slot_prbc_input.get if leader == pid else None
+                    prbc_input = slot_prbc_input.get if leader == pid  else None
 
                     return gevent.spawn(provablereliablebroadcast, sid + 'FAST_PRBC' + str(slot_cur) + str(leader), pid, N, f,
                                                 PK2s, SK2, leader, prbc_input, prbc_recvs[slot_cur].get, prbc_send)
 
-                prbc_thread = _setup_prbc()
-                batches, proof = prbc_thread.get()
-
+                if omitfast is False:
+                    prbc_thread = _setup_prbc()
+                    batches, proof = prbc_thread.get()
+                else:
+                    while True:
+                        gevent.sleep(0.01)
         except Timeout:
             break
 
