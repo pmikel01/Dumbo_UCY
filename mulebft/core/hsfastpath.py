@@ -17,7 +17,7 @@ def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
 
 
-def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, Bsize, Tout, hash_genesis, PK2s, SK2, recv, send, logger=None):
+def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, Bsize, Tout, hash_genesis, PK2s, SK2, recv, send, omitfast=False, logger=None):
     """Fast path, Byzantine Safe Broadcast
     :param str sid: ``the string of identifier``
     :param int pid: ``0 <= pid < N``
@@ -95,7 +95,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
 
             msg_noncritical_signal.clear()
 
-            if msg[0] == 'VOTE' and pid == leader and len(voters[slot_cur]) < N - f:
+            if msg[0] == 'VOTE' and pid == leader and len(voters[slot_cur]) < N - f and omitfast is False:
 
                 _, slot, hash_p, sig_p = msg
                 #_, slot, hash_p, raw_sig_p, tx_batch, tx_sig = msg

@@ -18,7 +18,7 @@ def hash(x):
     return hashlib.sha256(pickle.dumps(x)).digest()
 
 
-def rbcfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, Bsize, Tout, hash_genesis, PK2s, SK2, recv, send, logger=None):
+def rbcfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, Bsize, Tout, hash_genesis, PK2s, SK2, recv, send, omitfast=False, logger=None):
     """Fast path, Byzantine Safe Broadcast
     :param str sid: ``the string of identifier``
     :param int pid: ``0 <= pid < N``
@@ -79,7 +79,7 @@ def rbcfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum,
 
                 s_times[slot_cur] = time.time()
 
-                if pid == leader:
+                if pid == leader and omitfast is False:
                     tx_batch = json.dumps([get_input()] * BATCH_SIZE)
                     slot_prbc_input = Queue(1)
                     slot_prbc_input.put(tx_batch)

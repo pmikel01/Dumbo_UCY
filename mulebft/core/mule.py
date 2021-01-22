@@ -107,7 +107,7 @@ class Mule():
     :param K: a test parameter to specify break out after K epochs
     """
 
-    def __init__(self, sid, pid, S, T, Bfast, Bacs, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, mute=False):
+    def __init__(self, sid, pid, S, T, Bfast, Bacs, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, mute=False, omitfast=False):
 
         self.SLOTS_NUM = S
         self.TIMEOUT = T
@@ -143,6 +143,7 @@ class Mule():
         self.vcdelay = []
 
         self.mute = mute
+        self.omitfast = omitfast
 
     def submit_tx(self, tx):
         """Appends the given transaction to the transaction buffer.
@@ -326,7 +327,7 @@ class Mule():
                                    self.transaction_buffer.get_nowait, fastpath_output,
                                    self.SLOTS_NUM, self.FAST_BATCH_SIZE, T,
                                    hash_genesis, self.sPK2s, self.sSK2,
-                                   fast_recv.get, fastpath_send, logger=self.logger)
+                                   fast_recv.get, fastpath_send, logger=self.logger, omitfast=self.omitfast)
 
             return fast_thread
 

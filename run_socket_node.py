@@ -17,16 +17,16 @@ from ctypes import c_bool
 
 
 def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
-                         stop: mpValue, protocol="mule", mute=False, F=100, debug=False):
+                         stop: mpValue, protocol="mule", mute=False, F=100, debug=False, omitfast=False):
     bft = None
     if protocol == 'dumbo':
         bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug)
     elif protocol == 'sdumbo':
         bft = SDumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client,  ready, stop, K, mute=mute, debug=debug)
     elif protocol == "mule":
-        bft = MuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
+        bft = MuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast)
     elif protocol == "rbcmule":
-        bft = RbcMuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute)
+        bft = RbcMuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast)
     elif protocol == 'hotstuff':
         bft = HotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, 1, mute=mute)
     else:
@@ -63,6 +63,8 @@ if __name__ == '__main__':
                         help='batch size of fallback path', type=int, default=100)
     parser.add_argument('--D', metavar='D', required=False,
                         help='whether to debug mode', type=bool, default=False)
+    parser.add_argument('--O', metavar='O', required=False,
+                        help='whether to omit the fast path', type=bool, default=False)
     args = parser.parse_args()
 
     # Some parameters
@@ -78,6 +80,7 @@ if __name__ == '__main__':
     M = args.M
     F = args.F
     D = args.D
+    O = args.O
 
     # Random generator
     rnd = random.Random(sid)
@@ -121,7 +124,7 @@ if __name__ == '__main__':
 
         net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
         net_client = NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop)
-        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D)
+        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O)
 
         net_server.start()
         net_client.start()
