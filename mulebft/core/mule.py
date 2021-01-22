@@ -159,7 +159,7 @@ class Mule():
         """Run the Mule protocol."""
 
         if self.mute:
-            muted_nodes = [each * 10 + 1 for each in range(int((self.N-1)/10))]
+            muted_nodes = [each * 4 + 1 for each in range(int((self.N-1)/4))]
             if self.id in muted_nodes:
                 #T = 0.00001
                 while True:
