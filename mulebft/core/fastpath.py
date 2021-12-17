@@ -127,6 +127,7 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                         continue
 
                     try:
+                        logger.info(str((sig_p, sender, PK1.hash_message(hash_p))))
                         assert PK1.verify_share(sig_p, sender, PK1.hash_message(hash_p))
                     except AssertionError:
                         if logger is not None:
@@ -226,6 +227,24 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
         try:
             sig_tx = ecdsa_sign(SK2, tx_batch)
             send(leader, ('VOTE', slot_cur, hash_prev, serialize(sig_prev), tx_batch, sig_tx))
+            logger.info(str((leader, ('VOTE', slot_cur, PK1.hash_message(hash_prev), sig_prev))))
+            logger.info("ID is " + str(pid))
+            try:
+                assert PK1.verify_share(sig_prev, 0, PK1.hash_message(hash_prev))
+            except:
+                logger.info("0disaster")
+            try:
+                assert PK1.verify_share(sig_prev, 1, PK1.hash_message(hash_prev))
+            except:
+                logger.info("1disaster")
+            try:
+                assert PK1.verify_share(sig_prev, 2, PK1.hash_message(hash_prev))
+            except:
+                logger.info("2disaster")
+            try:
+                assert PK1.verify_share(sig_prev, 3, PK1.hash_message(hash_prev))
+            except:
+                logger.info("3disaster")
         except AttributeError as e:
             if logger is not None:
                 logger.info(traceback.print_exc())

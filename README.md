@@ -1,3 +1,5 @@
+Dumbo BFT. The code is forked from the implementation of Honeybadger protocols.
+
 # HoneyBadgerBFT
 The Honey Badger of BFT Protocols.
 
