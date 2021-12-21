@@ -598,7 +598,7 @@ class RbcMule():
 
             #blkcnt = str(block).count("Dummy TX")
             blkcnt = self.FALLBACK_BATCH_SIZE * (N - f)
-            blkdelay = end - start
+            blkdelay = end - start_vc
 
             self.txdelay = (self.txcnt * self.txdelay + blkcnt * blkdelay) / (self.txcnt + blkcnt)
             self.txcnt += blkcnt

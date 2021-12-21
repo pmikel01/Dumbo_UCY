@@ -74,6 +74,7 @@ class MuleBFTNode (Mule):
 
         pid = os.getpid()
         self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
+        self.logger.info('parameters: N=%d, f=%d, S=%d, T=%d, fast-batch=%d, acs-batch=%d, K=%d, O=d%' % (self.N, self.f, self.SLOTS_NUM, self.TIMEOUT, self.FAST_BATCH_SIZE, self.FALLBACK_BATCH_SIZE, self.K, self.omitfast))
 
         self._send = lambda j, o: self.bft_to_client((j, o))
         self._recv = lambda: self.bft_from_server()

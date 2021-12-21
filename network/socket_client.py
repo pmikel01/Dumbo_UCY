@@ -10,14 +10,16 @@ from gevent import socket, lock
 from gevent.queue import Queue
 import logging
 import traceback
-
+from ctypes import c_bool
 
 # Network node class: deal with socket communications
 class NetworkClient (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue, pattern: mpValue = mpValue(c_bool, True)):
+
+        self.pattern = pattern
 
         self.client_from_bft = client_from_bft
         self.ready = client_ready
@@ -34,6 +36,10 @@ class NetworkClient (Process):
         self.socks = [None for _ in self.addresses_list]
         self.sock_queues = [Queue() for _ in self.addresses_list]
         self.sock_locks = [lock.Semaphore() for _ in self.addresses_list]
+
+        self.TIME = 1000
+        self.BYTES = 625_000
+        self.DELAY = 100
 
         super().__init__()
 
@@ -53,8 +59,10 @@ class NetworkClient (Process):
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
         send_threads = [gevent.spawn(self._send, j) for j in range(self.N)]
+        partten_thread = gevent.spawn(self._partten)
         self._handle_send_loop()
         #gevent.joinall(send_threads)
+
 
     def _connect(self, j: int):
         sock = socket.socket()
@@ -67,19 +75,79 @@ class NetworkClient (Process):
         except Exception as e1:
             return False
 
-    def _send(self, j: int):
+
+    def _partten(self):
         while not self.stop.value:
-            #gevent.sleep(0)
-            #self.sock_locks[j].acquire()
-            o = self.sock_queues[j].get()
-            try:
-                self.socks[j].sendall(pickle.dumps(o) + self.SEP)
-            except:
-                self.logger.error("fail to send msg")
-                #self.logger.error(str((e1, traceback.print_exc())))
-                self.socks[j].close()
-                break
-            #self.sock_locks[j].release()
+            if self.pattern.value:  # True="10ms-5Mbps"
+                self.TIME = 100
+                self.BYTES = 62_500
+                self.DELAY = 10
+            if not self.pattern.value:  # False="100ms-500kbps"
+                self.TIME = 100
+                self.BYTES = 6_250
+                self.DELAY = 100
+            gevent.sleep(0.001)
+
+
+    def _send(self, j: int):
+        #  100kbps - 12.5 kB : 1 sec
+        #  500kbps - 62.5 kB : 1 sec
+        #  1Mbps - 125 kB : 1 sec
+        #  5Mbps - 625 kB : 1 sec
+
+        cnt = self.BYTES  # 1000 bytes
+        msg = None
+
+        while not self.stop.value:
+
+            if cnt == self.BYTES:
+                start = time.time() * 1000
+
+            if msg is None:
+                o = self.sock_queues[j].get()
+                msg = pickle.dumps(o) + self.SEP
+                gevent.sleep(self.DELAY / 1000)
+
+            if len(msg) <= cnt:
+                cnt = cnt - len(msg)
+                try:
+                    self.socks[j].sendall(msg)
+                    msg = None
+                except:
+                    self.logger.error("fail to send msg")
+                    # self.logger.error(str((e1, traceback.print_exc())))
+                    self.socks[j].close()
+                    break
+            else:
+                msg1 = msg[0:cnt]
+                msg = msg[cnt:]
+                try:
+                    self.socks[j].sendall(msg1)
+                    cnt = 0
+                except:
+                    self.logger.error("fail to send msg")
+                    # self.logger.error(str((e1, traceback.print_exc())))
+                    self.socks[j].close()
+                    break
+
+            if cnt == 0:
+                end = time.time() * 1000
+                duration = end - start
+                print(duration)
+                cnt = self.BYTES
+                gevent.sleep((self.TIME - duration) / 1000)
+
+
+    # def _send(self, j:int):
+    #     while not self.stop.value:
+    #         o = self.sock_queues[j].get()
+    #         try:
+    #             self.socks[j].sendall(pickle.dumps(o) + self.SEP)
+    #         except:
+    #             self.logger.error("fail to send msg")
+    #             self.socks[j].close()
+    #             break
+
 
     ##
     def _handle_send_loop(self):

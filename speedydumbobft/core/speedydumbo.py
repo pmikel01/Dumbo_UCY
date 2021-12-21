@@ -187,11 +187,9 @@ class SpeedyDumbo():
                 tx_cnt = str(new_tx).count("Dummy TX")
                 self.txcnt += tx_cnt
                 self.logger.info('Node %d Delivers ACS Block in Round %d with having %d TXs' % (self.id, r, tx_cnt))
-
-            end = time.time()
-
-            if self.logger != None:
+                end = time.time()
                 self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
+                self.logger.info('Current Block\'s TPS at Node %d: ' % self.id + str(tx_cnt/(end - start)))
 
             # Put undelivered but committed TXs back to the backlog buffer
             #for _tx in tx_to_send:
@@ -288,6 +286,7 @@ class SpeedyDumbo():
             # wait for pb proof, only when I am the leader
             if j == pid:
                 gevent.spawn(wait_for_pb_proof)
+
 
         def _setup_vacs():
 

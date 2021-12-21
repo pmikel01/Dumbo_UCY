@@ -166,6 +166,8 @@ class Dumbo():
         if self.logger != None:
             self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
+        print('Node %d starts Dumbo BFT consensus' % self.id)
+
         while True:
 
             # For each round...
@@ -195,11 +197,13 @@ class Dumbo():
                 tx_cnt = str(new_tx).count("Dummy TX")
                 self.txcnt += tx_cnt
                 self.logger.info('Node %d Delivers ACS Block in Round %d with having %d TXs' % (self.id, r, tx_cnt))
-
-            end = time.time()
-
-            if self.logger != None:
+                end = time.time()
                 self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
+                self.logger.info('Current Block\'s TPS at Node %d: ' % self.id + str(tx_cnt/(end - start)))
+
+            #print('* Node %d outputs an ACS Block at the %d-th Round:' % (self.id, r))
+            #print("    - Latency of this block: %.12f seconds" % (end - start))
+            #print("    - Throughput of this block: %.9f tps" % (tx_cnt / (end - start)))
 
             # Put undelivered but committed TXs back to the backlog buffer
             #for _tx in tx_to_send:
@@ -219,6 +223,11 @@ class Dumbo():
             self.logger.info("node %d breaks in %f seconds with total delivered Txs %d" % (self.id, self.e_time-self.s_time, self.txcnt))
         else:
             print("node %d breaks" % self.id)
+
+        #print("*******************************************")
+        #print('* Node %d breaks the test' % self.id )
+        #print("    - Average latency: %.12f seconds" % ((self.e_time-self.s_time) / self.K) )
+        #print("    - Average throughput: %.9f tps" % (tx_cnt * self.K  / ((self.e_time-self.s_time))))
 
         #self._recv_thread.join(timeout=2)
 
