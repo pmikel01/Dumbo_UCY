@@ -82,9 +82,9 @@ class NetworkClient (Process):
                 self.TIME = 100
                 self.BYTES = 625_000
                 self.DELAY = 80
-            if not self.pattern.value:  # False="800ms-5Mbps"
+            if not self.pattern.value:  # False="800ms-10Mbps"
                 self.TIME = 100
-                self.BYTES = 62_500
+                self.BYTES = 125_000
                 self.DELAY = 800
             gevent.sleep(1)
             print(self.pattern.value)
