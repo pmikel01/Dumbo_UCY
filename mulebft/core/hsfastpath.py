@@ -242,6 +242,10 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
                 weighted_delay = (epoch_txcnt * weighted_delay + txcnt[fixed_block[1]] * delay[fixed_block[1]]) / (epoch_txcnt + txcnt[fixed_block[1]])
                 epoch_txcnt += txcnt[fixed_block[1]]
 
+                if logger is not None:
+                    logger.info('Fast block at Node %d for Epoch %s and Slot %d has delay and TXs: %s, %d' % (pid, sid, fixed_block[1], str(delay[fixed_block[1]]), txcnt[fixed_block[1]]))
+
+
             if output_notraized_block is not None:
                 output_notraized_block((notraized_block, (h_p, Sigma_p, (epoch_txcnt, weighted_delay))))
 

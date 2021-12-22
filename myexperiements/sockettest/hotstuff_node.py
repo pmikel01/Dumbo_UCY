@@ -4,7 +4,7 @@ from stablehotstuff.stablehotstuff import Hotstuff
 from typing import List, Callable
 import os
 import pickle
-from gevent import time, monkey
+from gevent import time, monkey, Greenlet
 from myexperiements.sockettest.make_random_tx import tx_generator
 from coincurve import PrivateKey, PublicKey
 from multiprocessing import Value as mpValue, Queue as mpQueue, Process
@@ -52,6 +52,7 @@ class HotstuffBFTNode (Hotstuff):
         self.ready = ready
         self.stop = stop
         self.mode = mode
+        self.network = network
         Hotstuff.__init__(self, sid, id, max(S, 200), max(int(Bfast), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
 
     def prepare_bootstrap(self):
@@ -84,6 +85,21 @@ class HotstuffBFTNode (Hotstuff):
         while not self.ready.value:
             time.sleep(1)
             #gevent.sleep(1)
+
+        def _change_network():
+            seconds = 0
+            while True:
+                time.sleep(1)
+                seconds += 1
+                if seconds % 30 == 0:
+                    if int(seconds / 30) % 2 == 1:
+                        self.network.value = False
+                        print("change to bad network....")
+                    else:
+                        self.network.value = True
+                        print("change to good network....")
+
+        Greenlet(_change_network).start()
 
         self.run_bft()
         self.stop.value = True

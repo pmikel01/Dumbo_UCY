@@ -5,7 +5,7 @@ import random
 from typing import Callable
 import os
 import pickle
-from gevent import time
+from gevent import time, Greenlet
 from rbcmulebft.core.rbcmule import RbcMule
 from myexperiements.sockettest.make_random_tx import tx_generator
 from coincurve import PrivateKey, PublicKey
@@ -55,6 +55,7 @@ class RbcMuleBFTNode (RbcMule):
         self.ready = ready
         self.stop = stop
         self.mode = mode
+        self.network = network
         RbcMule.__init__(self, sid, id, S, T, max(int(Bfast), 1), max(int(Bacs/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute, omitfast=omitfast)
 
     def prepare_bootstrap(self):
@@ -86,6 +87,21 @@ class RbcMuleBFTNode (RbcMule):
 
         while not self.ready.value:
             time.sleep(1)
+
+        def _change_network():
+            seconds = 0
+            while True:
+                time.sleep(1)
+                seconds += 1
+                if seconds % 30 == 0:
+                    if int(seconds / 30) % 2 == 1:
+                        self.network.value = False
+                        print("change to bad network....")
+                    else:
+                        self.network.value = True
+                        print("change to good network....")
+
+        Greenlet(_change_network).start()
 
         self.run_bft()
         self.stop.value = True

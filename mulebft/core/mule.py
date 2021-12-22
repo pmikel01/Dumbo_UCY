@@ -586,16 +586,14 @@ class Mule():
 
             end = time.time()
 
-            #if self.logger != None:
-            #    blk = str(block)
-            #    #self.logger.info('Node %d Delivers ACS Block %d: ' % (self.id, self.epoch) + str(block))
-            #    tx_cnt = blk.count("Dummy TX")
-            #    self.txcnt += tx_cnt
-            #    self.logger.info('Node %d Delivers ACS Block in Epoch %d with having %d TXs' % (self.id, self.epoch, tx_cnt))
+
 
             #blkcnt = str(block).count("Dummy TX")
             blkcnt = self.FALLBACK_BATCH_SIZE * (N - f)
             blkdelay = end - start
+
+            if self.logger != None:
+                self.logger.info('Node %d Delivers ACS Block in Epoch %d with delay %d and TXs %d' % (self.id, self.epoch, blkdelay, blkcnt))
 
             self.txdelay = (self.txcnt * self.txdelay + blkcnt * blkdelay) / (self.txcnt + blkcnt)
             self.txcnt += blkcnt

@@ -4,7 +4,7 @@ import random
 from typing import Callable
 import os
 import pickle
-from gevent import time
+from gevent import time, Greenlet
 from mulebft.core.mule import Mule
 from myexperiements.sockettest.make_random_tx import tx_generator
 from coincurve import PrivateKey, PublicKey
@@ -54,6 +54,8 @@ class MuleBFTNode (Mule):
         self.ready = ready
         self.stop = stop
         self.mode = mode
+        self.network = network
+
         Mule.__init__(self, sid, id, S, T, max(int(Bfast), 1), max(int(Bacs/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute, omitfast=omitfast)
 
     def prepare_bootstrap(self):
@@ -75,7 +77,7 @@ class MuleBFTNode (Mule):
 
         pid = os.getpid()
         self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
-        self.logger.info('parameters: N=%d, f=%d, S=%d, T=%d, fast-batch=%d, acs-batch=%d, K=%d, O=d%' % (self.N, self.f, self.SLOTS_NUM, self.TIMEOUT, self.FAST_BATCH_SIZE, self.FALLBACK_BATCH_SIZE, self.K, self.omitfast))
+        self.logger.info('parameters: N=%d, f=%d, S=%d, T=%d, fast-batch=%d, acs-batch=%d, K=%d, O=%d' % (self.N, self.f, self.SLOTS_NUM, self.TIMEOUT, self.FAST_BATCH_SIZE, self.FALLBACK_BATCH_SIZE, self.K, self.omitfast))
 
         self._send = lambda j, o: self.bft_to_client((j, o))
         self._recv = lambda: self.bft_from_server()
@@ -84,6 +86,22 @@ class MuleBFTNode (Mule):
 
         while not self.ready.value:
             time.sleep(1)
+
+
+        def _change_network():
+            seconds = 0
+            while True:
+                time.sleep(1)
+                seconds += 1
+                if seconds % 30 == 0:
+                    if int(seconds / 30) % 2 == 1:
+                        self.network.value = False
+                        print("change to bad network....")
+                    else:
+                        self.network.value = True
+                        print("change to good network....")
+
+        Greenlet(_change_network).start()
 
         self.run_bft()
         self.stop.value = True

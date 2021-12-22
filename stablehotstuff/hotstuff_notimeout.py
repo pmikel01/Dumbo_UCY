@@ -227,8 +227,8 @@ def hsfastpath_notimeout(sid, pid, N, f, leader, get_input, put_output, Snum, Bs
                 weighted_delay = (epoch_txcnt * weighted_delay + txcnt[pending_block[1]-1] * delay[pending_block[1]-1]) / (epoch_txcnt + txcnt[pending_block[1]-1])
                 epoch_txcnt += txcnt[pending_block[1]-1]
 
-                #if logger is not None:
-                #    logger.info('Fast block Delay at Node %d for Epoch %s and Slot %d: ' % (pid, sid, pending_block[1]-1) + str(delay))
+                if logger is not None:
+                    logger.info('Fast block at Node %d for Epoch %s and Slot %d has delay and TXs: %s, %d' % (pid, sid, pending_block[1]-1, str(delay[pending_block[1]-1]), txcnt[pending_block[1]-1]))
 
         pending_block = (sid, slot_cur, h_p, Sigma_p, batches)
         pending_block_header = (sid, slot_cur, h_p, hash(batches))
