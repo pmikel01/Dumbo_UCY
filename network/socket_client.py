@@ -78,15 +78,17 @@ class NetworkClient (Process):
 
     def _partten(self):
         while not self.stop.value:
-            if self.pattern.value:  # True="10ms-5Mbps"
+            if self.pattern.value:  # True="100ms-100Mbps"
+                self.TIME = 100
+                self.BYTES = 1_250_000
+                self.DELAY = 100
+            if not self.pattern.value:  # False="500ms-5Mbps"
                 self.TIME = 100
                 self.BYTES = 62_500
-                self.DELAY = 10
-            if not self.pattern.value:  # False="100ms-500kbps"
-                self.TIME = 100
-                self.BYTES = 6_250
-                self.DELAY = 100
-            gevent.sleep(0.001)
+                self.DELAY = 500
+            gevent.sleep(1)
+            print(self.pattern.value)
+
 
 
     def _send(self, j: int):
@@ -94,6 +96,7 @@ class NetworkClient (Process):
         #  500kbps - 62.5 kB : 1 sec
         #  1Mbps - 125 kB : 1 sec
         #  5Mbps - 625 kB : 1 sec
+        #  50Mbps - 6250 kB : 1 sec
 
         cnt = self.BYTES  # 1000 bytes
         msg = None
@@ -133,9 +136,9 @@ class NetworkClient (Process):
             if cnt == 0:
                 end = time.time() * 1000
                 duration = end - start
-                print(duration)
+                # print(duration)
                 cnt = self.BYTES
-                gevent.sleep((self.TIME - duration) / 1000)
+                gevent.sleep(max((self.TIME - duration) / 1000, 0))
 
 
     # def _send(self, j:int):

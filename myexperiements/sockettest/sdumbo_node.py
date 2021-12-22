@@ -4,12 +4,12 @@ import random
 from typing import  Callable
 import os
 import pickle
-from gevent import time
+from gevent import time, Greenlet
 from speedydumbobft.core.speedydumbo import SpeedyDumbo
 from myexperiements.sockettest.make_random_tx import tx_generator
 from multiprocessing import Value as mpValue
 from coincurve import PrivateKey, PublicKey
-
+from ctypes import c_bool
 
 def load_key(id, N):
 
@@ -43,7 +43,7 @@ def load_key(id, N):
 
 class SDumboBFTNode (SpeedyDumbo):
 
-    def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, debug=False, tx_buffer=None):
+    def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, debug=False, network: mpValue=mpValue(c_bool, True), tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
         self.bft_from_server = bft_from_server
         self.bft_to_client = bft_to_client
@@ -81,6 +81,21 @@ class SDumboBFTNode (SpeedyDumbo):
         while not self.ready.value:
             time.sleep(1)
             #gevent.sleep(1)
+
+        def _change_network():
+            seconds = 0
+            while True:
+                time.sleep(1)
+                seconds += 1
+                if seconds % 30 == 0:
+                    if seconds % 30 % 2 == 1:
+                        self.network.value = False
+                        print("change to bad network....")
+                    else:
+                        self.network.value = True
+                        print("change to good network....")
+
+        Greenlet(_change_network).start()
 
         self.run_bft()
         self.stop.value = True

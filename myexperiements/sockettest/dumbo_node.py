@@ -4,12 +4,12 @@ import random
 from typing import  Callable
 import os
 import pickle
-from gevent import time
+from gevent import time, Greenlet
 from dumbobft.core.dumbo import Dumbo
 from myexperiements.sockettest.make_random_tx import tx_generator
 from multiprocessing import Value as mpValue
 from coincurve import PrivateKey, PublicKey
-
+from ctypes import c_bool
 
 def load_key(id, N):
 
@@ -43,7 +43,7 @@ def load_key(id, N):
 
 class DumboBFTNode (Dumbo):
 
-    def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, debug=False, tx_buffer=None):
+    def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, debug=False, network: mpValue=mpValue(c_bool, True), tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
         self.bft_from_server = bft_from_server
         self.bft_to_client = bft_to_client
@@ -52,6 +52,7 @@ class DumboBFTNode (Dumbo):
         self.ready = ready
         self.stop = stop
         self.mode = mode
+        self.network = network
         Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
 
     def prepare_bootstrap(self):
@@ -75,12 +76,25 @@ class DumboBFTNode (Dumbo):
         pid = os.getpid()
         self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
 
-
         self.prepare_bootstrap()
 
         while not self.ready.value:
             time.sleep(1)
-            #gevent.sleep(1)
+
+        def _change_network():
+            seconds = 0
+            while True:
+                time.sleep(1)
+                seconds += 1
+                if seconds % 30 == 0:
+                    if int(seconds / 30) % 2 == 1:
+                        self.network.value = False
+                        print("change to bad network....")
+                    else:
+                        self.network.value = True
+                        print("change to good network....")
+
+        Greenlet(_change_network).start()
 
         self.run_bft()
         self.stop.value = True
