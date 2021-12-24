@@ -91,8 +91,8 @@ class HotstuffBFTNode (Hotstuff):
             while True:
                 time.sleep(1)
                 seconds += 1
-                if seconds % 30 == 0:
-                    if int(seconds / 30) % 2 == 1:
+                if seconds % 20 == 0:
+                    if int(seconds / 20) % 3 == 1:
                         self.network.value = False
                         print("change to bad network....")
                     else:
