@@ -127,7 +127,7 @@ if __name__ == '__main__':
         network_pattern = mpValue(c_bool, True)  # True = good network; False = bad network
 
         net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
-        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop, network_pattern)
+        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop, network_pattern, False)
         bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O, network_pattern)
         print(O)
         net_server.start()

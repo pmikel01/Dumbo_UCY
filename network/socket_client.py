@@ -17,7 +17,7 @@ class NetworkClient (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue, pattern: mpValue = mpValue(c_bool, True)):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue, pattern: mpValue = mpValue(c_bool, True), dynamic=True):
 
         self.pattern = pattern
 
@@ -41,6 +41,8 @@ class NetworkClient (Process):
         self.BYTES = 625_000
         self.DELAY = 100
 
+        self.DYNAMIC = dynamic
+
         super().__init__()
 
 
@@ -58,7 +60,10 @@ class NetworkClient (Process):
                     break
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
-        send_threads = [gevent.spawn(self._send, j) for j in range(self.N)]
+        if self.DYNAMIC:
+            send_threads = [gevent.spawn(self._dynamic_send, j) for j in range(self.N)]
+        else:
+            send_threads = [gevent.spawn(self._send, j) for j in range(self.N)]
         partten_thread = gevent.spawn(self._partten)
         self._handle_send_loop()
         #gevent.joinall(send_threads)
@@ -91,7 +96,7 @@ class NetworkClient (Process):
 
 
 
-    def _send(self, j: int):
+    def _dynamic_send(self, j: int):
         #  100kbps - 12.5 kB : 1 sec
         #  500kbps - 62.5 kB : 1 sec
         #  1Mbps - 125 kB : 1 sec
@@ -141,15 +146,15 @@ class NetworkClient (Process):
                 gevent.sleep(max((self.TIME - duration) / 1000, 0))
 
 
-    # def _send(self, j:int):
-    #     while not self.stop.value:
-    #         o = self.sock_queues[j].get()
-    #         try:
-    #             self.socks[j].sendall(pickle.dumps(o) + self.SEP)
-    #         except:
-    #             self.logger.error("fail to send msg")
-    #             self.socks[j].close()
-    #             break
+    def _send(self, j:int):
+        while not self.stop.value:
+            o = self.sock_queues[j].get()
+            try:
+                self.socks[j].sendall(pickle.dumps(o) + self.SEP)
+            except:
+                self.logger.error("fail to send msg")
+                self.socks[j].close()
+                break
 
 
     ##
