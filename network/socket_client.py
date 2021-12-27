@@ -83,16 +83,17 @@ class NetworkClient (Process):
 
     def _partten(self):
         while not self.stop.value:
-            if self.pattern.value:  # True="100ms-200Mbps"
+            if self.pattern.value:  # True="50ms-50Mbps"
                 self.TIME = 100
-                self.BYTES = 2_500_000
-                self.DELAY = 100
-            if not self.pattern.value:  # False="200ms-20Mbps"
+                self.BYTES = 625_000
+                self.DELAY = 50
+            if not self.pattern.value:  # False="300ms-10Mbps"
                 self.TIME = 100
-                self.BYTES = 250_000
-                self.DELAY = 200
+                self.BYTES = 125_000
+                self.DELAY = 300
             gevent.sleep(1)
             print(self.pattern.value)
+
 
 
 

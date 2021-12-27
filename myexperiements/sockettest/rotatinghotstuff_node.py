@@ -96,9 +96,11 @@ class RotatingHotstuffBFTNode (RotatingLeaderHotstuff):
                 if seconds % 20 == 0:
                     if int(seconds / 20) % 3 == 1:
                         self.network.value = False
+                        self.logger.info("change to bad network....")
                         #print("change to bad network....")
                     else:
                         self.network.value = True
+                        self.logger.info("change to good network....")
                         #print("change to good network....")
 
         Greenlet(_change_network).start()
