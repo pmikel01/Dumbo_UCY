@@ -202,8 +202,8 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
 
         #print('3')
 
-        #if logger is not None:
-        #    logger.info("Entering slot %d" % slot_cur)
+        if logger is not None:
+            logger.info("Entering slot %d" % slot_cur)
 
         s_times[slot_cur] = time.time()
 
@@ -253,9 +253,13 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
         pending_block_header = (sid, slot_cur, h_p, hash(batches))
         hash_prev = hash(pending_block_header)
 
-        slot_cur = slot_cur + 1
+        if logger is not None:
+            logger.info("Leaving slot %d" % slot_cur)
 
+        slot_cur = slot_cur + 1
         slot_noncritical_signal.set()
+
+
 
         ########################
         # Leave critical block #
@@ -289,13 +293,16 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
         #timeout = Timeout(TIMEOUT, False)
         #timeout.start()
 
+        timeout = Timeout(TIMEOUT)
+        timeout.start()
         try:
-            with Timeout(TIMEOUT):
-                if omitfast is False:
-                    one_slot()
-                else:
-                    while True:
-                        gevent.sleep(0.01)
+            #with Timeout(TIMEOUT):
+            gevent.spawn(one_slot).join()
+                #if omitfast is False:
+                #    one_slot()
+                #else:
+                #    while True:
+                #        gevent.sleep(0.01)
         except Timeout as e:
             msg_noncritical_signal.wait()
             slot_noncritical_signal.wait()
