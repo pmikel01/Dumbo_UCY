@@ -29,7 +29,7 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
 
     :param list PK2s: an array of ``coincurve.PublicKey'', i.e., N public keys of ECDSA for all parties
     :param PublicKey SK2: ``coincurve.PrivateKey'', i.e., secret key of ECDSA
-    :param int Tout: timeout of a slot
+    :param float Tout: timeout of a slot
     :param int Snum: number of slots in a epoch
     :param int Bsize: batch size, i.e., the number of TXs in a batch
     :param hash_genesis: the hash of genesis block
@@ -294,12 +294,14 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
         #timeout.start()
 
         timeout = Timeout(TIMEOUT)
+        #print(TIMEOUT)
         timeout.start()
         try:
+            with gevent.Timeout(TIMEOUT, False):
             #with Timeout(TIMEOUT):
-            gevent.spawn(one_slot).join()
+            #gevent.spawn(one_slot).join(timeout=Timeout)
                 #if omitfast is False:
-                #    one_slot()
+                one_slot()
                 #else:
                 #    while True:
                 #        gevent.sleep(0.01)
@@ -311,6 +313,8 @@ def hsfastpath(sid, pid, N, f, leader, get_input, output_notraized_block, Snum, 
             if logger is not None:
                 logger.info("Fastpath Timeout!")
             break
+        timeout.cancel()
+        timeout.close()
 
     if logger is not None:
         logger.info("Leaves fastpath at %d slot" % (slot_cur))
