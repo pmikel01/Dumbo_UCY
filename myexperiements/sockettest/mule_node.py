@@ -89,15 +89,16 @@ class MuleBFTNode (Mule):
 
         def _change_network():
             seconds = 0
+            self.network.value = True
             while True:
                 time.sleep(1)
                 seconds += 1
-                if seconds % 30 == 0:
-                    if int(seconds / 20) % 3 == 1:
-                        self.network.value = True
+                if seconds % 60 == 0:
+                    if int(seconds / 60) % 2 == 1:
+                        self.network.value = False
                         self.logger.info("change to bad network....")
                     else:
-                        self.network.value = False
+                        self.network.value = True
                         self.logger.info("change to good network....")
 
         Greenlet(_change_network).start()

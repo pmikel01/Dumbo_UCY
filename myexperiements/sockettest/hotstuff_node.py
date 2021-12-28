@@ -88,16 +88,17 @@ class HotstuffBFTNode (Hotstuff):
 
         def _change_network():
             seconds = 0
+            self.network.value = True
             while True:
                 time.sleep(1)
                 seconds += 1
-                if seconds % 20 == 0:
-                    if int(seconds / 20) % 3 == 1:
+                if seconds % 60 == 0:
+                    if int(seconds / 60) % 2 == 1:
                         self.network.value = False
-                        #print("change to bad network....")
+                        self.logger.info("change to bad network....")
                     else:
                         self.network.value = True
-                        #print("change to good network....")
+                        self.logger.info("change to good network....")
 
         Greenlet(_change_network).start()
 
