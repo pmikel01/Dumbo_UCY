@@ -61,6 +61,7 @@ class NetworkClient (Process):
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
         if self.DYNAMIC:
+            gevent.spawn(self._change_network)
             send_threads = [gevent.spawn(self._dynamic_send, j) for j in range(self.N)]
         else:
             send_threads = [gevent.spawn(self._send, j) for j in range(self.N)]
@@ -184,6 +185,23 @@ class NetworkClient (Process):
                 pass
 
         #print("sending loop quits ...")
+
+    def _change_network(self):
+        seconds = 0
+        self.pattern.value = True
+        while True:
+            time.sleep(1)
+            seconds += 1
+            if seconds % 300 == 0:
+                if int(seconds / 300) % 2 == 1:
+                    self.pattern.value = False
+                    self.logger.info("change to bad network....")
+                else:
+                    self.pattern.value = True
+                    self.logger.info("change to good network....")
+
+    #Greenlet(_change_network).start()
+
 
     def run(self):
         self.logger = self._set_client_logger(self.id)
