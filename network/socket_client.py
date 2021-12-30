@@ -190,16 +190,17 @@ class NetworkClient (Process):
     def _change_network(self):
         seconds = 0
         self.network_condition = True
-        while self.bft_running.value:
+        while not self.stop.value:
+            if self.bft_running.value:
+                seconds += 1
+                if seconds % 120 == 0:
+                    if int(seconds / 120) % 2 == 1:
+                        self.network_condition = False
+                        self.logger.info("change to bad network....")
+                    else:
+                        self.network_condition = True
+                        self.logger.info("change to good network....")
             time.sleep(1)
-            seconds += 1
-            if seconds % 60 == 0:
-                if int(seconds / 60) % 2 == 1:
-                    self.network_condition = False
-                    self.logger.info("change to bad network....")
-                else:
-                    self.network_condition = True
-                    self.logger.info("change to good network....")
 
     #Greenlet(_change_network).start()
 
