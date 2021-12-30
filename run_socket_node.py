@@ -18,20 +18,20 @@ from ctypes import c_bool
 
 
 def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
-                         stop: mpValue, protocol="mule", mute=False, F=100, debug=False, omitfast=False, network_pattern: mpValue=mpValue(c_bool, True)):
+                         stop: mpValue, protocol="mule", mute=False, F=100, debug=False, omitfast=False, bft_running: mpValue=mpValue(c_bool, False)):
     bft = None
     if protocol == 'dumbo':
-        bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug, network=network_pattern)
+        bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug, bft_running=bft_running)
     elif protocol == 'sdumbo':
-        bft = SDumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client,  ready, stop, K, mute=mute, debug=debug, network=network_pattern)
+        bft = SDumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug, network=bft_running)
     elif protocol == "mule":
-        bft = MuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, network=network_pattern)
+        bft = MuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, bft_running=bft_running)
     elif protocol == "hotstuff1":
-        bft = RotatingHotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, network=network_pattern)
+        bft = RotatingHotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, bft_running=bft_running)
     elif protocol == "rbcmule":
-        bft = RbcMuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, network=network_pattern)
+        bft = RbcMuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, network=bft_running)
     elif protocol == 'hotstuff':
-        bft = HotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, 1, mute=mute, network=network_pattern)
+        bft = HotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, 1, mute=mute, network=bft_running)
     else:
         print("Only support dumbo or sdumbo or mule or hotstuff")
     return bft
@@ -124,11 +124,11 @@ if __name__ == '__main__':
         server_ready = mpValue(c_bool, False)
         net_ready = mpValue(c_bool, False)
         stop = mpValue(c_bool, False)
-        network_pattern = mpValue(c_bool, True)  # True = good network; False = bad network
+        bft_running = mpValue(c_bool, False)  # True = good network; False = bad network
 
         net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
-        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop, network_pattern, dynamic=True)
-        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O, network_pattern)
+        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop, bft_running, dynamic=True)
+        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O, bft_running)
         print(O)
         net_server.start()
         net_client.start()

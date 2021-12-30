@@ -45,7 +45,7 @@ def load_key(id, N):
 
 class MuleBFTNode (Mule):
 
-    def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, network: mpValue=mpValue(c_bool, True), omitfast=False):
+    def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, bft_running: mpValue=mpValue(c_bool, False), omitfast=False):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
         #self.recv_queue = recv_q
         #self.send_queue = send_q
@@ -54,7 +54,7 @@ class MuleBFTNode (Mule):
         self.ready = ready
         self.stop = stop
         self.mode = mode
-        self.network = network
+        self.running = bft_running
 
         Mule.__init__(self, sid, id, S, T, max(int(Bfast), 1), max(int(Bacs/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute, omitfast=omitfast)
 
@@ -87,7 +87,7 @@ class MuleBFTNode (Mule):
         while not self.ready.value:
             time.sleep(1)
 
-
+        self.running.value = True
 
         self.run_bft()
         self.stop.value = True

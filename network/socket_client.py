@@ -17,9 +17,9 @@ class NetworkClient (Process):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue, pattern: mpValue = mpValue(c_bool, True), dynamic=True):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue, bft_running: mpValue = mpValue(c_bool, False), dynamic=True):
 
-        self.pattern = pattern
+        self.bft_running = bft_running
 
         self.client_from_bft = client_from_bft
         self.ready = client_ready
@@ -41,6 +41,7 @@ class NetworkClient (Process):
         self.BYTES = 625_000
         self.DELAY = 100
 
+        self.network_condition = True
         self.DYNAMIC = dynamic
 
         super().__init__()
@@ -84,14 +85,14 @@ class NetworkClient (Process):
 
     def _partten(self):
         while not self.stop.value:
-            if self.pattern.value:  # True="100ms-100Mbps"
+            if self.network_condition:  # True="50ms-500Mbps"
                 self.TIME = 100
-                self.BYTES = 1_250_000
-                self.DELAY = 100
-            if not self.pattern.value:  # False="200ms-10Mbps"
+                self.BYTES = 6_250_000
+                self.DELAY = 50
+            if not self.network_condition:  # False="300ms-50Mbps"
                 self.TIME = 100
-                self.BYTES = 125_000
-                self.DELAY = 200
+                self.BYTES = 625_000
+                self.DELAY = 300
             gevent.sleep(1)
             #print(self.pattern.value)
 
@@ -188,16 +189,16 @@ class NetworkClient (Process):
 
     def _change_network(self):
         seconds = 0
-        self.pattern.value = True
-        while True:
+        self.network_condition = True
+        while self.bft_running.value:
             time.sleep(1)
             seconds += 1
-            if seconds % 300 == 0:
-                if int(seconds / 300) % 2 == 1:
-                    self.pattern.value = False
+            if seconds % 60 == 0:
+                if int(seconds / 60) % 2 == 1:
+                    self.network_condition = False
                     self.logger.info("change to bad network....")
                 else:
-                    self.pattern.value = True
+                    self.network_condition = True
                     self.logger.info("change to good network....")
 
     #Greenlet(_change_network).start()

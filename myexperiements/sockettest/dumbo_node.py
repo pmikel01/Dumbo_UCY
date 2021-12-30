@@ -43,7 +43,7 @@ def load_key(id, N):
 
 class DumboBFTNode (Dumbo):
 
-    def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, debug=False, network: mpValue=mpValue(c_bool, True), tx_buffer=None):
+    def __init__(self, sid, id, B, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, debug=False, bft_running: mpValue=mpValue(c_bool, False), tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
         self.bft_from_server = bft_from_server
         self.bft_to_client = bft_to_client
@@ -52,7 +52,7 @@ class DumboBFTNode (Dumbo):
         self.ready = ready
         self.stop = stop
         self.mode = mode
-        self.network = network
+        self.running = bft_running
         Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
 
     def prepare_bootstrap(self):
@@ -81,7 +81,7 @@ class DumboBFTNode (Dumbo):
         while not self.ready.value:
             time.sleep(1)
 
-
+        self.running.value = True
 
         self.run_bft()
         self.stop.value = True
