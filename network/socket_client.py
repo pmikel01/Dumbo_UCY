@@ -85,9 +85,9 @@ class NetworkClient (Process):
 
     def _partten(self):
         while not self.stop.value:
-            if self.network_condition:  # True="50ms-500Mbps"
+            if self.network_condition:  # True="50ms-200Mbps"
                 self.TIME = 100
-                self.BYTES = 6_250_000
+                self.BYTES = 2_500_000
                 self.DELAY = 50
             if not self.network_condition:  # False="300ms-50Mbps"
                 self.TIME = 100
@@ -190,6 +190,14 @@ class NetworkClient (Process):
     def _change_network(self):
         seconds = 0
         self.network_condition = True
+        while seconds < 59:
+            seconds += 1
+            gevent.sleep(1)
+        self.network_condition = False
+        while seconds < 61:
+            seconds += 1
+            gevent.sleep(1)
+        self.network_condition = True
         while not self.stop.value:
             if self.bft_running.value:
                 seconds += 1
@@ -200,7 +208,7 @@ class NetworkClient (Process):
                     else:
                         self.network_condition = True
                         self.logger.info("change to good network....")
-            time.sleep(1)
+            gevent.sleep(1)
 
     #Greenlet(_change_network).start()
 

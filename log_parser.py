@@ -26,7 +26,7 @@ with open('mule.log', 'r') as hosts:
         if "_run_epoch INFO VIEW CHANGE costs time" in line:
             params = line.split()
             diff_time = datetime.datetime.strptime(params[1], "%H:%M:%S,%f") - start
-            #print("view-change", '\t', diff_time.total_seconds(), '\t', None, '\t', 0)
+            print("view-change", '\t', diff_time.total_seconds(), '\t', None, '\t', tx_cnt)
             pre_vc_time = diff_time
         if "INFO Node 0 Delivers ACS Block in Epoch" in line:
             params = line.split()
@@ -82,7 +82,7 @@ with open('hotstuff.log', 'r') as hosts:
         if "seconds in epoch" in line:
             params = line.split()
             diff_time = datetime.datetime.strptime(params[1], "%H:%M:%S,%f") - start
-            #print("view-change", '\t', diff_time.total_seconds(), '\t', None, '\t', 0)
+            print("view-change", '\t', diff_time.total_seconds(), '\t', None, '\t', tx_cnt)
             pre_vc_time = diff_time
         if "INFO Node 0 Delivers ACS Block in Epoch" in line:
             params = line.split()
