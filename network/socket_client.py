@@ -196,10 +196,12 @@ class NetworkClient (Process):
             seconds += 1
             gevent.sleep(1)
         self.network_condition = False
+        self.logger.info("change to bad network....")
         while seconds < 61:
             seconds += 1
             gevent.sleep(1)
         self.network_condition = True
+        self.logger.info("change to good network....")
         while not self.stop.value:
             seconds += 1
             if seconds % 120 == 0:
