@@ -1,12 +1,11 @@
 # coding=utf-8
 from collections import defaultdict
+
+import gevent
 import zfec
 import hashlib
 import math
 
-from gevent import monkey
-
-monkey.patch_all(thread=False)
 
 #####################
 #    zfec encode    #
@@ -233,6 +232,7 @@ def reliablebroadcast(sid, pid, N, f, leader, input, receive, send):
         return m
 
     while True:  # main receive loop
+
         sender, msg = receive()
         if msg[0] == 'VAL' and fromLeader is None:
             # Validation

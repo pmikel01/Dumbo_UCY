@@ -1,35 +1,46 @@
+from gevent import monkey; monkey.patch_all(thread=False)
+
 import time
 import random
 import traceback
-import gevent
-
-from typing import List
-
-from gevent import monkey
-monkey.patch_all(thread=False)
-
+from typing import List, Callable
+from gevent import Greenlet
 from myexperiements.sockettest.dumbo_node import DumboBFTNode
+from myexperiements.sockettest.sdumbo_node import SDumboBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
-from myexperiements.sockettest.socket_server import NetworkServer
+from myexperiements.sockettest.rbcmule_node import RbcMuleBFTNode
+from myexperiements.sockettest.hotstuff_node import HotstuffBFTNode
+from myexperiements.sockettest.rotatinghotstuff_node import RotatingHotstuffBFTNode
+from network.socket_server import NetworkServer
+from network.socket_client import NetworkClient
 from multiprocessing import Value as mpValue, Queue as mpQueue
 from ctypes import c_bool
 
-def instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q: mpQueue, send_q: List[mpQueue], ready: mpValue, stop: mpValue, protocol="mule", mute=False, factor=1):
+
+def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue,
+                         stop: mpValue, protocol="mule", mute=False, F=100, debug=True, omitfast=False, bft_running: mpValue=mpValue(c_bool, False)):
     bft = None
     if protocol == 'dumbo':
-        bft = DumboBFTNode(sid, i, B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
+        bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug, bft_running=bft_running)
+    elif protocol == 'sdumbo':
+        bft = SDumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, debug=debug, network=bft_running)
     elif protocol == "mule":
-        bft = MuleBFTNode(sid, i, S, T, int(factor*B/N), B, N, f, recv_q, send_q, ready, stop, K, mute=mute)
+        bft = MuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, bft_running=bft_running)
+    elif protocol == "hotstuff1":
+        bft = RotatingHotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, bft_running=bft_running)
+    elif protocol == "rbcmule":
+        bft = RbcMuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, K, mute=mute, omitfast=omitfast, network=bft_running)
+    elif protocol == 'hotstuff':
+        bft = HotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, ready, stop, 1, mute=mute, network=bft_running)
     else:
-        print("Only support dumbo or mule")
+        print("Only support dumbo or sdumbo or mule or hotstuff")
     return bft
 
-def instantiate_network_server(port: int, my_ip: str, id: int, addresses_list: list, recv_q: mpQueue, send_q: List[mpQueue], ready: mpValue, stop: mpValue):
-    return NetworkServer(port, my_ip, id, addresses_list, recv_q, send_q, ready, stop)
 
 if __name__ == '__main__':
 
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--sid', metavar='sid', required=True,
                         help='identifier of node', type=str)
@@ -52,8 +63,11 @@ if __name__ == '__main__':
     parser.add_argument('--M', metavar='M', required=False,
                         help='whether to mute a third of nodes', type=bool, default=False)
     parser.add_argument('--F', metavar='F', required=False,
-                        help='the parameter to time (B/N) to get the fast path batch size', type=float, default=1)
-
+                        help='batch size of fallback path', type=int, default=100)
+    parser.add_argument('--D', metavar='D', required=False,
+                        help='whether to debug mode', type=bool, default=True)
+    parser.add_argument('--O', metavar='O', required=False,
+                        help='whether to omit the fast path', type=bool, default=False)
     args = parser.parse_args()
 
     # Some parameters
@@ -68,6 +82,8 @@ if __name__ == '__main__':
     P = args.P
     M = args.M
     F = args.F
+    D = args.D
+    O = args.O
 
     # Random generator
     rnd = random.Random(sid)
@@ -91,27 +107,51 @@ if __name__ == '__main__':
         assert all([node is not None for node in addresses])
         print("hosts.config is correctly read")
 
-        recv_q = mpQueue()
-        send_q = [mpQueue() for _ in range(N)]
-        ready = mpValue(c_bool, False)
+        # bft_from_server, server_to_bft = mpPipe(duplex=True)
+        # client_from_bft, bft_to_client = mpPipe(duplex=True)
+
+        client_bft_mpq = mpQueue()
+        #client_from_bft = client_bft_mpq.get
+        client_from_bft = lambda: client_bft_mpq.get(timeout=0.00001)
+        bft_to_client = client_bft_mpq.put_nowait
+
+        server_bft_mpq = mpQueue()
+        #bft_from_server = server_bft_mpq.get
+        bft_from_server = lambda: server_bft_mpq.get(timeout=0.00001)
+        server_to_bft = server_bft_mpq.put_nowait
+
+        client_ready = mpValue(c_bool, False)
+        server_ready = mpValue(c_bool, False)
+        net_ready = mpValue(c_bool, False)
         stop = mpValue(c_bool, False)
-        print(ready.value)
-        print(stop.value)
+        bft_running = mpValue(c_bool, False)  # True = good network; False = bad network
 
-        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q, send_q, ready, stop, P, M, F)
-        net = instantiate_network_server(my_address[1], my_address[0], i, addresses, recv_q, send_q, ready, stop)
+        net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
+        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop, bft_running, dynamic=True)
+        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O, bft_running)
+        #print(O)
+        net_server.start()
+        net_client.start()
 
-        net.start()
-        bft.run()
-        #while not stop.value:
-        #    time.sleep(5)
-        #    print("parent is waiting...")
-        #bft.terminate()
-        net.terminate()
-        #bft.join()
-        net.join()
-        print("wow")
+        while not client_ready.value and not server_ready.value:
+            time.sleep(1)
+            print("waiting for network ready...")
+
+        with net_ready.get_lock():
+            net_ready.value = True
+
+        bft_thread = Greenlet(bft.run)
+        bft_thread.start()
+        bft_thread.join()
+
+        with stop.get_lock():
+            stop.value = True
+
+        net_client.terminate()
+        net_client.join()
+        time.sleep(1)
+        net_server.terminate()
+        net_server.join()
 
     except FileNotFoundError or AssertionError as e:
         traceback.print_exc()
-

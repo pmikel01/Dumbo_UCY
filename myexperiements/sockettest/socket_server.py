@@ -11,7 +11,6 @@ from gevent import socket, monkey, lock
 import logging
 import traceback
 
-#monkey.patch_all(thread=False, socket=False)
 monkey.patch_all(thread=False)
 
 
@@ -82,6 +81,7 @@ class NetworkServer (Process):
         self.logger.info('node %d\'s socket server starts to listen ingoing connections on process id %d' % (self.id, pid))
         print("my IP is " + self.ip)
         self.server_sock = socket.socket()
+        self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_sock.bind((self.ip, self.port))
         self.server_sock.listen(5)
         handle_msg_threads = []
@@ -139,18 +139,16 @@ class NetworkServer (Process):
 
     def _send(self, j: int, o: bytes):
         msg = b''.join([o, self.SEP.encode('utf-8')])
+        self.sock_locks[j].acquire()
         for _ in range(3):
-            self.sock_locks[j].acquire()
             try:
                 self.socks[j].sendall(msg)
-                #print('send2' + str((j, pickle.loads(o))))
-                self.sock_locks[j].release()
                 break
             except Exception as e1:
                 self.logger.error("fail to send msg")
                 self.logger.error(str((e1, traceback.print_exc())))
-                self.sock_locks[j].release()
                 continue
+        self.sock_locks[j].release()
 
     ##
     ##

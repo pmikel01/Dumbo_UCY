@@ -4,7 +4,7 @@ import gevent
 from gevent import Greenlet
 from gevent.queue import Queue
 
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast, encode, merkleTree
 
 

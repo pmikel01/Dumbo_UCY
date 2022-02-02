@@ -4,11 +4,12 @@ import gevent
 from gevent import monkey
 from gevent.queue import Queue
 from mulebft.core.mule import Mule
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
-from honeybadgerbft.crypto.threshenc import tpke
-from honeybadgerbft.crypto.ecdsa.ecdsa import pki
+from crypto.threshsig.generate_keys import dealer
+from crypto.threshenc import tpke
+from crypto.ecdsa.ecdsa import pki
 
-monkey.patch_all()
+monkey.patch_all(thread=False)
+
 
 
 def simple_router(N, maxdelay=0.01, seed=None):

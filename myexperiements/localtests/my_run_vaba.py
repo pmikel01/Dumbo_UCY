@@ -4,9 +4,9 @@ from gevent import Greenlet
 from gevent.queue import Queue
 from gevent import monkey
 from dumbobft.core.validatedagreement import validatedagreement
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 
-monkey.patch_all()
+monkey.patch_all(thread=False)
 
 # CBC
 def simple_router(N, maxdelay=0.001, seed=None):

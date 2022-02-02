@@ -36,60 +36,60 @@ HoneyBadger Block
 
 Reliable Broadcast
 ^^^^^^^^^^^^^^^^^^
-.. automodule:: honeybadgerbft.core.reliablebroadcast
+.. automodule:: core.reliablebroadcast
     :members:
 
 Crypto
 ------
-.. automodule:: honeybadgerbft.crypto
+.. automodule:: crypto
     :members:
 
 
 Elliptic Curve Digital Signature Algorithm
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: honeybadgerbft.crypto.ecdsa
+.. automodule:: crypto.ecdsa
     :members:
 
-.. automodule:: honeybadgerbft.crypto.ecdsa.generate_keys_ecdsa
+.. automodule:: crypto.ecdsa.generate_keys_ecdsa
     :members:
 
 Threshold Encryption
 ^^^^^^^^^^^^^^^^^^^^
-.. automodule:: honeybadgerbft.crypto.threshenc
+.. automodule:: crypto.threshenc
     :members:
 
-.. automodule:: honeybadgerbft.crypto.threshenc.generate_keys
+.. automodule:: crypto.threshenc.generate_keys
     :members:
 
-.. automodule:: honeybadgerbft.crypto.threshenc.tpke
+.. automodule:: crypto.threshenc.tpke
     :members:
 
 Threshold Signature
 ^^^^^^^^^^^^^^^^^^^
-.. automodule:: honeybadgerbft.crypto.threshsig
+.. automodule:: crypto.threshsig
     :members:
 
 boldyreva
 """""""""
-.. automodule:: honeybadgerbft.crypto.threshsig.boldyreva
+.. automodule:: crypto.threshsig.boldyreva
     :members:
 
 boldyreva_gibc
 """"""""""""""
-.. automodule:: honeybadgerbft.crypto.threshsig.boldyreva_gipc
+.. automodule:: crypto.threshsig.boldyreva_gipc
     :members:
 
 boldyreva_pool
 """"""""""""""
-.. automodule:: honeybadgerbft.crypto.threshsig.boldyreva_pool
+.. automodule:: crypto.threshsig.boldyreva_pool
     :members:
 
 generate_keys
 """""""""""""
-.. automodule:: honeybadgerbft.crypto.threshsig.generate_keys
+.. automodule:: crypto.threshsig.generate_keys
     :members:
 
 millerrabin
 """""""""""
-.. automodule:: honeybadgerbft.crypto.threshsig.millerrabin
+.. automodule:: crypto.threshsig.millerrabin
     :members:

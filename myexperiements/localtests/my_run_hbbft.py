@@ -4,11 +4,11 @@ import gevent
 from gevent import monkey
 from gevent.queue import Queue
 from honeybadgerbft.core.honeybadger import HoneyBadgerBFT
-from honeybadgerbft.crypto.threshsig.boldyreva import dealer
+from crypto.threshsig import dealer
 from honeybadgerbft.crypto.threshenc import tpke
 
 
-monkey.patch_all()
+monkey.patch_all(thread=False)
 
 def simple_router(N, maxdelay=0.01, seed=None):
     """Builds a set of connected channels, with random delay

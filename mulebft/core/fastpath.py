@@ -1,18 +1,19 @@
+from gevent import monkey; monkey.patch_all(thread=False)
+
 import traceback
 import time
 from collections import defaultdict
 from gevent.event import Event
 from gevent.queue import Queue
-from gevent import Timeout, monkey
-from honeybadgerbft.crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
-from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
-from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
+from gevent import Timeout
+from crypto.ecdsa.ecdsa import ecdsa_sign, ecdsa_vrfy, PublicKey
+from crypto.threshsig.boldyreva import serialize, deserialize1
+from crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
 import os
 import json
 import gevent
 import hashlib, pickle
 
-monkey.patch_all(thread=False)
 
 
 def hash(x):
@@ -87,7 +88,6 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
         while True:
 
             gevent.sleep(0)
-            time.sleep(0)
 
             (sender, msg) = recv()
             #logger.info("receving a fast path msg " + str((sender, msg)))
@@ -273,8 +273,8 @@ def fastpath(sid, pid, N, f, leader, get_input, put_output, Snum, Bsize, Tout, h
                 weighted_delay = (epoch_txcnt * weighted_delay + txcnt[pending_block[1]-1] * delay[pending_block[1]-1]) / (epoch_txcnt + txcnt[pending_block[1]-1])
                 epoch_txcnt += txcnt[pending_block[1]-1]
 
-                #if logger is not None:
-                #    logger.info('Fast block Delay at Node %d for Epoch %s and Slot %d: ' % (pid, sid, pending_block[1]-1) + str(delay))
+                if logger is not None:
+                    logger.info('Fast block at Node %d for Epoch %s and Slot %d has delay and TXs: %s, %d' % (pid, sid, pending_block[1]-1, str(delay[pending_block[1]-1]), txcnt[pending_block[1]-1]))
 
         pending_block = (sid, slot_cur, h_p, raw_Sig, signed_batches)
         pending_block_header = (sid, slot_cur, h_p, hash(signed_batches))
