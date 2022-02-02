@@ -61,7 +61,41 @@ class MuleBFTNode (Mule, Process):
 
     def prepare_bootstrap(self):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
-        tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
+
+        # tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
+ 
+        # ran1 = random.randint(100,250)
+        # ran2 = random.randint(100,250)
+        # tx = tx_generator(ran1)
+        # tx2 = tx_generator(ran2)
+        # self.logger.info('node id %d and size %d' % (self.id, ran1))
+        # self.logger.info('node id %d and size2 %d' % (self.id, ran2))
+        # count1 = 0
+        # count2 = 0
+
+        # if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
+        #     k = 0
+        #     for _ in range(self.K + 1):
+        #         for r in range(max(self.FAST_BATCH_SIZE * self.SLOTS_NUM, self.FALLBACK_BATCH_SIZE)):
+        #             suffix = hex(self.id) + hex(r) + ">"
+        #             choose = random.choice([1,2])
+        #             if (choose == 1) :
+        #                 Mule.submit_tx(self, tx[:-len(suffix)] + suffix)
+        #                 count1 = count1 + 1
+        #             else :
+        #                 Mule.submit_tx(self, tx2[:-len(suffix)] + suffix)
+        #                 count2 = count2 + 1
+        #             k += 1
+        #             if r % 50000 == 0:
+        #                 self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
+        # else:
+        #     pass
+        #     # TODO: submit transactions through tx_buffer
+        # self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
+        # self.logger.info('node id %d and count %d' % (self.id, count1))
+        # self.logger.info('node id %d and count2 %d' % (self.id, count2))
+        tx = tx_generator(250)
+
         if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
             k = 0
             for _ in range(self.K + 1):

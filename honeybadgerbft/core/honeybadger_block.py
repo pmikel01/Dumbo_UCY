@@ -9,6 +9,17 @@ monkey.patch_all(thread=False)
 
 logger = logging.getLogger(__name__)
 
+logger2 = logging.getLogger("con-node")
+logger2.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    '%(asctime)s %(filename)s [line:%(lineno)d] %(funcName)s %(levelname)s %(message)s ')
+if 'log' not in os.listdir(os.getcwd()):
+    os.mkdir(os.getcwd() + '/log')
+full_path = os.path.realpath(os.getcwd()) + '/log/' + "con-node" + ".log"
+file_handler = logging.FileHandler(full_path)
+file_handler.setFormatter(formatter)  # 可以通过setFormatter指定输出格式
+logger2.addHandler(file_handler)
+
 
 def tpke_serialize(g):
     if g is not None:
@@ -61,7 +72,6 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
     :return:
     """
 
-
     # Broadcast inputs are of the form (tenc(key), enc(key, transactions))
 
     # Threshold encrypt
@@ -79,13 +89,16 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
     # Wait for the corresponding ACS to finish
     vall = acs_out()
 
-    logger.debug("node %d is making block" % pid)
+    # logger2.debug("node %d is making block" % pid)
 
 
     assert len(vall) == N
     assert len([_ for _ in vall if _ is not None]) >= N - f  # This many must succeed
 
-    logger.debug("node %d is making block" % pid)
+    if pid==0: logger2.debug("node %d is making block" % pid)
+    if pid==0: logger2.debug("vall_len: %d" % len(vall))
+    # logger2.debug(str(vall))
+
 
 
     # print pid, 'Received from acs:', vall
@@ -93,6 +106,9 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
     # Broadcast all our decryption shares
     my_shares = []
     for i, v in enumerate(vall):
+        # logger2.debug(i)
+        # logger2.debug(v)
+        
         if v is None:
             my_shares.append(None)
             continue
@@ -101,6 +117,8 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
         share = SK.decrypt_share(*tkey)
         # share is of the form: U_i, an element of group1
         my_shares.append(share)
+
+    if pid==0: logger2.debug("my_shares: %d" % len(my_shares))
 
     tpke_bcast([tpke_serialize(share) for share in my_shares])
 
@@ -117,6 +135,8 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
             continue
         shares_received[j] = shares
 
+    if pid==0: logger2.debug("shares: %d" % len(shares_received))
+
     assert len(shares_received) >= f+1
     # TODO: Accountability
     # If decryption fails at this point, we will have evidence of misbehavior,
@@ -132,7 +152,13 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
         tkey = deserialize_UVW(*tkey)
         key = PK.combine_shares(*tkey, svec)
         plain = tpke.decrypt(key, ciph)
+        # if pid==0: logger2.debug("plain: %s" % plain)
         decryptions.append(plain)
+    # if pid==0: logger2.debug(decryptions)
+
     #print('Done!', decryptions)
+    # if pid==0: logger2.debug(decryptions) 
+    # if pid==0: logger2.debug(len(decryptions))
+    
 
     return tuple(decryptions)

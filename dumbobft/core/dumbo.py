@@ -167,7 +167,8 @@ class Dumbo():
 
         self.s_time = time.time()
         if self.logger != None: self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
-
+        
+        self.logger.info('BBB: %d ' % self.B)
         while True:
             # For each round...
 
@@ -182,6 +183,9 @@ class Dumbo():
             for _ in range(self.B):
                 tx_to_send.append(self.transaction_buffer.get_nowait())
 
+            self.logger.info('tx_to_send: %d ' % len(tx_to_send))
+            
+
             def _make_send(r):
                 def _send(j, o):
                     self._send(j, (r, o))
@@ -190,10 +194,14 @@ class Dumbo():
             send_r = _make_send(r)
             recv_r = self._per_round_recv[r].get
             new_tx = self._run_round(r, tx_to_send, send_r, recv_r)
+            # for x in new_tx:
+                # self.logger.info(x)
+            
 
-            #print('new block at %d:' % self.id, new_tx)
+            # print('new block at %d:' % self.id, new_tx)
             if self.logger != None:
-                #self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.round) + str(new_tx))
+                self.logger.info('new: %d ' % len(new_tx))
+                # self.logger.info('Node %d Delivers Block %d: ' % (self.id, self.round) + str(new_tx))
                 tx_cnt = str(new_tx).count("Dummy TX")
                 self.txcnt += tx_cnt
                 self.logger.info(
@@ -332,10 +340,14 @@ class Dumbo():
                           acs_in=my_prbc_input.put_nowait, acs_out=dumboacs.get,
                           tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
 
+        self.logger.info('out: %d ' % len(_output))
+
         block = set()
         for batch in _output:
             decoded_batch = json.loads(batch.decode())
+            self.logger.info('dec: %d ' % len(decoded_batch))
             for tx in decoded_batch:
+                # if pid==0: self.logger.debug("tx: %s" % tx)
                 block.add(tx)
 
         return list(block)

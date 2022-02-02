@@ -43,6 +43,7 @@ class DumboBFTNode (Dumbo, Process):
         self.ready = ready
         self.stop = stop
         self.mode = mode
+
         Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.ePK, self.eSK, send=None, recv=None, K=K, mute=mute)
         Process.__init__(self)
 
@@ -53,14 +54,18 @@ class DumboBFTNode (Dumbo, Process):
             k = 0
             for _ in range(self.K):
                 for r in range(self.B):
+                    # print(self.B)
+                    # self.logger.info('B: %d ' % (r))
+
                     Dumbo.submit_tx(self, tx.replace(">", hex(r) + ">"))
                     k += 1
-                    if r % 50000 == 0:
+                    if (r % 50000 == 0) and (r != 0):
                         self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
         else:
             pass
             # TODO: submit transactions through tx_buffer
         self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
+        self.logger.info('Total tx`s: %d ' % (k))
 
     def run(self):
 
@@ -69,7 +74,11 @@ class DumboBFTNode (Dumbo, Process):
 
         self._send = lambda j, o: self.send_queues[j].put_nowait(o)
         self._recv = lambda: self.recv_queue.get_nowait()
+        self.logger.info('B: %d ' % (self.B))
+        self.logger.info('K: %d ' % (self.K))
 
+
+        
         self.prepare_bootstrap()
 
         while not self.ready.value:

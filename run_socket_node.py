@@ -110,6 +110,7 @@ if __name__ == '__main__':
         net.terminate()
         #bft.join()
         net.join()
+        print("wow")
 
     except FileNotFoundError or AssertionError as e:
         traceback.print_exc()
