@@ -66,7 +66,7 @@ class DumboBFTNode (Dumbo):
                 # 100 tx`s each time`
                 for r in range(self.tpt):
                     id = str(self.id) + "-" + str(k)
-                    tx = tx_generator(id)  # Set each dummy TX to be 250 Byte
+                    tx = tx_generator(id)
                     Dumbo.submit_tx(self, tx)
                     k += 1
                     if (r % 50000 == 0) and (r != 0):
@@ -77,14 +77,31 @@ class DumboBFTNode (Dumbo):
             self.logger.info('node id %d completed the loading of %d dummy TXs' % (self.id, k))
             time.sleep(2)
 
+    def prepare_bootstrap_without_infinite_loop(self):
+        self.logger.info('node id %d started inserting dummy payload TXs' % (self.id))
+        k = 0
+        if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
+            # 100 tx`s each time`
+            for r in range(self.tpt):
+                id = str(self.id) + "-" + str(k)
+                tx = tx_generator(id)  # Set each dummy TX to be 250 Byte
+                Dumbo.submit_tx(self, tx)
+                k += 1
+                if (r % 50000 == 0) and (r != 0):
+                    self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
+        else:
+            pass
+            # TODO: submit transactions through tx_buffer
+        self.logger.info('node id %d completed the loading of %d dummy TXs' % (self.id, k))
+
     def run(self):
 
         pid = os.getpid()
         self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
 
-        # self.prepare_bootstrap()
         measurements = threading.Thread(target=self.prepare_bootstrap)
         measurements.start()
+        # self.prepare_bootstrap_without_infinite_loop()
 
         while not self.ready.value:
             time.sleep(1)

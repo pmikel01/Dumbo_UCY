@@ -199,7 +199,8 @@ class Dumbo():
             if (isEmpty):
                 self.logger.info('Buffer Empty')
                 gevent.sleep(1)
-                continue
+                # continue
+                # check in the end if block is empty or not
 
             self.logger.info('tx_to_send: %d ' % len(tx_to_send))
 
@@ -227,10 +228,12 @@ class Dumbo():
             print("    - Throughput of this block: %.9f tps" % (tx_cnt / (end - start)))
 
             # Put undelivered but committed TXs back to the backlog buffer
+            notdel = 0
             for _tx in tx_to_send:
-               if _tx not in new_tx:
-                   self.transaction_buffer.put_nowait(_tx)
-
+                if _tx not in new_tx:
+                    notdel += 1
+                    self.transaction_buffer.put_nowait(_tx)
+            self.logger.info('notdel: %d ' % notdel)
             # print('buffer at %d:' % self.id, self.transaction_buffer)
             #if self.logger != None:
             #    self.logger.info('Backlog Buffer at Node %d:' % self.id + str(self.transaction_buffer))

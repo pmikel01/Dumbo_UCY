@@ -8,6 +8,10 @@ def tx_generator(id, chars=string.ascii_uppercase + string.digits):
     timestamp = str(time.time())
     address = ''.join(random.choice(chars) for _ in range(30))
 
+    nonce_size = 1
+    max_tx_size = 10000 # +250 approximately
+    nonce = ''.join(random.choice(chars) for _ in range(nonce_size))
+
     rnd_tmp = random.randint(5, 25)
     name = ''.join(random.choice(chars) for _ in range(rnd_tmp))
 
@@ -26,5 +30,5 @@ def tx_generator(id, chars=string.ascii_uppercase + string.digits):
     rnd_tmp = random.randint(0, 50)
     pressure = str(rnd_tmp)
 
-    return '<Id: ' + id + ', Sensor_Id: ' + sensor_id + ', Time: ' + timestamp + ', Address: ' + address + ', Name: ' + name + ', Location: ' + location + ', Lat: ' + lat + ', Lon: ' + lon + ', Status: ' + status + ', Noise: ' + noise + ', Temperature: ' + temperature + ', Humidity: ' + humidity + ', Pressure: ' + pressure + '>'
-
+    return '<Id: ' + id + ', Sensor_Id: ' + sensor_id + ', Time: ' + timestamp + ', Address: ' + address + ', Name: ' + name + ', Location: ' + location + ', Lat: ' + lat + ', Lon: ' + lon + ', Status: ' + status + ', Noise: ' + noise + ', Temperature: ' + temperature + ', Humidity: ' + humidity + ', Pressure: ' + pressure + ', Nonce: ' + nonce + '>'
+    # return '<Id: ' + id + '>'
