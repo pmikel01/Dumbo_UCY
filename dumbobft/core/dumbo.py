@@ -248,10 +248,10 @@ class Dumbo():
         else:
             print("node %d breaks" % self.id)
 
-        #print("*******************************************")
-        #print('* Node %d breaks the test' % self.id )
-        #print("    - Average latency: %.12f seconds" % ((self.e_time-self.s_time) / self.K) )
-        #print("    - Average throughput: %.9f tps" % (tx_cnt * self.K  / ((self.e_time-self.s_time))))
+        print("*******************************************")
+        print('* Node %d breaks the test' % self.id )
+        print("    - Average latency: %.12f seconds" % ((self.e_time-self.s_time) / self.K) )
+        print("    - Average throughput: %.9f tps" % (tx_cnt * self.K  / ((self.e_time-self.s_time))))
 
         #self._recv_thread.join(timeout=2)
 

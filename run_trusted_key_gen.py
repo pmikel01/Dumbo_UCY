@@ -19,45 +19,48 @@ def trusted_key_gen(N=4, f=1, seed=None):
     # Generate ECDSA sig keys
     sPK2s, sSK2s = ecdsa.pki(N)
 
+    fileName = "keys-" + str(N)
+    slashFileName = "/keys-" + str(N)
+
     # Save all keys to files
-    if 'keys' not in os.listdir(os.getcwd()):
-        os.mkdir(os.getcwd() + '/keys')
+    if fileName not in os.listdir(os.getcwd()):
+        os.mkdir(os.getcwd() + slashFileName)
 
     # public key of (f+1, n) thld sig
-    with open(os.getcwd() + '/keys/' + 'sPK.key', 'wb') as fp:
+    with open(os.getcwd() + slashFileName + '/' + 'sPK.key', 'wb') as fp:
         pickle.dump(sPK, fp)
 
     # public key of (n-f, n) thld sig
-    with open(os.getcwd() + '/keys/' + 'sPK1.key', 'wb') as fp:
+    with open(os.getcwd() + slashFileName + '/' + 'sPK1.key', 'wb') as fp:
         pickle.dump(sPK1, fp)
 
     # public key of (f+1, n) thld enc
-    with open(os.getcwd() + '/keys/' + 'ePK.key', 'wb') as fp:
+    with open(os.getcwd() + slashFileName + '/' + 'ePK.key', 'wb') as fp:
         pickle.dump(ePK, fp)
 
     # public keys of ECDSA
     for i in range(N):
-        with open(os.getcwd() + '/keys/' + 'sPK2-' + str(i) + '.key', 'wb') as fp:
+        with open(os.getcwd() + slashFileName + '/' + 'sPK2-' + str(i) + '.key', 'wb') as fp:
             pickle.dump(sPK2s[i].format(), fp)
 
     # private key of (f+1, n) thld sig
     for i in range(N):
-        with open(os.getcwd() + '/keys/' + 'sSK-' + str(i) + '.key', 'wb') as fp:
+        with open(os.getcwd() + slashFileName + '/' + 'sSK-' + str(i) + '.key', 'wb') as fp:
             pickle.dump(sSKs[i], fp)
 
     # private key of (n-f, n) thld sig
     for i in range(N):
-        with open(os.getcwd() + '/keys/' + 'sSK1-' + str(i) + '.key', 'wb') as fp:
+        with open(os.getcwd() + slashFileName + '/' + 'sSK1-' + str(i) + '.key', 'wb') as fp:
             pickle.dump(sSK1s[i], fp)
 
     # private key of (f+1, n) thld enc
     for i in range(N):
-        with open(os.getcwd() + '/keys/' + 'eSK-' + str(i) + '.key', 'wb') as fp:
+        with open(os.getcwd() + slashFileName + '/' + 'eSK-' + str(i) + '.key', 'wb') as fp:
             pickle.dump(eSKs[i], fp)
 
     # private keys of ECDSA
     for i in range(N):
-        with open(os.getcwd() + '/keys/' + 'sSK2-' + str(i) + '.key', 'wb') as fp:
+        with open(os.getcwd() + slashFileName + '/' + 'sSK2-' + str(i) + '.key', 'wb') as fp:
             pickle.dump(sSK2s[i].secret, fp)
 
 
