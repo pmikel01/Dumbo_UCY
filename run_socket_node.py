@@ -129,16 +129,23 @@ if __name__ == '__main__':
         net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
         net_client = NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop, bft_running, dynamic=True)
         bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F, D, O, bft_running)
+        print(1)
         #print(O)
         net_server.start()
         net_client.start()
+        print(2)
 
         while not client_ready.value and not server_ready.value:
             time.sleep(1)
             print("waiting for network ready...")
 
+        print(3)
+
         with net_ready.get_lock():
             net_ready.value = True
+            print(4)
+        
+        print(5)
 
         bft_thread = Greenlet(bft.run)
         bft_thread.start()

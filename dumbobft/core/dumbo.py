@@ -180,23 +180,28 @@ class Dumbo():
                 self._per_round_recv[r] = Queue()
 
             # Select B transactions (TODO: actual random selection)
-            tx_to_send = []
-            for _ in range(self.B):
-                tx_to_send.append(self.transaction_buffer.get_nowait())
-
-            # Select B transactions (TODO: actual random selection) newwwwwwwwwwwwwww
-            # isEmpty = True
             # tx_to_send = []
             # for _ in range(self.B):
-            #     if not self.transaction_buffer.empty():
-            #         tx_to_send.append(self.transaction_buffer.get_nowait())
-            #         isEmpty = False
-            #     else:
-            #         if (isEmpty):
-            #             self.logger.info('Buffer Empty')
-            #             continue
+            #     tx_to_send.append(self.transaction_buffer.get_nowait())
 
-            # self.logger.info('tx_to_send: %d ' % len(tx_to_send))
+            # Select B transactions (TODO: actual random selection)
+            isEmpty = True
+            tx_to_send = []
+            for _ in range(self.B):
+                if not self.transaction_buffer.empty():
+                    tx_to_send.append(self.transaction_buffer.get_nowait())
+                    isEmpty = False
+                else:
+                    if not isEmpty:
+                        self.logger.info('Buffer has less tx`s than Batch size')
+                        break
+
+            if (isEmpty):
+                self.logger.info('Buffer Empty')
+                gevent.sleep(1)
+                continue
+
+            self.logger.info('tx_to_send: %d ' % len(tx_to_send))
 
             def _make_send(r):
                 def _send(j, o):
@@ -208,21 +213,23 @@ class Dumbo():
             new_tx = self._run_round(r, tx_to_send, send_r, recv_r)
 
             if self.logger != None:
-                tx_cnt = str(new_tx).count("Dummy TX")
+                # self.logger.info(new_tx)
+                # self.logger.info('new_tx: %d ' % len(new_tx))
+                tx_cnt = len(new_tx)
                 self.txcnt += tx_cnt
                 self.logger.info('Node %d Delivers ACS Block in Round %d with having %d TXs' % (self.id, r, tx_cnt))
                 end = time.time()
                 self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
                 self.logger.info('Current Block\'s TPS at Node %d: ' % self.id + str(tx_cnt/(end - start)))
 
-            #print('* Node %d outputs an ACS Block at the %d-th Round:' % (self.id, r))
-            #print("    - Latency of this block: %.12f seconds" % (end - start))
-            #print("    - Throughput of this block: %.9f tps" % (tx_cnt / (end - start)))
+            print('* Node %d outputs an ACS Block at the %d-th Round:' % (self.id, r))
+            print("    - Latency of this block: %.12f seconds" % (end - start))
+            print("    - Throughput of this block: %.9f tps" % (tx_cnt / (end - start)))
 
             # Put undelivered but committed TXs back to the backlog buffer
-            #for _tx in tx_to_send:
-            #    if _tx not in new_tx:
-            #        self.transaction_buffer.put_nowait(_tx)
+            for _tx in tx_to_send:
+               if _tx not in new_tx:
+                   self.transaction_buffer.put_nowait(_tx)
 
             # print('buffer at %d:' % self.id, self.transaction_buffer)
             #if self.logger != None:
@@ -284,8 +291,10 @@ class Dumbo():
         bc_recv_loop_thread.start()
 
         #print(pid, r, 'tx_to_send:', tx_to_send)
-        #if self.logger != None:
+        # if self.logger != None:
+        #    self.logger.info('tx_to_send: %d ' % len(tx_to_send))
         #    self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
+        
 
         def _setup_prbc(j):
             """Setup the sub protocols RBC, BA and common coin.
@@ -382,11 +391,12 @@ class Dumbo():
                           propose=json.dumps(tx_to_send),
                           acs_put_in=my_prbc_input.put_nowait, acs_get_out=dumboacs_thread.get,
                           tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
-
+        
         block = set()
         for batch in _output:
             decoded_batch = json.loads(batch.decode())
             for tx in decoded_batch:
+                # self.logger.info(tx)
                 block.add(tx)
 
         bc_recv_loop_thread.kill()

@@ -4,6 +4,8 @@ import random
 from typing import  Callable
 import os
 import pickle
+import gevent
+import threading
 from gevent import time, Greenlet
 from dumbobft.core.dumbo import Dumbo
 from myexperiements.sockettest.make_random_tx import tx_generator
@@ -53,38 +55,47 @@ class DumboBFTNode (Dumbo):
         self.stop = stop
         self.mode = mode
         self.running = bft_running
+        self.tpt = 100 #transactions per time
         Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
 
     def prepare_bootstrap(self):
-        self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
-        if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
-            tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
-            k = 0
-            for _ in range(self.K):
-                for r in range(self.B):
-                    Dumbo.submit_tx(self, tx.replace(">", hex(r) + ">"))
+        self.logger.info('node id %d started inserting dummy payload TXs' % (self.id))
+        k = 0
+        while not self.stop.value:
+            if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
+                # 100 tx`s each time`
+                for r in range(self.tpt):
+                    id = str(self.id) + "-" + str(k)
+                    tx = tx_generator(id)  # Set each dummy TX to be 250 Byte
+                    Dumbo.submit_tx(self, tx)
                     k += 1
                     if (r % 50000 == 0) and (r != 0):
                         self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
-        else:
-            pass
-            # TODO: submit transactions through tx_buffer
-        self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
-        self.logger.info('Total tx`s: %d ' % (k))
+            else:
+                pass
+                # TODO: submit transactions through tx_buffer
+            self.logger.info('node id %d completed the loading of %d dummy TXs' % (self.id, k))
+            time.sleep(2)
+
     def run(self):
 
         pid = os.getpid()
         self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
 
-        self.prepare_bootstrap()
+        # self.prepare_bootstrap()
+        measurements = threading.Thread(target=self.prepare_bootstrap)
+        measurements.start()
 
         while not self.ready.value:
             time.sleep(1)
+            self.logger.info("noooo")
+            # gevent.sleep(10)
 
         self.running.value = True
 
         self.run_bft()
         self.stop.value = True
+        measurements.join()        
 
 def main(sid, i, B, N, f, addresses, K):
     badger = DumboBFTNode(sid, i, B, N, f, addresses, K)

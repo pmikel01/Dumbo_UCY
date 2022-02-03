@@ -38,4 +38,4 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/usr/local/src/HoneyBadgerBFT
-    command: /bin/sh /usr/local/src/HoneyBadgerBFT/run_local_network_test.sh 10 3 100 10
+    command: /bin/sh /usr/local/src/HoneyBadgerBFT/run_local_network_test.sh 10 3 1000 10
