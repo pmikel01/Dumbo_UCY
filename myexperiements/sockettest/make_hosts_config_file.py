@@ -4,9 +4,9 @@ host = "127.0.0.1"
 port = 10007
 
 with open('hosts.config', 'a') as hosts:
-    for i in range(161):
-        hosts.write(str(i) + " " + host + " " + str(port) + os.linesep)
-        #  hosts.write(str(i) + " " + host + " "+ host + " " + str(port) + os.linesep)
+    for i in range(200):
+        # hosts.write(str(i) + " " + host + " " + str(port) + os.linesep)
+        hosts.write(str(i) + " " + host + " "+ host + " " + str(port) + os.linesep)
         port += 200
 
 # print("hosts.config is not correctly read... ")

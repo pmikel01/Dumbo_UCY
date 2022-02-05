@@ -55,7 +55,7 @@ class DumboBFTNode (Dumbo):
         self.stop = stop
         self.mode = mode
         self.running = bft_running
-        self.tpt = 100 #transactions per time
+        self.tpt = 100000 #transactions per time
         Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
 
     def prepare_bootstrap(self):
@@ -75,7 +75,7 @@ class DumboBFTNode (Dumbo):
                 pass
                 # TODO: submit transactions through tx_buffer
             self.logger.info('node id %d completed the loading of %d dummy TXs' % (self.id, k))
-            time.sleep(2)
+            time.sleep(1)
 
     def prepare_bootstrap_without_infinite_loop(self):
         self.logger.info('node id %d started inserting dummy payload TXs' % (self.id))
@@ -105,14 +105,16 @@ class DumboBFTNode (Dumbo):
 
         while not self.ready.value:
             time.sleep(1)
-            self.logger.info("noooo")
+            # self.logger.info("noooo")
             # gevent.sleep(10)
 
         self.running.value = True
 
         self.run_bft()
         self.stop.value = True
-        measurements.join()        
+        measurements.join()      
+        gevent.sleep(5)
+
 
 def main(sid, i, B, N, f, addresses, K):
     badger = DumboBFTNode(sid, i, B, N, f, addresses, K)

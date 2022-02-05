@@ -223,9 +223,9 @@ class Dumbo():
                 self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
                 self.logger.info('Current Block\'s TPS at Node %d: ' % self.id + str(tx_cnt/(end - start)))
 
-            print('* Node %d outputs an ACS Block at the %d-th Round:' % (self.id, r))
-            print("    - Latency of this block: %.12f seconds" % (end - start))
-            print("    - Throughput of this block: %.9f tps" % (tx_cnt / (end - start)))
+            # print('* Node %d outputs an ACS Block at the %d-th Round:' % (self.id, r))
+            # print("    - Latency of this block: %.12f seconds" % (end - start))
+            # print("    - Throughput of this block: %.9f tps" % (tx_cnt / (end - start)))
 
             # Put undelivered but committed TXs back to the backlog buffer
             notdel = 0
@@ -249,9 +249,12 @@ class Dumbo():
             print("node %d breaks" % self.id)
 
         print("*******************************************")
-        print('* Node %d breaks the test' % self.id )
-        print("    - Average latency: %.12f seconds" % ((self.e_time-self.s_time) / self.K) )
-        print("    - Average throughput: %.9f tps" % (tx_cnt * self.K  / ((self.e_time-self.s_time))))
+        
+        print("Average latency (sec): %.12f" % ((self.e_time-self.s_time) / self.K) )
+        print("Average throughput (txPerSec): %.9f" % (tx_cnt * self.K  / ((self.e_time-self.s_time))))
+
+        print("*******************************************")
+
 
         #self._recv_thread.join(timeout=2)
 
