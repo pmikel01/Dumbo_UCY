@@ -1,32 +1,41 @@
 import argparse
-import boto.ec2
+import boto3
 import sys, os
 import time
-if not boto.config.has_section('ec2'):
-    boto.config.add_section('ec2')
-    boto.config.setbool('ec2','use-sigv4',True)
+from operator import attrgetter
+# if not boto.config.has_section('ec2'):
+#     boto.config.add_section('ec2')
+#     boto.config.setbool('ec2','use-sigv4',True)
+ec2 = boto3.resource('ec2')
 
 secgroups = {
-    'eu-west-3':'sg-0e50b636305f6fede',
-    'eu-central-1':'sg-0fcbe44a71eab0814',
-    'ca-central-1':'sg-09a3dc1babd0bf054',
-    'us-east-1':'sg-081493fb0126963c1',
-    'us-west-1':'sg-02857b09bc1dd8a9f'
-
-
-    # 'us-east-1':'sg-6c4dfe0a',
-    # 'us-west-1':'sg-7b34651e',
-    # 'us-west-2':'sg-8f067ceb',
-    # 'sa-east-1':'sg-2a1f744f',
-    # 'ap-southeast-1':'sg-2d491c48',
-    # 'ap-southeast-2':'sg-d58dd4b0',
-    # 'ap-northeast-1':'sg-499fb02c',
-#    'eu-central-1':'sg-2bfe9342'  # somehow this group does not work
+    'eu-west-3':'sg-0638252c8d13e9315', #default 0e50b636305f6fede
+    'eu-central-1':'sg-0f0a4b3d24f428d06', #default 0fcbe44a71eab0814
+    'ca-central-1':'sg-0e95c6f3567970899', #default 09a3dc1babd0bf054
+    'us-east-1':'sg-03e71fec894fb3db0', #default 081493fb0126963c1
+    'us-west-1':'sg-072bbfe8725e8da84' #default 02857b09bc1dd8a9f
 }
 regions = sorted(secgroups.keys())[::-1]
 
+amis = {
+    'eu-west-3':'ami-0c6ebbd55ab05f070',
+    'eu-central-1':'ami-0d527b8c289b4af7f',
+    'ca-central-1':'ami-0aee2d0182c9054ac',
+    'us-east-1':'ami-04505e74c0741db8d',
+    'us-west-1':'ami-0892d3c7ee96c0bf7'
+}
+
+sshKeys = {
+    'eu-west-3':'pmikel01-mc2ec2',
+    'eu-central-1':'pmikel01-mc2ec2',
+    'ca-central-1':'pmikel01-mc2ec2',
+    'us-east-1':'pmikel01-mc2ec2',
+    'us-west-1':'pmikel01-mc2ec2'
+}
+
 NameFilter = 'Badger'
-    
+
+######## Not Used #########
 def getAddrFromEC2Summary(s):
     return [
             x.split('ec2.')[-1] for x in s.replace(
@@ -38,107 +47,102 @@ def getAddrFromEC2Summary(s):
                         ).strip().split('\n')]
 
 def get_ec2_instances_ip(region):
-    ec2_conn = boto.ec2.connect_to_region(region,
-                aws_access_key_id=access_key,
-                aws_secret_access_key=secret_key)
-    if ec2_conn:
+    ec2 = boto3.resource('ec2', region_name=region)
+
+    if ec2:
         result = []
-        reservations = ec2_conn.get_all_reservations(filters={'tag:Name': NameFilter})
-        for reservation in reservations:
-            if reservation:       
-                for ins in reservation.instances:
-                    if ins.public_dns_name: 
-                        currentIP = ins.public_dns_name.split('.')[0][4:].replace('-','.')
-                        result.append(currentIP)
-                        print(currentIP)
+        instances = ec2.instances.all()
+        for instance in instances:
+            #needed ?
+            instance.load()
+            if instance.public_dns_name:
+                currentIP = instance.public_dns_name.split('.')[0][4:].replace('-','.')
+                result.append(currentIP)
+                print(currentIP)
         return result
     else:
         print('Region failed', region)
         return None
 
 def get_ec2_instances_id(region):
-    ec2_conn = boto.ec2.connect_to_region(region,
-                aws_access_key_id=access_key,
-                aws_secret_access_key=secret_key)
-    if ec2_conn:
+    if ec2:
         result = []
-        reservations = ec2_conn.get_all_reservations(filters={'tag:Name': NameFilter})
-        for reservation in reservations:    
-            for ins in reservation.instances:
-                print(ins.id)
-                result.append(ins.id)
+        instances = ec2.instances.all()
+        for instance in instances:
+            instance.load()
+            print(instance.id)
+            result.append(instance.id)
         return result
     else:
         print('Region failed', region)
         return None
 
 def stop_all_instances(region):
-    ec2_conn = boto.ec2.connect_to_region(region,
-                aws_access_key_id=access_key,
-                aws_secret_access_key=secret_key)
+    ec2 = boto3.resource('ec2', region_name=region)
     idList = []
-    if ec2_conn:
-        reservations = ec2_conn.get_all_reservations(filters={'tag:Name': NameFilter})
-        for reservation in reservations: 
-            if reservation:   
-                for ins in reservation.instances:
-                    idList.append(ins.id)
-        ec2_conn.stop_instances(instance_ids=idList)
+    if ec2:
+        # ec2.instances.all().stop()
+        instances = ec2.instances.all()
+        for instance in instances:
+            instance.stop()
+            instance.wait_until_stopped()
 
 def terminate_all_instances(region):
-    ec2_conn = boto.ec2.connect_to_region(region,
-                aws_access_key_id=access_key,
-                aws_secret_access_key=secret_key)
+    ec2 = boto3.resource('ec2', region_name=region)
     idList = []
-    if ec2_conn:
-        reservations = ec2_conn.get_all_reservations(filters={'tag:Name': NameFilter})
-        for reservation in reservations:   
-            if reservation:    
-                for ins in reservation.instances:
-                    idList.append(ins.id)
-        ec2_conn.terminate_instances(instance_ids=idList)
+    if ec2:
+        # ec2.instances.all().terminate()
+        instances = ec2.instances.all()
+        for instance in instances:
+            instance.terminate()
+            instance.wait_until_terminated()
 
 def launch_new_instances(region, number):
-    ec2_conn = boto.ec2.connect_to_region(region,
-                aws_access_key_id=access_key,
-                aws_secret_access_key=secret_key)
-    dev_sda1 = boto.ec2.blockdevicemapping.EBSBlockDeviceType(delete_on_termination=True)
+    ec2 = boto3.resource('ec2', region_name=region)
+    # dev_sda1 = ec2.instBlockDeviceMappings.Ebs(delete_on_termination=True)
     # dev_sda1.size = 8 # size in Gigabytes
-    dev_sda1.size = 1 # size in Gigabytes
-    dev_sda1.delete_on_termination = True
-    bdm = boto.ec2.blockdevicemapping.BlockDeviceMapping()
-    bdm['/dev/sda1'] = dev_sda1
-    img = ec2_conn.get_all_images(filters={'name':'ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-20211129'})[0].id
-    reservation = ec2_conn.run_instances(image_id=img, #'ami-04505e74c0741db8d',  # ami-04505e74c0741db8d
-                                 min_count=number,
-                                 max_count=number,
-                                 key_name='pmikel01-mc2ec2', 
-                                 instance_type='t2.micro',
-                                 security_group_ids = [secgroups[region], ],
-                                 block_device_map = bdm)
-    for instance in reservation.instances:
-        instance.add_tag("Name", NameFilter)
-    return reservation
+    # dev_sda1.size = 1 # size in Gigabytes
+    # dev_sda1.delete_on_termination = True
+    # bdm = ec2.BlockDeviceMappings.BlockDeviceMapping()
+    # bdm['/dev/sda1'] = dev_sda1
+    launchedInstances = ec2.create_instances(ImageId=amis[region], #'ami-04505e74c0741db8d',  # ami-04505e74c0741db8d
+                                 MinCount=number,
+                                 MaxCount=number,
+                                 KeyName=sshKeys[region], 
+                                 InstanceType='t2.micro',
+                                 SecurityGroupIds = [secgroups[region], ])
+    i=0
+    for instance in launchedInstances:
+        print(f'EC2 instance "{instance.id}" has been launched')
+        
+        instance.wait_until_running()
+        print(f'EC2 instance "{instance.id}" has been started')
+        i+=1
+    print(i, "instances launced and running in ", region)
+
+    #If needed change deleteOnTermination here
+
+    return launchedInstances
 
 
 def start_all_instances(region):
-    ec2_conn = boto.ec2.connect_to_region(region,
-                aws_access_key_id=access_key,
-                aws_secret_access_key=secret_key)
+    ec2 = boto3.resource('ec2', region_name=region)
     idList = []
-    if ec2_conn:
-        reservations = ec2_conn.get_all_reservations(filters={'tag:Name': NameFilter})
-        for reservation in reservations:    
-            for ins in reservation.instances:
-                idList.append(ins.id)
-        ec2_conn.start_instances(instance_ids=idList)
-
+    if ec2:
+        # ec2.instances.all().start()
+        instances = ec2.instances.all()
+        for instance in instances:
+            instance.start()
+            instance.wait_until_running()
 
 def ipAll():
     result = []
     for region in regions:
         result += get_ec2_instances_ip(region) or []
     open('hosts','w').write('\n'.join(result))
+    ############ Check result ############
+    print(result)
+    ######################################
     callFabFromIPList(result, 'removeHosts')
     callFabFromIPList(result, 'writeHosts')
     return result
@@ -147,28 +151,28 @@ def ipAll():
 def getIP():
     return [l for l in open('hosts', 'r').read().split('\n') if l]
 
-
 def idAll():
     result = []
     for region in regions:
         result += get_ec2_instances_id(region) or []
     return result
 
-
 def startAll():
     for region in regions:
         start_all_instances(region)
-
 
 def stopAll():
     for region in regions:
         stop_all_instances(region)
 
+def terminateAll():
+    for region in regions:
+        terminate_all_instances(region)
+
 from subprocess import check_output, Popen, call, PIPE, STDOUT
 import fcntl
 from threading import Thread
 import platform
-
 
 def callFabFromIPList(l, work):
     if platform.system() == 'Darwin':
@@ -176,7 +180,7 @@ def callFabFromIPList(l, work):
             '-u', 'ubuntu', '-H', ','.join(l), # We rule out the client
             work]))
     else:
-        call('fab -i ~/.ssh/pmikel01-mc2ec2.pem -u ubuntu -P -H %s %s' % (','.join(l), work), shell=True)
+        call('fab -i ~/.ssh/pmikel01-mc2ec2.pem -u ubuntu -P -t 10 -n 2 -H %s %s' % (','.join(l), work), shell=True)
 
 def non_block_read(output):
     ''' even in a thread, a normal read with block until the buffer is full '''
@@ -201,15 +205,18 @@ def monitor(stdout, N, t):
     ending_time = time.time()
     print('Latency from client scope:', ending_time - starting_time)
 
+######## Not Used #########
 def runProtocol():  # fast-path to run, assuming we already have the files ready
     callFabFromIPList(getIP(), 'runProtocol')
 
+######## Not Used #########
 def runProtocolfromClient(client, key, hosts=None):
     if not hosts:
         callFabFromIPList(getIP(), 'runProtocolFromClient:%s,%s' % (client, key))
     else:
         callFabFromIPList(hosts, 'runProtocolFromClient:%s,%s' % (client, key))
 
+######## Not Used #########
 def runEC2(Tx, N, t, n):  # run 4 in a row
     for i in range(1, n+1):
         runProtocolfromClient('"%d %d %d"' % (Tx, N, t), "~/%d_%d_%d.key" % (N, t, i))
@@ -247,7 +254,7 @@ def callStartProtocolAndMonitorOutput(N, t, l, work='runProtocol'):
     print('Latency from client scope:', ending_time - starting_time)
 
 
-
+######## Not Used #########
 def callFab(s, work):  # Deprecated
     print(Popen(['fab', '-i', '~/.ssh/pmikel01-mc2ec2.pem',
             '-u', 'ubuntu', '-H', ','.join(getAddrFromEC2Summary(s)),
@@ -269,15 +276,13 @@ def gp():
 def rp(srp):
     c(getIP(), 'runProtocol:%s' % srp)
 
+def pig():
+    c(getIP(), 'ping')
+
+import IPython
+
 if  __name__ =='__main__':
   try: __IPYTHON__
   except NameError:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('access_key', help='Access Key');
-    parser.add_argument('secret_key', help='Secret Key');
-    args = parser.parse_args()
-    access_key = args.access_key
-    secret_key = args.secret_key
-
-    import IPython
+    
     IPython.embed()
