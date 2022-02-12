@@ -132,6 +132,18 @@ def writeHosts():
     put('./hosts', '~/')
 
 @parallel
+def removeKeys(N_):
+    N = int(N_)
+    cmd = 'rm ~/keys-' + str(N)
+    run(cmd)
+
+@parallel
+def writeKeys(N_):
+    N = int(N_)
+    local = './keys-' + str(N)
+    put(local, '~/')
+
+@parallel
 def fetchLogs():
     get('~/msglog.TorMultiple',
         'logs/%(host)s' + time.strftime('%Y-%m-%d_%H:%M:%SZ',time.gmtime()) + '.log')
@@ -184,15 +196,22 @@ def generateTX(N_, seed):
     run('python -m HoneyBadgerBFT.ec2.generate_tx %d %s > tx' % (N, seed))
 
 @parallel
-def runProtocol(N_, t_, B_, timespan_, tx='tx'):
+def tests():
+    run("server_ip=\"$(curl ifconfig.co)\"")
+    run("printf \"Server public ip4 %s\n\" $server_ip")
+
+@parallel
+def runProtocol(N_, f_, B_, K_):
     N = int(N_)
-    t = int(t_)
-    B = int(B_) * N   # now we don't have to calculate them anymore
-    timespan = int(timespan_)
-    print(N, t, B, timespan)
+    f = int(f_)
+    # B = int(B_) * N   # now we don't have to calculate them anymore
+    B = int(B_)
+    K = int(K_)
+    print(N, f, B, K)
+    # run("server_ip=\"$(curl ifconfig.co)\"")
     with shell_env(LIBRARY_PATH='/usr/local/lib', LD_LIBRARY_PATH='/usr/local/lib'):
-        run('python -m HoneyBadgerBFT.test.honest_party_test_EC2 -k'
-            ' thsig%d_%d.keys -e ecdsa.keys -a %d -b %d -n %d -t %d -c thenc%d_%d.keys' % (N, t, timespan, B, N, t, N, t))
+        
+        sudo('sh Dumbo_UCY.run_ec2_node.sh %d %d %d %d' % (N, f, B, K))
 
 # @parallel
 # def checkout():

@@ -46,23 +46,28 @@ def getAddrFromEC2Summary(s):
                         '-', '.'
                         ).strip().split('\n')]
 
-def get_ec2_instances_ip(region):
-    ec2 = boto3.resource('ec2', region_name=region)
-
-    if ec2:
-        result = []
-        instances = ec2.instances.all()
-        for instance in instances:
-            #needed ?
-            instance.load()
-            if instance.public_dns_name:
-                currentIP = instance.public_dns_name.split('.')[0][4:].replace('-','.')
-                result.append(currentIP)
-                print(currentIP)
-        return result
-    else:
-        print('Region failed', region)
-        return None
+def get_ec2_instances_ip():
+    result = []
+    i=0
+    for region in regions:
+        ec2 = boto3.resource('ec2', region_name=region)
+        if ec2:
+            regionResult = []
+            instances = ec2.instances.all()
+            for instance in instances:
+                instance.load()
+                if instance.public_dns_name:
+                    currentIP = instance.public_dns_name.split('.')[0][4:].replace('-','.')
+                    privateIP = instance.private_ip_address
+                    host = str(i) + " " + privateIP + " " + currentIP
+                    regionResult.append(host)
+                    print(host)
+                    i += 1
+        else:
+            print('Region failed', region)
+            return None
+        result += regionResult
+    return result
 
 def get_ec2_instances_id(region):
     if ec2:
@@ -136,20 +141,25 @@ def start_all_instances(region):
             instance.wait_until_running()
 
 def ipAll():
-    result = []
-    for region in regions:
-        result += get_ec2_instances_ip(region) or []
+    result = get_ec2_instances_ip()
+
     open('hosts','w').write('\n'.join(result))
     ############ Check result ############
     print(result)
     ######################################
-    callFabFromIPList(result, 'removeHosts')
-    callFabFromIPList(result, 'writeHosts')
+    callFabFromIPList(getIP(), 'removeHosts')
+    callFabFromIPList(getIP(), 'writeHosts')
     return result
 
+def runEC2experiment(N, F, B, K):
+    ipAll()
+    os.system("python3 ../run_trusted_key_gen.py --N " + str(N) + " --f " + str(F))
+    c(getIP(), 'removeKeys:'+str(N))
+    c(getIP(), 'writeKeys:'+str(N))
+    c(getIP(), "runProtocol:" + str(N) + "," + str(F) + "," + str(B) + "," + str(K))
 
 def getIP():
-    return [l for l in open('hosts', 'r').read().split('\n') if l]
+    return [l.split(' ')[2] for l in open('hosts', 'r').read().split('\n') if l]
 
 def idAll():
     result = []

@@ -44,8 +44,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--sid', metavar='sid', required=True,
                         help='identifier of node', type=str)
-    parser.add_argument('--id', metavar='id', required=True,
-                        help='identifier of node', type=int)
+    parser.add_argument('--id', metavar='id', required=False,
+                        help='identifier of node', type=int, default=0)
     parser.add_argument('--N', metavar='N', required=True,
                         help='number of parties', type=int)
     parser.add_argument('--f', metavar='f', required=True,
@@ -68,6 +68,8 @@ if __name__ == '__main__':
                         help='whether to debug mode', type=bool, default=True)
     parser.add_argument('--O', metavar='O', required=False,
                         help='whether to omit the fast path', type=bool, default=False)
+    parser.add_argument('--I', metavar='I', required=False,
+                        help='public IP address of node', type=str)
     args = parser.parse_args()
 
     # Some parameters
@@ -84,6 +86,7 @@ if __name__ == '__main__':
     F = args.F
     D = args.D
     O = args.O
+    myIP = args.I
 
     # Random generator
     rnd = random.Random(sid)
@@ -95,13 +98,15 @@ if __name__ == '__main__':
             for line in hosts:
                 params = line.split()
                 pid = int(params[0])
+                i = pid
                 priv_ip = params[1]
                 pub_ip = params[2]
-                port = int(params[3])
+                # port = int(params[3])
+                port = 10000
                 # print(pid, ip, port)
                 if pid not in range(N):
                     continue
-                if pid == i:
+                if pub_ip == myIP:
                     my_address = (priv_ip, port)
                 addresses[pid] = (pub_ip, port)
         assert all([node is not None for node in addresses])

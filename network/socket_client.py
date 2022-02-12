@@ -75,18 +75,10 @@ class NetworkClient (Process):
     def _connect(self, j: int):
         sock = socket.socket()
         sockNum = self.port + j + 1
-        if self.ip == '127.0.0.1':
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind((self.ip, self.port + j + 1))
+        # if self.ip == '127.0.0.1':
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((self.ip, self.port + j + 1))
 
-            # try:
-            #     # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            # except OSError as eee:
-            #     self.logger.error("fuckkkk")
-            #     # os.system("kill -9 $(lsof -ti tcp:"+str(sockNum)+") > /dev/null 2>&1")
-            #     # os.system("kill -9 $(lsof -ti tcp:"+str(sockNum)+")")
-            #     # sock.bind((self.ip, self.port + j + 1))
-            #     return False
         try:
             sock.connect(self.addresses_list[j])
             self.socks[j] = sock
