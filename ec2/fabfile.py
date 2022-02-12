@@ -197,8 +197,9 @@ def generateTX(N_, seed):
 
 @parallel
 def tests():
-    run("server_ip=\"$(curl ifconfig.co)\"")
-    run("printf \"Server public ip4 %s\n\" $server_ip")
+    # run("server_ip=\"$(curl ifconfig.co)\"")
+    # run("printf \"Server public ip4 %s\n\" $server_ip")
+    run('rm -rf Dumbo_UCY')
 
 @parallel
 def runProtocol(N_, f_, B_, K_):
