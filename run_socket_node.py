@@ -93,6 +93,7 @@ if __name__ == '__main__':
 
     # Nodes list
     addresses = [None] * N
+    my_address = None
     try:
         with open('hosts.config', 'r') as hosts:
             for line in hosts:
