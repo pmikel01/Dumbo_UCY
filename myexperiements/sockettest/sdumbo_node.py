@@ -53,23 +53,61 @@ class SDumboBFTNode (SpeedyDumbo):
         self.stop = stop
         self.mode = mode
         self.network = network
+        self.tpt = 15000 #transactions per time
         SpeedyDumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
 
-    def prepare_bootstrap(self):
-        self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
-        if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
-            tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
-            k = 0
-            for _ in range(self.K):
-                for r in range(self.B):
-                    SpeedyDumbo.submit_tx(self, tx.replace(">", hex(r) + ">"))
+    # def prepare_bootstrap(self):
+    #     self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))
+    #     if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
+    #         tx = tx_generator(250)  # Set each dummy TX to be 250 Byte
+    #         k = 0
+    #         for _ in range(self.K):
+    #             for r in range(self.B):
+    #                 SpeedyDumbo.submit_tx(self, tx.replace(">", hex(r) + ">"))
+    #                 k += 1
+    #                 if r % 50000 == 0:
+    #                     self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
+    #     else:
+    #         pass
+    #         # TODO: submit transactions through tx_buffer
+    #     self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
+
+    def prepare_bootstrap2(self):
+        self.logger.info('node id %d started inserting dummy payload TXs' % (self.id))
+        k = 0
+        while not self.stop.value:
+            if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
+                # 100 tx`s each time`
+                for r in range(self.tpt):
+                    id = str(self.id) + "-" + str(k)
+                    tx = tx_generator(id)
+                    SpeedyDumbo.submit_tx(self, tx)
                     k += 1
-                    if r % 50000 == 0:
+                    if (r % 50000 == 0) and (r != 0):
                         self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
+            else:
+                pass
+                # TODO: submit transactions through tx_buffer
+            self.logger.info('node id %d completed the loading of %d dummy TXs' % (self.id, k))
+            time.sleep(1)
+# prepare_bootstrap_without_infinite_loop
+    def prepare_bootstrap(self):
+        self.logger.info('node id %d started inserting dummy payload TXs' % (self.id))
+        k = 0
+        if self.mode == 'test' or 'debug': #K * max(Bfast * S, Bacs)
+            # 100 tx`s each time`
+
+            for r in range(self.tpt):
+                id = str(self.id) + "-" + str(k)
+                tx = tx_generator(id)  # Set each dummy TX to be 250 Byte
+                SpeedyDumbo.submit_tx(self, tx)
+                k += 1
+                if (r % 50000 == 0) and (r != 0):
+                    self.logger.info('node id %d just inserts 50000 TXs' % (self.id))
         else:
             pass
             # TODO: submit transactions through tx_buffer
-        self.logger.info('node id %d completed the loading of dummy TXs' % (self.id))
+        self.logger.info('node id %d completed the loading of %d dummy TXs' % (self.id, k))
 
     def run(self):
 
