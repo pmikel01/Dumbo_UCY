@@ -93,9 +93,8 @@ if __name__ == '__main__':
 
     # Nodes list
     addresses = [None] * N
-    my_address = None
     try:
-        with open('hosts.config', 'r') as hosts:
+        with open('hosts', 'r') as hosts:
             for line in hosts:
                 params = line.split()
                 pid = int(params[0])
@@ -107,6 +106,10 @@ if __name__ == '__main__':
                 # print(pid, ip, port)
                 if pid not in range(N):
                     continue
+                # print("--------")
+                # print(pub_ip)
+                # print(myIP)
+                # print("--------")
                 if pub_ip == myIP:
                     my_address = (priv_ip, port)
                 addresses[pid] = (pub_ip, port)
