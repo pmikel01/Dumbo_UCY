@@ -125,23 +125,23 @@ def stopProtocols():
 
 @parallel
 def removeHosts():
-    run('rm ~/hosts')
+    run('rm ~/Dumbo_UCY/hosts')
 
 @parallel
 def writeHosts():
-    put('./hosts', '~/')
+    put('./hosts', '~/Dumbo_UCY/')
 
 @parallel
 def removeKeys(N_):
     N = int(N_)
-    cmd = 'rm ~/keys-' + str(N)
+    cmd = 'rm ~/Dumbo_UCY/keys-' + str(N)
     run(cmd)
 
 @parallel
 def writeKeys(N_):
     N = int(N_)
     local = './keys-' + str(N)
-    put(local, '~/')
+    put(local, '~/Dumbo_UCY/')
 
 @parallel
 def fetchLogs():
@@ -210,8 +210,9 @@ def runProtocol(N_, f_, B_, K_):
     print(N, f, B, K)
     # run("server_ip=\"$(curl ifconfig.co)\"")
     with shell_env(LIBRARY_PATH='/usr/local/lib', LD_LIBRARY_PATH='/usr/local/lib'):
-        
-        sudo('sh Dumbo_UCY.run_ec2_node.sh %d %d %d %d' % (N, f, B, K))
+        with cd('~/Dumbo_UCY'):
+            # run('ls')
+            run('sh run_ec2_node.sh %d %d %d %d' % (N, f, B, K))
 
 # @parallel
 # def checkout():

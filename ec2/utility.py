@@ -147,8 +147,8 @@ def ipAll():
     ############ Check result ############
     print(result)
     ######################################
-    callFabFromIPList(getIP(), 'removeHosts')
-    callFabFromIPList(getIP(), 'writeHosts')
+    c(getIP(), 'removeHosts')
+    c(getIP(), 'writeHosts')
     return result
 
 def runEC2experiment(N, F, B, K):
