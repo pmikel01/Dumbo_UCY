@@ -101,6 +101,8 @@ def install_dependencies():
         run('./configure')
         run('make')
         sudo('make install')
+        run('export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/lib')
+        run('export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib')
     with settings(warn_only=True):
         if run('test -d charm').failed:
             run('git clone https://github.com/JHUISI/charm.git')
@@ -199,7 +201,18 @@ def generateTX(N_, seed):
 def tests():
     # run("server_ip=\"$(curl ifconfig.co)\"")
     # run("printf \"Server public ip4 %s\n\" $server_ip")
-    run('rm -rf Dumbo_UCY')
+    run('cat Dumbo_UCY/log/consensus-node-4.log')
+    # sudo('pip3 uninstall PyCryptodome -y')
+    # sudo('python3 -m pip install pycrypto')
+    # with cd('/usr/local/lib/python3.8/dist-packages/Crypto/Random/'):
+    #     run('ls')
+    #     cmd = "sed -i 's/time.clock()/time.perf_counter()/g' _UserFriendlyRNG.py"
+    #     sudo(cmd)
+
+    # run('cp -a ~/pbc-0.5.14/. ~/Dumbo_UCY/')
+    # run('python3 --version')
+    # sudo('pip install pycrypto')
+    # sudo('pip install ecdsa')
 
 @parallel
 def runProtocol(N_, f_, B_, K_):

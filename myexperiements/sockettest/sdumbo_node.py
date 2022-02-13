@@ -135,7 +135,7 @@ class SDumboBFTNode (SpeedyDumbo):
                         print("change to good network....")
 
         Greenlet(_change_network).start()
-
+        print("run bft")
         self.run_bft()
         self.stop.value = True
 

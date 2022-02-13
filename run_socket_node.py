@@ -98,7 +98,6 @@ if __name__ == '__main__':
             for line in hosts:
                 params = line.split()
                 pid = int(params[0])
-                i = pid
                 priv_ip = params[1]
                 pub_ip = params[2]
                 # port = int(params[3])
@@ -111,6 +110,7 @@ if __name__ == '__main__':
                 # print(myIP)
                 # print("--------")
                 if pub_ip == myIP:
+                    i = pid
                     my_address = (priv_ip, port)
                 addresses[pid] = (pub_ip, port)
         assert all([node is not None for node in addresses])
@@ -150,6 +150,7 @@ if __name__ == '__main__':
 
         bft_thread = Greenlet(bft.run)
         bft_thread.start()
+        print("bft started")
         bft_thread.join()
 
         with stop.get_lock():

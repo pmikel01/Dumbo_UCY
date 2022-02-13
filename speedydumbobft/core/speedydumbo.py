@@ -153,6 +153,7 @@ class SpeedyDumbo():
         #self._recv_thread = gevent.spawn(_recv_loop)
         self._recv_thread = Greenlet(_recv_loop)
         self._recv_thread.start()
+        print("_recv_loop started")
 
         self.s_time = time.time()
         if self.logger != None:
@@ -173,6 +174,7 @@ class SpeedyDumbo():
             tx_to_send = []
             for _ in range(self.B):
                 tx_to_send.append(self.transaction_buffer.get_nowait())
+            print(tx_to_send.count)
 
             def _make_send(r):
                 def _send(j, o):
