@@ -276,6 +276,7 @@ def runProtocol(N_, f_, B_, K_):
 
 @parallel
 def git_pull():
+    # run('rm -rf Dumbo_UCY')
     with settings(warn_only=True):
         if run('test -d Dumbo_UCY').failed:
             run('git clone https://github.com/pmikel01/Dumbo_UCY.git')
