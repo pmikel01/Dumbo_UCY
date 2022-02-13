@@ -159,6 +159,8 @@ class SpeedyDumbo():
         if self.logger != None:
             self.logger.info('Node %d starts to run at time:' % self.id + str(self.s_time))
 
+        print('Node %d starts Dumbo BFT consensus' % self.id)
+
         while True:
 
             # For each round...
@@ -171,10 +173,23 @@ class SpeedyDumbo():
                 self._per_round_recv[r] = Queue()
 
             # Select B transactions (TODO: actual random selection)
+            # tx_to_send = []
+            # for _ in range(self.B):
+            #     tx_to_send.append(self.transaction_buffer.get_nowait())
+            # print(tx_to_send.count)
+
+            isEmpty = True
             tx_to_send = []
             for _ in range(self.B):
-                tx_to_send.append(self.transaction_buffer.get_nowait())
-            print(tx_to_send.count)
+                if not self.transaction_buffer.empty():
+                    tx_to_send.append(self.transaction_buffer.get_nowait())
+                    isEmpty = False
+                else:
+                    if not isEmpty:
+                        self.logger.info('Buffer has less tx`s than Batch size')
+                        break
+
+            print(len(tx_to_send))
 
             def _make_send(r):
                 def _send(j, o):
@@ -186,7 +201,7 @@ class SpeedyDumbo():
             new_tx = self._run_round(r, tx_to_send, send_r, recv_r)
 
             if self.logger != None:
-                tx_cnt = str(new_tx).count("Dummy TX")
+                tx_cnt = len(new_tx)
                 self.txcnt += tx_cnt
                 self.logger.info('Node %d Delivers ACS Block in Round %d with having %d TXs' % (self.id, r, tx_cnt))
                 end = time.time()

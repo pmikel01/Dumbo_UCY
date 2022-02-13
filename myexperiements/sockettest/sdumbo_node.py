@@ -53,7 +53,7 @@ class SDumboBFTNode (SpeedyDumbo):
         self.stop = stop
         self.mode = mode
         self.network = network
-        self.tpt = 15000 #transactions per time
+        self.tpt = 100000 #transactions per time
         SpeedyDumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
 
     # def prepare_bootstrap(self):
