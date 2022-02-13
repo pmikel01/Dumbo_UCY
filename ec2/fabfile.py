@@ -197,15 +197,24 @@ def generateTX(N_, seed):
     N = int(N_)
     run('python -m HoneyBadgerBFT.ec2.generate_tx %d %s > tx' % (N, seed))
 
+
+@parallel
+def fixCryptoLib():
+    with cd('/usr/local/lib/python3.8/dist-packages/Crypto/Random/'):
+        # run('ls')
+        cmd = "sed -i 's/time.clock()/time.perf_counter()/g' _UserFriendlyRNG.py"
+        sudo(cmd)
+
+
 @parallel
 def tests():
     # run("server_ip=\"$(curl ifconfig.co)\"")
     # run("printf \"Server public ip4 %s\n\" $server_ip")
-    run('cat Dumbo_UCY/log/consensus-node-4.log')
+    run('cat Dumbo_UCY/log/consensus-node-88.log')
     # sudo('pip3 uninstall PyCryptodome -y')
     # sudo('python3 -m pip install pycrypto')
     # with cd('/usr/local/lib/python3.8/dist-packages/Crypto/Random/'):
-    #     run('ls')
+    #     # run('ls')
     #     cmd = "sed -i 's/time.clock()/time.perf_counter()/g' _UserFriendlyRNG.py"
     #     sudo(cmd)
 

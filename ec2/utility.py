@@ -100,7 +100,7 @@ def terminate_all_instances(region):
         instances = ec2.instances.all()
         for instance in instances:
             instance.terminate()
-            instance.wait_until_terminated()
+            # instance.wait_until_terminated()
 
 def launch_new_instances(region, number):
     ec2 = boto3.resource('ec2', region_name=region)
@@ -288,6 +288,10 @@ def rp(srp):
 
 def pig():
     c(getIP(), 'ping')
+
+def fixCrypto():
+    c(getIP(), 'fixCryptoLib')
+    
 
 import IPython
 
