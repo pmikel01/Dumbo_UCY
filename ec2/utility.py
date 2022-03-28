@@ -152,10 +152,10 @@ def ipAll():
     return result
 
 def runEC2experiment(N, F, B, K):
-    # ipAll()
-    # os.system("python3 ../run_trusted_key_gen.py --N " + str(N) + " --f " + str(F))
-    # c(getIP(), 'removeKeys:'+str(N))
-    # c(getIP(), 'writeKeys:'+str(N))
+    ipAll()
+    os.system("python3 ../run_trusted_key_gen.py --N " + str(N) + " --f " + str(F))
+    c(getIP(), 'removeKeys:'+str(N))
+    c(getIP(), 'writeKeys:'+str(N))
     c(getIP(), "runProtocol:" + str(N) + "," + str(F) + "," + str(B) + "," + str(K))
 
 def getIP():

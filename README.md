@@ -34,6 +34,12 @@ HoneyBadgerBFT
 This is released under the CRAPL academic license. See ./CRAPL-LICENSE.txt
 Other licenses may be issued at the authors' discretion.
 
+### Clear Logs
+
+Run the following command
+
+    sudo sh clearLogs.sh
+
 ### Docker
 
 Build the docker image first.
@@ -80,10 +86,7 @@ charm
 
 
 
-pycrypt
-
-
-    sudo python -m pip install pycrypto
+//Copy from ec2 frabric file
 
 Clone the code:
 
