@@ -134,6 +134,16 @@ def writeHosts():
     put('./hosts', '~/Dumbo_UCY/')
 
 @parallel
+def getLogs():
+    get('~/Dumbo_UCY/nodelogs/', './Graphs/')
+
+@parallel
+def resetLogFiles():
+    with cd('~/Dumbo_UCY'):
+        sudo('sh clearLogs.sh')
+
+
+@parallel
 def removeKeys(N_):
     N = int(N_)
     cmd = 'rm ~/Dumbo_UCY/keys-' + str(N)

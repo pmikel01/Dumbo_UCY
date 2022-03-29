@@ -209,9 +209,12 @@ class SpeedyDumbo():
                 self.logger.info('Current Block\'s TPS at Node %d: ' % self.id + str(tx_cnt/(end - start)))
 
             # Put undelivered but committed TXs back to the backlog buffer
-            #for _tx in tx_to_send:
-            #    if _tx not in new_tx:
-            #        self.transaction_buffer.put_nowait(_tx)
+            notdel = 0
+            for _tx in tx_to_send:
+                if _tx not in new_tx:
+                    notdel += 1
+                    self.transaction_buffer.put_nowait(_tx)
+            self.logger.info('notdel: %d ' % notdel)
 
             # print('buffer at %d:' % self.id, self.transaction_buffer)
             #if self.logger != None:
@@ -229,7 +232,16 @@ class SpeedyDumbo():
 
         #self._recv_thread.join(timeout=2)
 
-    #
+
+        print("*******************************************")
+        
+        print("Average latency (sec): %.12f" % ((self.e_time-self.s_time) / self.K) )
+        print("Average throughput (txPerSec): %.9f" % (tx_cnt * self.K  / ((self.e_time-self.s_time))))
+        print("Average throughput (txPerSec): %.9f" % (self.txcnt / ((self.e_time-self.s_time))))
+
+        print("*******************************************")
+    
+
     def _run_round(self, r, tx_to_send, send, recv):
         """Run one protocol round.
         :param int r: round id

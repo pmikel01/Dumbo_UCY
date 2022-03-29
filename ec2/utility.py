@@ -7,6 +7,8 @@ from operator import attrgetter
 #     boto.config.add_section('ec2')
 #     boto.config.setbool('ec2','use-sigv4',True)
 ec2 = boto3.resource('ec2')
+batchSizes=[100,500,1000,5000,10000,50000,75000,100000,250000,500000,1000000,1500000,2000000]
+nodesNum=[10,16,31,46,55,64,82,100,121,150]
 
 secgroups = {
     'eu-west-3':'sg-0638252c8d13e9315', #default 0e50b636305f6fede
@@ -157,6 +159,26 @@ def runEC2experiment(N, F, B, K):
     c(getIP(), 'removeKeys:'+str(N))
     c(getIP(), 'writeKeys:'+str(N))
     c(getIP(), "runProtocol:" + str(N) + "," + str(F) + "," + str(B) + "," + str(K))
+
+def runMultipleEC2experiments(N, F, B, K):
+    ipAll()
+    c(getIP(), 'resetLogFiles')
+    for nodes in nodesNum:
+        for bSize in batchSizes:
+            os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(1))
+            c(getIP(), 'removeKeys:' + str(nodes))
+            c(getIP(), 'writeKeys:' + str(nodes))
+            #########################################################################################
+            #                                                F                                Rounds
+            c(getIP(), "runProtocol:" + str(nodes) + "," + str(1) + "," + str(bSize) + "," + str(10))
+            #########################################################################################
+    c(getFirstIP(), 'getLogs')
+
+def getFirstIP():
+    hostLines = open('hosts', 'r').read().split('\n')
+    for l in hostLines:
+        if l:
+            return l.split(' ')[2]
 
 def getIP():
     return [l.split(' ')[2] for l in open('hosts', 'r').read().split('\n') if l]
