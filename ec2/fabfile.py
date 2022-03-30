@@ -140,7 +140,7 @@ def getLogs():
 @parallel
 def resetLogFiles():
     with cd('~/Dumbo_UCY'):
-        sudo('sh clearLogs.sh')
+        run('sh clearLogs.sh')
 
 
 @parallel
@@ -220,7 +220,8 @@ def fixCryptoLib():
 def tests():
     # run("server_ip=\"$(curl ifconfig.co)\"")
     # run("printf \"Server public ip4 %s\n\" $server_ip")
-    run('cat Dumbo_UCY/log/consensus-node-88.log')
+    # run('cat Dumbo_UCY/log/consensus-node-88.log')
+    run('ls Dumbo_UCY')
     # sudo('pip3 uninstall PyCryptodome -y')
     # sudo('python3 -m pip install pycrypto')
     # with cd('/usr/local/lib/python3.8/dist-packages/Crypto/Random/'):

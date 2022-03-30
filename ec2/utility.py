@@ -1,4 +1,5 @@
 import argparse
+import random
 import boto3
 import sys, os
 import time
@@ -25,7 +26,7 @@ amis = {
     'eu-central-1':'ami-0d527b8c289b4af7f',
     'ca-central-1':'ami-0aee2d0182c9054ac',
     'us-east-1':'ami-04505e74c0741db8d',
-    'us-west-1':'ami-0892d3c7ee96c0bf7'
+    'us-west-1':'ami-01f87c43e618bf8f0'
 }
 
 sshKeys = {
@@ -51,7 +52,6 @@ def getAddrFromEC2Summary(s):
 
 def get_ec2_instances_ip():
     result = []
-    i=0
     for region in regions:
         ec2 = boto3.resource('ec2', region_name=region)
         if ec2:
@@ -62,14 +62,18 @@ def get_ec2_instances_ip():
                 if instance.public_dns_name:
                     currentIP = instance.public_dns_name.split('.')[0][4:].replace('-','.')
                     privateIP = instance.private_ip_address
-                    host = str(i) + " " + privateIP + " " + currentIP
+                    #host = str(i) + " " + privateIP + " " + currentIP
+                    host = privateIP + " " + currentIP
                     regionResult.append(host)
                     print(host)
-                    i += 1
         else:
             print('Region failed', region)
             return None
         result += regionResult
+    random.shuffle(result)
+    for i, host in enumerate(result):
+        result[i] = str(i) + " " + host
+
     return result
 
 def get_ec2_instances_id(region):
@@ -168,15 +172,15 @@ def runMultipleEC2experiments():
     ipAll()
     c(getIP(), 'resetLogFiles')
     for nodes in nodesNum:
+        os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
+        c(getFirstN_IP(nodes), 'removeKeys:' + str(nodes))
+        c(getFirstN_IP(nodes), 'writeKeys:' + str(nodes))
         for bSize in batchSizes:
-            os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
-            c(getIP(), 'removeKeys:' + str(nodes))
-            c(getIP(), 'writeKeys:' + str(nodes))
             #########################################################################################
-            c(getIP(), "runProtocol:" + str(nodes) + "," + str(faults) + "," + str(bSize) + "," + str(rounds))
+            c(getFirstN_IP(nodes), "runProtocol:" + str(nodes) + "," + str(faults) + "," + str(bSize) + "," + str(rounds))
             #########################################################################################
     runEC2experimentWithFaults()
-    c(getFirstIP(), 'getLogs')
+    c(getFirstN_IP(1), 'getLogs')
 
 def runEC2experimentWithFaults():
     nodes=55
@@ -185,10 +189,10 @@ def runEC2experimentWithFaults():
     rounds=10
 
     os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
-    c(getIP(), 'removeKeys:' + str(nodes))
-    c(getIP(), 'writeKeys:' + str(nodes))
+    c(getFirstN_IP(nodes), 'removeKeys:' + str(nodes))
+    c(getFirstN_IP(nodes), 'writeKeys:' + str(nodes))
     #########################################################################################
-    c(getIP(), "runProtocol:" + str(nodes) + "," + str(faults) + "," + str(bSize) + "," + str(rounds))
+    c(getFirstN_IP(nodes), "runProtocol:" + str(nodes) + "," + str(faults) + "," + str(bSize) + "," + str(rounds))
     #########################################################################################
 
 def getFirstIP():
@@ -196,6 +200,18 @@ def getFirstIP():
     for l in hostLines:
         if l:
             return l.split(' ')[2]
+
+
+def getFirstN_IP(N):
+    hostList=[]
+    hostLines = open('hosts', 'r').read().split('\n')
+    i = 0
+    for l in hostLines:
+        if l and i<N:
+            hostList.append(l.split(' ')[2])
+        if not i<N:
+            break
+    return hostList
 
 def getIP():
     return [l.split(' ')[2] for l in open('hosts', 'r').read().split('\n') if l]
