@@ -53,7 +53,8 @@ class SDumboBFTNode (SpeedyDumbo):
         self.stop = stop
         self.mode = mode
         self.network = network
-        self.tpt = 100000 #transactions per time
+        self.totalTxs = int(B/N)*K+100
+        self.tpt = self.totalTxs #transactions per time
         SpeedyDumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute, debug=debug)
 
     # def prepare_bootstrap(self):
@@ -134,7 +135,7 @@ class SDumboBFTNode (SpeedyDumbo):
                         self.network.value = True
                         print("change to good network....")
 
-        Greenlet(_change_network).start()
+        #Greenlet(_change_network).start()
         print("run bft")
         self.run_bft()
         self.stop.value = True

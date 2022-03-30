@@ -135,7 +135,7 @@ def writeHosts():
 
 @parallel
 def getLogs():
-    get('~/Dumbo_UCY/nodelogs/', './Graphs/')
+    get('~/Dumbo_UCY/nodelogs/', './../Graphs/')
 
 @parallel
 def resetLogFiles():
@@ -221,7 +221,11 @@ def tests():
     # run("server_ip=\"$(curl ifconfig.co)\"")
     # run("printf \"Server public ip4 %s\n\" $server_ip")
     # run('cat Dumbo_UCY/log/consensus-node-88.log')
-    run('ls Dumbo_UCY')
+    #run('ls Dumbo_UCY/log')
+    #run('cat Dumbo_UCY/nodelogs/10-100-1-metrics.log')
+    run('cat Dumbo_UCY/log/consensus-node-2.log')
+    run('cat Dumbo_UCY/log/node-net-client-2.log')
+    run('cat Dumbo_UCY/log/node-net-server-2.log')
     # sudo('pip3 uninstall PyCryptodome -y')
     # sudo('python3 -m pip install pycrypto')
     # with cd('/usr/local/lib/python3.8/dist-packages/Crypto/Random/'):

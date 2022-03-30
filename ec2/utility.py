@@ -150,12 +150,12 @@ def start_all_instances(region):
 def ipAll():
     result = get_ec2_instances_ip()
 
-    open('hosts','w').write('\n'.join(result))
+    #open('hosts','w').write('\n'.join(result))
     ############ Check result ############
-    print(result)
+    #print(result)
     ######################################
-    c(getIP(), 'removeHosts')
-    c(getIP(), 'writeHosts')
+    #c(getIP(), 'removeHosts')
+    #c(getIP(), 'writeHosts')
     return result
 
 def runEC2experiment(N, F, B, K):
@@ -170,7 +170,7 @@ def runMultipleEC2experiments():
     rounds=10
 
     ipAll()
-    c(getIP(), 'resetLogFiles')
+    #c(getIP(), 'resetLogFiles')
     for nodes in nodesNum:
         os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
         c(getFirstN_IP(nodes), 'removeKeys:' + str(nodes))
@@ -211,6 +211,8 @@ def getFirstN_IP(N):
             hostList.append(l.split(' ')[2])
         if not i<N:
             break
+        i += 1
+    print(hostList)
     return hostList
 
 def getIP():
