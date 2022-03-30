@@ -102,7 +102,7 @@ if __name__ == '__main__':
                 priv_ip = params[1]
                 pub_ip = params[2]
                 # port = int(params[3])
-                port = 10200
+                port = 10400
                 # print(pid, ip, port)
                 if pid not in range(N):
                     continue
