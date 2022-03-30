@@ -116,6 +116,7 @@ class SpeedyDumbo():
         self.s_time = 0
         self.e_time = 0
         self.txcnt = 0
+        #self.undeliveredTXS = 0
 
         self.mute = mute
         self.debug = debug
@@ -189,7 +190,7 @@ class SpeedyDumbo():
                         self.logger.info('Buffer has less tx`s than Batch size')
                         break
 
-            print(len(tx_to_send))
+            #print(len(tx_to_send))
 
             def _make_send(r):
                 def _send(j, o):
@@ -215,6 +216,8 @@ class SpeedyDumbo():
                     notdel += 1
                     self.transaction_buffer.put_nowait(_tx)
             self.logger.info('notdel: %d ' % notdel)
+            #self.undeliveredTXS += notdel
+            #print(notdel)
 
             # print('buffer at %d:' % self.id, self.transaction_buffer)
             #if self.logger != None:
@@ -236,8 +239,9 @@ class SpeedyDumbo():
         print("*******************************************")
         
         print("Average latency (sec): %.12f" % ((self.e_time-self.s_time) / self.K) )
-        print("Average throughput (txPerSec): %.9f" % (tx_cnt * self.K  / ((self.e_time-self.s_time))))
+        #print("Average throughput (txPerSec): %.9f" % (tx_cnt * self.K  / ((self.e_time-self.s_time))))
         print("Average throughput (txPerSec): %.9f" % (self.txcnt / ((self.e_time-self.s_time))))
+        #print("Average tx`s undelivered (txPerRound): %.9f" % (self.undeliveredTXS / self.K) )
 
         print("*******************************************")
     
