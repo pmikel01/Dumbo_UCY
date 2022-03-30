@@ -93,6 +93,7 @@ if __name__ == '__main__':
 
     # Nodes list
     addresses = [None] * N
+    my_address = (0, 0)
     try:
         with open('hosts', 'r') as hosts:
             for line in hosts:
@@ -105,11 +106,12 @@ if __name__ == '__main__':
                 # print(pid, ip, port)
                 if pid not in range(N):
                     continue
-                # print("--------")
-                # print(pub_ip)
-                # print(myIP)
-                # print("--------")
+                print("--------")
+                print(pub_ip)
+                print(myIP)
+                print("--------")
                 if pub_ip == myIP:
+                    print("*******************************found******************")
                     i = pid
                     my_address = (priv_ip, port)
                 addresses[pid] = (pub_ip, port)
