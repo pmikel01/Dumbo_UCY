@@ -8,7 +8,8 @@ from operator import attrgetter
 #     boto.config.setbool('ec2','use-sigv4',True)
 ec2 = boto3.resource('ec2')
 batchSizes=[100,500,1000,5000,10000,50000,75000,100000,250000,500000,1000000,1500000,2000000]
-nodesNum=[10,16,31,46,55,64,82,100,121,150]
+nodesNum=[10,32,55,82,100,150]
+faultyNodes=[2,4,7,11,13,16,20,25,30,37]
 
 secgroups = {
     'eu-west-3':'sg-0638252c8d13e9315', #default 0e50b636305f6fede
@@ -160,19 +161,35 @@ def runEC2experiment(N, F, B, K):
     c(getIP(), 'writeKeys:'+str(N))
     c(getIP(), "runProtocol:" + str(N) + "," + str(F) + "," + str(B) + "," + str(K))
 
-def runMultipleEC2experiments(N, F, B, K):
+def runMultipleEC2experiments():
+    faults=1
+    rounds=10
+
     ipAll()
     c(getIP(), 'resetLogFiles')
     for nodes in nodesNum:
         for bSize in batchSizes:
-            os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(1))
+            os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
             c(getIP(), 'removeKeys:' + str(nodes))
             c(getIP(), 'writeKeys:' + str(nodes))
             #########################################################################################
-            #                                                F                                Rounds
-            c(getIP(), "runProtocol:" + str(nodes) + "," + str(1) + "," + str(bSize) + "," + str(10))
+            c(getIP(), "runProtocol:" + str(nodes) + "," + str(faults) + "," + str(bSize) + "," + str(rounds))
             #########################################################################################
+    runEC2experimentWithFaults()
     c(getFirstIP(), 'getLogs')
+
+def runEC2experimentWithFaults():
+    nodes=55
+    bSize=100000
+    faults=18
+    rounds=10
+
+    os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
+    c(getIP(), 'removeKeys:' + str(nodes))
+    c(getIP(), 'writeKeys:' + str(nodes))
+    #########################################################################################
+    c(getIP(), "runProtocol:" + str(nodes) + "," + str(faults) + "," + str(bSize) + "," + str(rounds))
+    #########################################################################################
 
 def getFirstIP():
     hostLines = open('hosts', 'r').read().split('\n')

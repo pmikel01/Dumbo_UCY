@@ -11,6 +11,8 @@ server_ip="$(curl ifconfig.co)"
 echo $server_ip
 
 echo "Starting node..."
-python3 run_socket_node.py --sid 'sidA' --N $1 --f $2 --B $3 --K $4 --T 100 --P "sdumbo" --F 1000000 --I $server_ip > nodelogs/$1-$3-metrics.log
+python3 run_socket_node.py --sid 'sidA' --N $1 --f $2 --B $3 --K $4 --T 100 --P "sdumbo" --F 1000000 --I $server_ip > nodelogs/$1-$3-$2-metrics.log
 # python3 run_socket_node.py --sid 'sidA' --N $1 --f $2 --B $3 --K $4 --T 100 --P "sdumbo" --F 1000000 --I $server_ip
 
+echo "$1-$3-$2 Finished"
+echo "#########################################################"
