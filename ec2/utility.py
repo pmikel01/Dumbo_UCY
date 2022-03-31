@@ -8,8 +8,10 @@ from operator import attrgetter
 #     boto.config.add_section('ec2')
 #     boto.config.setbool('ec2','use-sigv4',True)
 ec2 = boto3.resource('ec2')
-batchSizes=[100,500,1000,5000,10000,50000,75000,100000,250000,500000,1000000,1500000,2000000]
-nodesNum=[10,32,55,82,100,150]
+batchSizes=[250000]
+#batchSizes=[100,500,1000,5000,10000,50000,75000,100000,250000,500000,1000000,1500000,2000000]
+nodesNum=[32]
+#nodesNum=[10,32,55,82,100,150]
 faultyNodes=[2,4,7,11,13,16,20,25,30,37]
 
 secgroups = {
@@ -97,6 +99,7 @@ def stop_all_instances(region):
         instances = ec2.instances.all()
         for instance in instances:
             instance.stop()
+        for instance in instances:
             instance.wait_until_stopped()
 
 def terminate_all_instances(region):
@@ -145,17 +148,18 @@ def start_all_instances(region):
         instances = ec2.instances.all()
         for instance in instances:
             instance.start()
+        for instance in instances:
             instance.wait_until_running()
 
 def ipAll():
     result = get_ec2_instances_ip()
 
-    #open('hosts','w').write('\n'.join(result))
+    open('hosts','w').write('\n'.join(result))
     ############ Check result ############
     #print(result)
     ######################################
-    #c(getIP(), 'removeHosts')
-    #c(getIP(), 'writeHosts')
+    c(getIP(), 'removeHosts')
+    c(getIP(), 'writeHosts')
     return result
 
 def runEC2experiment(N, F, B, K):
@@ -167,9 +171,9 @@ def runEC2experiment(N, F, B, K):
 
 def runMultipleEC2experiments():
     faults=1
-    rounds=10
+    rounds=5
 
-    ipAll()
+    #ipAll()
     #c(getIP(), 'resetLogFiles')
     for nodes in nodesNum:
         os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
@@ -186,7 +190,7 @@ def runEC2experimentWithFaults():
     nodes=55
     bSize=100000
     faults=18
-    rounds=10
+    rounds=5
 
     os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
     c(getFirstN_IP(nodes), 'removeKeys:' + str(nodes))
