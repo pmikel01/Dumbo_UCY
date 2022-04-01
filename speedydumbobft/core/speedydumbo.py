@@ -209,13 +209,14 @@ class SpeedyDumbo():
                 self.logger.info('ACS Block Delay at Node %d: ' % self.id + str(end - start))
                 self.logger.info('Current Block\'s TPS at Node %d: ' % self.id + str(tx_cnt/(end - start)))
 
+
             # Put undelivered but committed TXs back to the backlog buffer
-            notdel = 0
-            for _tx in tx_to_send:
-                if _tx not in new_tx:
-                    notdel += 1
-                    self.transaction_buffer.put_nowait(_tx)
-            self.logger.info('notdel: %d ' % notdel)
+            # notdel = 0
+            # for _tx in tx_to_send:
+            #     if _tx not in new_tx:
+            #         notdel += 1
+            #         self.transaction_buffer.put_nowait(_tx)
+            # self.logger.info('notdel: %d ' % notdel)
             #self.undeliveredTXS += notdel
             #print(notdel)
 
@@ -367,8 +368,9 @@ class SpeedyDumbo():
 
         # One instance of (validated) ACS
         #print("start to set up VACS")
+        self.logger.info("start to set up VACS")
         _setup_vacs()
-
+        self.logger.info("Finished to set up VACS")
         # One instance of TPKE
         def tpke_bcast(o):
             """Threshold encryption broadcast."""
@@ -379,7 +381,7 @@ class SpeedyDumbo():
                            [_.get for _ in pb_value_outputs],
                            pb_proof_output.get,
                            vacs_input.put_nowait,
-                           vacs_output.get)
+                           vacs_output.get, self.logger)
 
         dumboacs_thread.start()
 
@@ -388,13 +390,18 @@ class SpeedyDumbo():
                           acs_put_in=my_pb_input.put_nowait, acs_get_out=dumboacs_thread.get,
                           tpke_bcast=tpke_bcast, tpke_recv=tpke_recv.get)
 
+        self.logger.info("hbbft block created")
+
         block = set()
+        self.logger.info("block set")
         for batch in _output:
             decoded_batch = json.loads(batch.decode())
             for tx in decoded_batch:
                 block.add(tx)
 
         bc_recv_loop_thread.kill()
+
+        self.logger.info("The end")
 
         return list(block)
 
