@@ -210,12 +210,12 @@ class SpeedyDumbo():
                 self.logger.info('Current Block\'s TPS at Node %d: ' % self.id + str(tx_cnt/(end - start)))
 
             # Put undelivered but committed TXs back to the backlog buffer
-            notdel = 0
-            for _tx in tx_to_send:
-                if _tx not in new_tx:
-                    notdel += 1
-                    self.transaction_buffer.put_nowait(_tx)
-            self.logger.info('notdel: %d ' % notdel)
+            # notdel = 0
+            # for _tx in tx_to_send:
+            #     if _tx not in new_tx:
+            #         notdel += 1
+            #         self.transaction_buffer.put_nowait(_tx)
+            # self.logger.info('notdel: %d ' % notdel)
             #self.undeliveredTXS += notdel
             #print(notdel)
 
