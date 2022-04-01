@@ -10,7 +10,7 @@ from operator import attrgetter
 ec2 = boto3.resource('ec2')
 batchSizes=[250000]
 #batchSizes=[100,500,1000,5000,10000,50000,75000,100000,250000,500000,1000000,1500000,2000000]
-nodesNum=[32]
+nodesNum=[100]
 #nodesNum=[10,32,55,82,100,150]
 faultyNodes=[2,4,7,11,13,16,20,25,30,37]
 
@@ -176,9 +176,9 @@ def runMultipleEC2experiments():
     #ipAll()
     #c(getIP(), 'resetLogFiles')
     for nodes in nodesNum:
-        os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
-        c(getFirstN_IP(nodes), 'removeKeys:' + str(nodes))
-        c(getFirstN_IP(nodes), 'writeKeys:' + str(nodes))
+        #os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
+        #c(getFirstN_IP(nodes), 'removeKeys:' + str(nodes))
+        #c(getFirstN_IP(nodes), 'writeKeys:' + str(nodes))
         for bSize in batchSizes:
             #########################################################################################
             c(getFirstN_IP(nodes), "runProtocol:" + str(nodes) + "," + str(faults) + "," + str(bSize) + "," + str(rounds))
