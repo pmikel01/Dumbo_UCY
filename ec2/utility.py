@@ -173,12 +173,12 @@ def runMultipleEC2experiments():
     faults=1
     rounds=5
 
-    #ipAll()
-    #c(getIP(), 'resetLogFiles')
+    ipAll()
+    c(getIP(), 'resetLogFiles')
     for nodes in nodesNum:
-        #os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
-        #c(getFirstN_IP(nodes), 'removeKeys:' + str(nodes))
-        #c(getFirstN_IP(nodes), 'writeKeys:' + str(nodes))
+        os.system("python3 ../run_trusted_key_gen.py --N " + str(nodes) + " --f " + str(faults))
+        c(getFirstN_IP(nodes), 'removeKeys:' + str(nodes))
+        c(getFirstN_IP(nodes), 'writeKeys:' + str(nodes))
         for bSize in batchSizes:
             #########################################################################################
             c(getFirstN_IP(nodes), "runProtocol:" + str(nodes) + "," + str(faults) + "," + str(bSize) + "," + str(rounds))
