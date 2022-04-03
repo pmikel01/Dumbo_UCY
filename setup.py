@@ -19,16 +19,20 @@ from setuptools import setup
 
 
 install_requires = [
-    'enum34',   # TODO post python3 port: remove
-    'gevent',
-    'gmpy2',
-    'pysocks',
     'pycrypto',
     'ecdsa',
-    'zfec>=1.5.0',
+    'zfec',
     'gipc',
+    'pysocks',
+    'enum34',
+    'gevent',
+    'ipdb',
     'coincurve',
+    'ipython',
     'numpy',
+    'setuptools',
+    'pyparsing',
+    'hypothesis'
 ]
 
 tests_require = [
