@@ -179,6 +179,7 @@ class SpeedyDumbo():
             #     tx_to_send.append(self.transaction_buffer.get_nowait())
             # print(tx_to_send.count)
 
+            #(TODO: actual random selection)
             isEmpty = True
             tx_to_send = []
             for _ in range(self.B):

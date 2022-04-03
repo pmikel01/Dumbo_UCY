@@ -1,0 +1,11 @@
+hosts.config is correctly read
+waiting for network ready...
+waiting for network ready...
+bft started
+run bft
+_recv_loop started
+Node 8 starts Dumbo BFT consensus
+*******************************************
+Average latency (sec): 1.446057176590
+Average throughput (txPerSec): 3111.910146327
+*******************************************

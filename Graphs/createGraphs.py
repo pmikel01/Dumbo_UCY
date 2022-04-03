@@ -25,19 +25,24 @@ colors2 = {
 
 def readLogs():
     global df
-    for filename in os.listdir("files"):
-        with open(os.path.join("files",filename),'r') as f:
+    for filename in os.listdir("./nodelogs"):
+        with open(os.path.join("./nodelogs",filename),'r') as f:
             text = f.read()
             lines = text.splitlines( )
+            # print(lines)
             nodes = filename.split("-")[0]
             batchSize = filename.split("-")[1]
-            latency = lines[-5].split()[-1]
-            throughput = lines[-4].split()[-1]
-            df = df.append({'Nodes' : nodes, 'BatchSize' : batchSize, 'Latency' : latency, 'Throughput' : throughput}, ignore_index = True)
+            latency = lines[-3].split()[-1]
+            throughput = lines[-2].split()[-1]
+            # print(nodes + " - " + batchSize)
+            df = df.append({'Nodes' : int(nodes), 'BatchSize' : int(batchSize), 'Latency' : float(latency), 'Throughput' : float(throughput)}, ignore_index = True)
+    df2 = df.sort_values(by=['BatchSize'])
+    df = df2
+    # print(df2)
 
 def createGraphs():
     global figTB
-    figTB = px.line(df, x="BatchSize", y="Throughput", color = "Nodes")
+    figTB = px.line(df, x="BatchSize", y="Throughput", color = "Nodes", title="Batch Size Vs Throughput")
     figTB.update_layout(
         plot_bgcolor=colors2['background'],
         paper_bgcolor=colors2['background'],
@@ -45,23 +50,30 @@ def createGraphs():
     )
 
     global figLB
-    figLB = px.line(df, x="BatchSize", y="Latency", color = "Nodes")
+    figLB = px.line(df, x="BatchSize", y="Latency", color = "Nodes", title="Batch Size Vs Latency")
     figLB.update_layout(
         plot_bgcolor=colors2['background'],
         paper_bgcolor=colors2['background'],
         font_color=colors2['text']
     )
 
+    bSize = 100000
+    rslt_df = df[df['BatchSize'] == bSize]
+    rslt_df = rslt_df.sort_values(by=['Nodes'])
+    figName = "Nodes Vs Latency For B=" + str(bSize)
+
     global figLN
-    figLN = px.line(df.query('BatchSize == 100000', inplace=True), x="Nodes", y="Latency")
+    figLN = px.line(rslt_df, x="Nodes", y="Latency", title=figName)
     figLN.update_layout(
         plot_bgcolor=colors2['background'],
         paper_bgcolor=colors2['background'],
         font_color=colors2['text']
     )
 
+    figName = "Nodes Vs Throughput For B=" + str(bSize)
+
     global figTN
-    figTN = px.line(df.query('BatchSize == 100000', inplace=True), x="Nodes", y="Throughput")
+    figTN = px.line(rslt_df, x="Nodes", y="Throughput", title=figName)
     figTN.update_layout(
         plot_bgcolor=colors2['background'],
         paper_bgcolor=colors2['background'],
@@ -69,12 +81,30 @@ def createGraphs():
     )
 
     global figLT
-    figLT = px.line(df, x="BatchSize", y="Throughput", color = "Nodes")
-    figLT.update_layout(
-        plot_bgcolor=colors2['background'],
-        paper_bgcolor=colors2['background'],
-        font_color=colors2['text']
-    )
+    allNodes = 1
+    numOfNodes = 85
+    
+
+    if (allNodes == 0):
+        rslt_df = df.sort_values(by=['Throughput'])
+        
+        figLT = px.line(rslt_df, x="Throughput", y="Latency", color = "Nodes", title="Throughput Vs Latency")
+        figLT.update_layout(
+            plot_bgcolor=colors2['background'],
+            paper_bgcolor=colors2['background'],
+            font_color=colors2['text']
+        )
+    else:
+        rslt_df = df[df['Nodes'] == numOfNodes]
+        rslt_df = rslt_df.sort_values(by=['Throughput'])
+        figName = "Throughput Vs Latency For Nodes=" + str(numOfNodes)
+        print(rslt_df)
+        figLT = px.line(rslt_df, x="Throughput", y="Latency", title=figName)
+        figLT.update_layout(
+            plot_bgcolor=colors2['background'],
+            paper_bgcolor=colors2['background'],
+            font_color=colors2['text']
+        )
 
 
 app = Dash(
