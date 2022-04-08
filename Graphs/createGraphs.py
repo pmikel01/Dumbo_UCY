@@ -57,7 +57,7 @@ def createGraphs():
         font_color=colors2['text']
     )
 
-    bSize = 100000
+    bSize = 1000000
     rslt_df = df[df['BatchSize'] == bSize]
     rslt_df = rslt_df.sort_values(by=['Nodes'])
     figName = "Nodes Vs Latency For B=" + str(bSize)
@@ -82,7 +82,7 @@ def createGraphs():
 
     global figLT
     allNodes = 1
-    numOfNodes = 85
+    numOfNodes = 100
     
 
     if (allNodes == 0):
