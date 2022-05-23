@@ -114,12 +114,6 @@ def terminate_all_instances(region):
 
 def launch_new_instances(region, number):
     ec2 = boto3.resource('ec2', region_name=region)
-    # dev_sda1 = ec2.instBlockDeviceMappings.Ebs(delete_on_termination=True)
-    # dev_sda1.size = 8 # size in Gigabytes
-    # dev_sda1.size = 1 # size in Gigabytes
-    # dev_sda1.delete_on_termination = True
-    # bdm = ec2.BlockDeviceMappings.BlockDeviceMapping()
-    # bdm['/dev/sda1'] = dev_sda1
     launchedInstances = ec2.create_instances(ImageId=amis[region], #'ami-04505e74c0741db8d',  # ami-04505e74c0741db8d
                                  MinCount=number,
                                  MaxCount=number,
@@ -134,8 +128,6 @@ def launch_new_instances(region, number):
         print(f'EC2 instance "{instance.id}" has been started')
         i+=1
     print(i, "instances launced and running in ", region)
-
-    #If needed change deleteOnTermination here
 
     return launchedInstances
 
@@ -253,85 +245,9 @@ def callFabFromIPList(l, work):
     else:
         call('fab -i ~/.ssh/pmikel01-mc2ec2.pem -u ubuntu -P -t 10 -n 2 -H %s %s' % (','.join(l), work), shell=True)
 
-def non_block_read(output):
-    ''' even in a thread, a normal read with block until the buffer is full '''
-    fd = output.fileno()
-    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-    try:
-        return output.readline()
-    except:
-        return ''
-
-def monitor(stdout, N, t):
-    starting_time = time.time()
-    counter = 0
-    while True:
-        output = non_block_read(stdout).strip()
-        print(output)
-        if 'synced transactions set' in output:
-            counter += 1
-            if counter >= N - t:
-                break
-    ending_time = time.time()
-    print('Latency from client scope:', ending_time - starting_time)
-
-######## Not Used #########
-def runProtocol():  # fast-path to run, assuming we already have the files ready
-    callFabFromIPList(getIP(), 'runProtocol')
-
-######## Not Used #########
-def runProtocolfromClient(client, key, hosts=None):
-    if not hosts:
-        callFabFromIPList(getIP(), 'runProtocolFromClient:%s,%s' % (client, key))
-    else:
-        callFabFromIPList(hosts, 'runProtocolFromClient:%s,%s' % (client, key))
-
-######## Not Used #########
-def runEC2(Tx, N, t, n):  # run 4 in a row
-    for i in range(1, n+1):
-        runProtocolfromClient('"%d %d %d"' % (Tx, N, t), "~/%d_%d_%d.key" % (N, t, i))
-
 def stopProtocol():
     callFabFromIPList(getIP(), 'stopProtocols')
 
-def callStartProtocolAndMonitorOutput(N, t, l, work='runProtocol'):
-    if platform.system() == 'Darwin':
-        popen = Popen(['fab', '-i', '~/.ssh/pmikel01-mc2ec2.pem',
-            '-u', 'ubuntu', '-H', ','.join(l),
-            work], stdout=PIPE, stderr=STDOUT, close_fds=True, bufsize=1, universal_newlines=True)
-    else:
-        popen = Popen('fab -i ~/.ssh/pmikel01-mc2ec2.pem -u ubuntu -P -H %s %s' % (','.join(l), work),
-            shell=True, stdout=PIPE, stderr=STDOUT, close_fds=True, bufsize=1, universal_newlines=True)
-    thread = Thread(target=monitor, args=[popen.stdout, N, t])
-    thread.daemon = True
-    thread.start()
-
-    popen.wait()
-    thread.join(timeout=1)
-
-    return  # to comment the following lines
-    counter = 0
-    while True:
-        line = popen.stdout.readline()
-        if not line: break
-        if 'synced transactions set' in line:
-            counter += 1
-        if counter >= N - t:
-            break
-        print(line) # yield line
-        sys.stdout.flush()
-    ending_time = time.time()
-    print('Latency from client scope:', ending_time - starting_time)
-
-
-######## Not Used #########
-def callFab(s, work):  # Deprecated
-    print(Popen(['fab', '-i', '~/.ssh/pmikel01-mc2ec2.pem',
-            '-u', 'ubuntu', '-H', ','.join(getAddrFromEC2Summary(s)),
-            work]))
-
-#short-cuts
 
 c = callFabFromIPList
 
