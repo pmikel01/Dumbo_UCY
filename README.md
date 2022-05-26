@@ -1,4 +1,4 @@
-Dumbo BFT. The code is forked from the implementation of Honeybadger protocols.
+Speeding Dumbo BFT. The code is forked from the implementation of Honeybadger protocols.
 
 # HoneyBadgerBFT
 The Honey Badger of BFT Protocols.
@@ -23,12 +23,12 @@ This repository contains a Python implementation of the Dumbo protocol based on 
 It is still a prototype, and is not approved for production use. It is intended
 to serve as a useful reference and alternative implementations for other projects.
 
-Dumbo introduces two new ACS protocols, both of which improve the running time
+Speeding Dumbo introduces two new ACS protocols, both of which improve the running time
 asymptotically and practically. Their experimental results demonstrate a multi-fold 
 improvements over HoneyBadgerBFT when they are run back to back in
 the same environment on Amazon AWS.
 
-HoneyBadgerBFT
+
 
 ## License
 This is released under the CRAPL academic license. See ./CRAPL-LICENSE.txt
